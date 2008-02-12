@@ -92,14 +92,14 @@ name , max_difference , pressure , local_time , print_error_max )
 
    factor = 1.0
    error_factor_by_field : SELECT CASE ( name )
-      CASE ( 'U       ' , 'V       ' ) error_factor_by_field 
+      CASE ( 'UU      ' , 'VV      ' ) error_factor_by_field 
          IF      ( plevel .LE. 499.9 ) THEN
             factor = 1.5
          ELSE IF ( plevel .LE. 1000.1 ) THEN
             factor = 1.25
          END IF
 
-      CASE ( 'T       ' ) error_factor_by_field 
+      CASE ( 'TT      ' ) error_factor_by_field 
          level : IF ( plevel .GT. 1000.1 ) THEN
             WHERE ( ( local_time_small .GE. 1100 ) .AND. &
                     ( local_time_small .LE. 2000 ) ) 
@@ -122,7 +122,7 @@ name , max_difference , pressure , local_time , print_error_max )
 
 !!!!!!!  WHERE ( shipreport_small ) factor = 0.75
 
-      CASE ( 'RH      ' , 'PSEALVLC' ) error_factor_by_field
+      CASE ( 'RH      ' , 'PMSL    ' ) error_factor_by_field
 
    END SELECT error_factor_by_field
 
@@ -174,7 +174,7 @@ name , max_difference , pressure , local_time , print_error_max )
 
    maximum_error : SELECT CASE ( name )
 
-      CASE ( 'U       ' , 'V       ' )  
+      CASE ( 'UU      ' , 'VV      ' )  
 
          !  For U and V, factored difference is the larger of 
          !  1) the factored error maximum, or 
@@ -182,7 +182,7 @@ name , max_difference , pressure , local_time , print_error_max )
 
          factored_difference  = max ( factor * max_difference , 0.15 * aob )
 
-      CASE ( 'T       ' , 'RH      ' , 'PSEALVLC' ) 
+      CASE ( 'TT      ' , 'RH      ' , 'PMSL    ' ) 
 
          !  The maximum difference is scaled by the factor for the 
          !  temperature, sea level pressure and the relative
@@ -205,7 +205,7 @@ name , max_difference , pressure , local_time , print_error_max )
 
    IF ( print_error_max ) THEN
       station_loop_2 : DO num = 1 , numobs
-         IF ( name(1:8) .EQ. 'PSEALVLC' ) THEN
+         IF ( name(1:8) .EQ. 'PMSL    ' ) THEN
             scale = 100.
          ELSE
             scale = 1.

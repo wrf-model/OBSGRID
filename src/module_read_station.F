@@ -107,14 +107,14 @@ CONTAINS
             END IF
 
             opress = ipress
-            IF ( name .EQ. 'U       ') THEN
+            IF ( name .EQ. 'UU      ') THEN
                u(loop) = value
                wqc(loop) = iqc
                xc(loop) = x
                yc(loop) = y
                sid(loop) = idstation
                num = num + 1
-            ELSE IF (name .EQ. 'V       ') THEN
+            ELSE IF (name .EQ. 'VV      ') THEN
                DO i = 1, num
                   IF (sid(i) .EQ. idstation .and. x .EQ. xc(i) .and. y .EQ. yc(i)) THEN
                      v(i) = value
@@ -127,7 +127,7 @@ CONTAINS
                xc(num) = x
                yc(num) = y
                sid(num) = idstation
-            ELSE IF (name .EQ. 'T       ') THEN
+            ELSE IF (name .EQ. 'TT      ') THEN
                DO i = 1, num
                   IF (sid(i) .EQ. idstation .and. x .EQ. xc(i) .and. y .EQ. yc(i)) THEN
                      t(i) = value
@@ -158,7 +158,7 @@ CONTAINS
                xc(num) = x
                yc(num) = y
                sid(num) = idstation
-            ELSE IF (name .EQ. 'PSEALVLC') THEN
+            ELSE IF (name .EQ. 'PMSL') THEN
                DO i = 1, num
                   IF (sid(i) .EQ. idstation .and. x .EQ. xc(i) .and. y .EQ. yc(i)) THEN
                      slp(i) = value

@@ -107,7 +107,7 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
 
    error_allowance_by_field : SELECT CASE ( name )
 
-      CASE ( 'U       ' , 'V       ' )
+      CASE ( 'UU      ' , 'VV      ' )
          IF      ( plevel .LT. 401. ) THEN
             difmax = buddy_difference * 1.7
          ELSE IF ( plevel .LT. 701. ) THEN
@@ -118,10 +118,10 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
             difmax = buddy_difference
          END IF
 
-      CASE ( 'PSEALVLC' )
+      CASE ( 'PMSL    ' )
          difmax = buddy_difference
 
-      CASE ( 'T       ' )
+      CASE ( 'TT      ' )
          IF      ( plevel .LT. 401. ) THEN
             difmax = buddy_difference * 0.6
          ELSE IF ( plevel .LT. 701. ) THEN
@@ -249,7 +249,7 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
 
    IF ( print_buddy ) THEN
       station_loop_4 : DO num = 1 , numobs
-         IF ( name(1:8) .EQ. 'PSEALVLC' ) THEN
+         IF ( name(1:8) .EQ. 'PMSL    ' ) THEN
             scale = 100.
          ELSE
             scale = 1.

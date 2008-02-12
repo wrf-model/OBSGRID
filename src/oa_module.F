@@ -117,9 +117,6 @@ use_first_guess )
       !  For the grid points in the window, compute this observation's
       !  influence.
 
-if ( pressure == 200. .AND. (xob(n) > 35 .AND. xob(n) < 45) .AND. (yob(n) > 5 .AND. yob(n) < 15) ) &
-     print*,"cb - INFLUENCE OF OB", iew_min, iew_max, jns_min, jns_max
-
       DO j = jns_min , jns_max
          DO i = iew_min , iew_max
 
@@ -128,8 +125,8 @@ if ( pressure == 200. .AND. (xob(n) > 35 .AND. xob(n) < 45) .AND. (yob(n) > 5 .A
             !  banana scheme, which elongates the acceptable distance from an observation and also is
             !  able to handle first-guess wind curvature.
 
-            IF ( ( name(1:8) .EQ. 'U       ' ) .OR. &
-                 ( name(1:8) .EQ. 'V       ' ) .OR. &
+            IF ( ( name(1:8) .EQ. 'UU      ' ) .OR. &
+                 ( name(1:8) .EQ. 'VV      ' ) .OR. &
                  ( name(1:8) .EQ. 'RH      ' )  ) THEN
                CALL dist ( i , j , iew , jns , crsdot , name(1:8) , obs_value(n) , xob(n) , yob(n) , &
                            dxd , pressure , u_banana , v_banana , radius_influence , &
@@ -456,9 +453,6 @@ SUBROUTINE dist ( i , j , iew , jns , crsdot , name , obs_value , xob , yob , dx
 
    END IF
  
-if ( pressure == 200. .AND. (xob > 35 .AND. xob < 45) .AND. (yob > 5 .AND. yob < 15) ) &
-   print*, "cb 200 mb pressure - ", i,j, xob, yob, choice, vcrit, speed_ob, elongation, distance, radius_of_curvature, u_ob,v_ob
-
 END SUBROUTINE dist
 
 !
@@ -478,19 +472,19 @@ iew_alloc , jns_alloc , kbu_alloc )
 
    which_var_to_get : SELECT CASE ( name ) 
 
-      CASE ( 'U       ' ) which_var_to_get
+      CASE ( 'UU      ' ) which_var_to_get
          CALL yx2xy (     u(1,1,kp) , jns_alloc , iew_alloc , dum2d )
 
-      CASE ( 'V       ' ) which_var_to_get
+      CASE ( 'VV      ' ) which_var_to_get
          CALL yx2xy (     v(1,1,kp) , jns_alloc , iew_alloc , dum2d )
 
-      CASE ( 'T       ' ) which_var_to_get
+      CASE ( 'TT      ' ) which_var_to_get
          CALL yx2xy (     t(1,1,kp) , jns_alloc , iew_alloc , dum2d )
 
       CASE ( 'RH      ' ) which_var_to_get
          CALL yx2xy (    rh(1,1,kp) , jns_alloc , iew_alloc , dum2d )
 
-      CASE ( 'PSEALVLC' ) which_var_to_get
+      CASE ( 'PMSL    ' ) which_var_to_get
          CALL yx2xy ( slp_x         , jns_alloc , iew_alloc , dum2d )
 
    END SELECT which_var_to_get
@@ -571,10 +565,10 @@ crsdot , name , passes , smooth_type , use_first_guess )
    !  values must be sane.
 
    SELECT CASE ( name )
-      CASE ( 'U       ' ) ; errm = 2.
-      CASE ( 'V       ' ) ; errm = 2.
-      CASE ( 'PSEALVLC' ) ; errm = 1.
-      CASE ( 'T       ' ) ; errm = 0.5
+      CASE ( 'UU      ' ) ; errm = 2.
+      CASE ( 'VV      ' ) ; errm = 2.
+      CASE ( 'PMSL    ' ) ; errm = 1.
+      CASE ( 'TT      ' ) ; errm = 0.5
       CASE ( 'RH      ' ) ; errm = 10.
    END SELECT
 
@@ -656,19 +650,19 @@ iew_alloc , jns_alloc , kbu_alloc )
 
    which_var_to_get : SELECT CASE ( name ) 
 
-      CASE ( 'U       ' ) which_var_to_get
+      CASE ( 'UU      ' ) which_var_to_get
          CALL yx2xy ( dum2d , iew_alloc , jns_alloc ,     u(1,1,kp) ) 
 
-      CASE ( 'V       ' ) which_var_to_get
+      CASE ( 'VV      ' ) which_var_to_get
          CALL yx2xy ( dum2d , iew_alloc , jns_alloc ,     v(1,1,kp) ) 
 
-      CASE ( 'T       ' ) which_var_to_get
+      CASE ( 'TT      ' ) which_var_to_get
          CALL yx2xy ( dum2d , iew_alloc , jns_alloc ,     t(1,1,kp) ) 
 
       CASE ( 'RH      ' ) which_var_to_get
          CALL yx2xy ( dum2d , iew_alloc , jns_alloc ,    rh(1,1,kp) ) 
 
-      CASE ( 'PSEALVLC' ) which_var_to_get
+      CASE ( 'PMSL    ' ) which_var_to_get
          CALL yx2xy ( dum2d , iew_alloc , jns_alloc , slp_x         ) 
 
    END SELECT which_var_to_get

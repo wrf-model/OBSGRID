@@ -116,7 +116,7 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
    !  kp:              vertical index
    !  local_time:      integer time (hhmm), crudely corrected to the local
    !                   time based upon the longitude
-   !  name:            variable name, T, RH, PSEALVLC, U, or V
+   !  name:            variable name, TT, RH, PMSL, UU, or VV
 
    REAL                                       :: error_difference , &
                                                  buddy_difference
@@ -177,23 +177,23 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
    
          variable_loop : DO ivar = 1, 5
    
-            ! do error checks only for ivar = PSEALVLC and for kp = 1
+            ! do error checks only for ivar = PMSL and for kp = 1
    
             IF ( ( kp .GT. 1 ) .AND. ( ivar .EQ. 5 ) ) EXIT variable_loop
    
             which_variable : SELECT CASE ( ivar )
                CASE ( 1 ) 
-                  name = 'U       '
+                  name = 'UU      '
                   error_difference = max_error_uv
                   buddy_difference = max_buddy_uv
                   CALL yx2xy (     u(1,1,kp) , jns_alloc , iew_alloc , gridded )
                CASE ( 2 ) 
-                  name = 'V       '              
+                  name = 'VV      '              
                   error_difference = max_error_uv
                   buddy_difference = max_buddy_uv
                   CALL yx2xy (     v(1,1,kp) , jns_alloc , iew_alloc , gridded )
                CASE ( 3 ) 
-                  name = 'T       '
+                  name = 'TT      '
                   error_difference = max_error_t
                   buddy_difference = max_buddy_t
                   CALL yx2xy (     t(1,1,kp) , jns_alloc , iew_alloc , gridded )
@@ -209,7 +209,7 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
                   buddy_difference = max_buddy_rh
                   CALL yx2xy (    rh(1,1,kp) , jns_alloc , iew_alloc , gridded )
                CASE ( 5 ) 
-                  name = 'PSEALVLC'
+                  name = 'PMSL    '
                   error_difference = max_error_p
                   buddy_difference = max_buddy_p
                   CALL yx2xy ( slp_x(1,1   ) , jns_alloc , iew_alloc , gridded )

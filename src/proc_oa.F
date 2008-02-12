@@ -97,7 +97,7 @@ radius_influence         , oa_min_switch            )
    !  Names of all of the variables to objectively analyze.  Also, define each of the
    !  horizontal staggerings for the variables.
 
-   name         = (/ 'U       '        , 'V       '        , 'T       '        , 'RH      '        , 'PSEALVLC'         /)
+   name         = (/ 'UU      '        , 'VV      '        , 'TT      '        , 'RH      '        , 'PMSL    '         /)
    crsdot       = (/      1            ,     1             ,      1            ,     1             ,      1             /)
    scale        = (/      1.           ,     1.            ,      1.           ,     1.            ,    100.            /)
    passes_sfc   = (/ smooth_sfc_wind   , smooth_sfc_wind   , smooth_sfc_temp   , smooth_sfc_rh     ,  smooth_sfc_slp    /)
@@ -184,7 +184,7 @@ radius_influence         , oa_min_switch            )
          !  (which should end this variable loop, but that is not important).
 
 
-         IF ( ( name(ivar)(1:8) .EQ. 'PSEALVLC' ) .AND. ( kp .GT. 1 ) ) THEN
+         IF ( ( name(ivar)(1:8) .EQ. 'PMSL    ' ) .AND. ( kp .GT. 1 ) ) THEN
             CYCLE variable_loop
          END IF
 
@@ -280,7 +280,7 @@ radius_influence         , oa_min_switch            )
                               dxob   * ( ( 1.-dyob ) * dum2d ( iob+1 , job   )   + &
                                               dyob   * dum2d ( iob+1 , job+1 ) )
                   diff ( num )  = obs_value(num) / scale(ivar) - aob
-         IF ( ( name(ivar)(1:8) .EQ. 'PSEALVLC' ) ) THEN
+         IF ( ( name(ivar)(1:8) .EQ. 'PMSL    ' ) ) THEN
          if ( iob >= 11 .and. iob <= 29 ) then
          if ( job >= 11 .and. job <= 29 ) then
          ENDIF

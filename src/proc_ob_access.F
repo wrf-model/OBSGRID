@@ -79,7 +79,7 @@ put_value , put_array_index , put_qc_info )
    !  There are a couple of simple errors to detect.  Make sure that the surface
    !  is requested for sea level pressure.
 
-   oops_01 : IF ( ( request_variable .EQ. 'PSEALVLC' ) .AND. &
+   oops_01 : IF ( ( request_variable .EQ. 'PMSL    ' ) .AND. &
                   ( NINT ( request_level ) .NE. 1001 ) ) THEN
       error_number = 99999001
       error_message(1:31) = 'proc_ob_access                 '
@@ -116,7 +116,7 @@ put_value , put_array_index , put_qc_info )
             !  pressure, we do not need to consider observations without any
             !  surface ASSOCIATED.
 
-            no_upper_air_get : IF ( ( request_variable .NE. 'PSEALVLC' )    .AND. & 
+            no_upper_air_get : IF ( ( request_variable .NE. 'PMSL    ' )    .AND. & 
                  ( .NOT. ( ASSOCIATED ( obs(loop_index)%surface )  )  )  ) THEN
                CYCLE all_reports_get
             END IF no_upper_air_get
@@ -233,7 +233,7 @@ put_value , put_array_index , put_qc_info )
             !  pressure, we do not need to consider observations without any
             !  surface ASSOCIATED.
 
-            no_upper_air_use : IF ( ( request_variable .NE. 'PSEALVLC' )    .AND. & 
+            no_upper_air_use : IF ( ( request_variable .NE. 'PMSL    ' )    .AND. & 
                  ( .NOT. ( ASSOCIATED ( obs(loop_index)%surface )  )  )  ) THEN
                CYCLE all_reports_use
             END IF no_upper_air_use

@@ -102,7 +102,7 @@ value , qc )
    
       slp_vs_others : SELECT CASE ( request_variable ) 
    
-         CASE ( 'PSEALVLC' ) slp_vs_others
+         CASE ( 'PMSL    ' ) slp_vs_others
             IF ( ( not_missing ( obs%ground%slp%data ) ) .AND. &
                  ( obs%ground%slp%qc .LT. request_qc_max ) ) THEN
                value = obs%ground%slp%data
@@ -141,21 +141,21 @@ value , qc )
    
                         which_sfc_var : SELECT CASE ( request_variable ) 
    
-                           CASE ( 'U       ' ) which_sfc_var
+                           CASE ( 'UU      ' ) which_sfc_var
                               IF ( ( not_missing ( next_one%meas%u%data ) ) .AND. &
                                                  ( next_one%meas%u%qc .LT. request_qc_max ) ) THEN
                                  value = next_one%meas%u%data
                                  qc    = next_one%meas%u%qc
                               END IF
    
-                           CASE ( 'V       ' ) which_sfc_var
+                           CASE ( 'VV      ' ) which_sfc_var
                               IF ( ( not_missing ( next_one%meas%v%data ) ) .AND. &
                                                  ( next_one%meas%v%qc .LT. request_qc_max ) ) THEN
                                  value = next_one%meas%v%data
                                  qc    = next_one%meas%v%qc
                               END IF
    
-                           CASE ( 'T       ' ) which_sfc_var
+                           CASE ( 'TT      ' ) which_sfc_var
                               IF ( ( not_missing ( next_one%meas%temperature%data ) ) .AND. &
                                                  ( next_one%meas%temperature%qc .LT. request_qc_max ) ) THEN
                                  value = next_one%meas%temperature%data
@@ -220,21 +220,21 @@ value , qc )
    
                         which_var : SELECT CASE ( request_variable ) 
    
-                           CASE ( 'U       ' ) which_var
+                           CASE ( 'UU      ' ) which_var
                               IF ( ( not_missing ( next_one%meas%u%data ) ) .AND. &
                                                  ( next_one%meas%u%qc .LT. request_qc_max ) ) THEN
                                  value = next_one%meas%u%data
                                  qc    = next_one%meas%u%qc
                               END IF
    
-                           CASE ( 'V       ' ) which_var
+                           CASE ( 'VV      ' ) which_var
                               IF ( ( not_missing ( next_one%meas%v%data ) ) .AND. &
                                                  ( next_one%meas%v%qc .LT. request_qc_max ) ) THEN
                                  value = next_one%meas%v%data
                                  qc    = next_one%meas%v%qc
                               END IF
    
-                           CASE ( 'T       ' ) which_var
+                           CASE ( 'TT      ' ) which_var
                               IF ( ( not_missing ( next_one%meas%temperature%data ) ) .AND. &
                                                  ( next_one%meas%temperature%qc .LT. request_qc_max ) ) THEN
                                  value = next_one%meas%temperature%data
@@ -320,7 +320,7 @@ value , qc )
 
    slp_vs_others : SELECT CASE ( request_variable ) 
 
-      CASE ( 'PSEALVLC' ) slp_vs_others
+      CASE ( 'PMSL    ' ) slp_vs_others
          obs%ground%slp%data = value
          obs%ground%slp%qc   = qc
 
@@ -357,15 +357,15 @@ value , qc )
 
                      which_sfc_var : SELECT CASE ( request_variable ) 
 
-                        CASE ( 'U       ' ) which_sfc_var
+                        CASE ( 'UU      ' ) which_sfc_var
                            next_one%meas%u%data = value
                            next_one%meas%u%qc   = qc
 
-                        CASE ( 'V       ' ) which_sfc_var
+                        CASE ( 'VV      ' ) which_sfc_var
                            next_one%meas%v%data = value
                            next_one%meas%v%qc   = qc
 
-                        CASE ( 'T       ' ) which_sfc_var
+                        CASE ( 'TT      ' ) which_sfc_var
                            next_one%meas%temperature%data = value
                            next_one%meas%temperature%qc   = qc
 
@@ -434,15 +434,15 @@ value , qc )
 
                      which_var : SELECT CASE ( request_variable ) 
 
-                        CASE ( 'U       ' ) which_var
+                        CASE ( 'UU      ' ) which_var
                            next_one%meas%u%data = value
                            next_one%meas%u%qc   = qc
 
-                        CASE ( 'V       ' ) which_var
+                        CASE ( 'VV      ' ) which_var
                            next_one%meas%v%data = value
                            next_one%meas%v%qc   = qc
 
-                        CASE ( 'T       ' ) which_var
+                        CASE ( 'TT      ' ) which_var
                            next_one%meas%temperature%data = value
                            next_one%meas%temperature%qc   = qc
 
