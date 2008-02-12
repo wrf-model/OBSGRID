@@ -1,0 +1,26 @@
+SUBROUTINE proc_obs_sort ( obs_filename , unit , &
+obs , number_of_obs , total_number_of_obs , fatal_if_exceed_max_obs , total_dups , index , &
+print_out_obs_found , print_out_files , &
+levels , pressure , &
+max_p_extend_t , max_p_extend_w , &
+height , iew , jns , map_projection , date , time , fdda_loop) 
+
+   USE observation
+   CHARACTER ( LEN = 132 ) , INTENT ( IN )          :: obs_filename
+   INTEGER , INTENT ( IN )                          :: unit
+   INTEGER , INTENT ( OUT )                         :: number_of_obs
+   INTEGER , INTENT ( IN )                          :: total_number_of_obs
+   LOGICAL , INTENT ( IN )                          :: fatal_if_exceed_max_obs
+   INTEGER , INTENT ( OUT )                         :: total_dups
+   TYPE (report) , DIMENSION (total_number_of_obs ) :: obs
+   INTEGER       , DIMENSION (total_number_of_obs ) :: index
+   LOGICAL , INTENT ( IN )                          :: print_out_obs_found , &
+                                                       print_out_files
+   INTEGER , INTENT ( IN )                          :: levels
+   REAL    , INTENT ( IN ) , DIMENSION ( levels )   :: pressure
+   REAL                                             :: max_p_extend_t , &
+                                                       max_p_extend_w
+   INTEGER                                          :: iew , jns , map_projection
+   REAL , DIMENSION ( jns , iew , levels )          :: height
+   INTEGER , INTENT(IN)                             :: date , time , fdda_loop
+END SUBROUTINE proc_obs_sort

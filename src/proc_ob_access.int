@@ -1,0 +1,39 @@
+SUBROUTINE proc_ob_access ( request_type , request_variable , print_found_obs , &
+request_level , date , time , request_p_diff , request_qc_max , total_numobs , &
+request_numobs , obs , &
+iew_alloc , jns_alloc , kbu_alloc , &
+total_dups , map_projection , &
+get_value , get_x_location , get_y_location , get_longitude , &
+get_array_index , get_over_water , get_id , get_qc_info , &
+put_value , put_array_index , put_qc_info )
+
+   USE observation
+
+   CHARACTER ( LEN =   3 )                            :: request_type
+   CHARACTER ( LEN =   8 )                            :: request_variable
+   LOGICAL                                            :: print_found_obs
+   REAL                                               :: request_level
+   INTEGER                                            :: date , time , &
+                                                         request_p_diff   , &
+                                                         request_qc_max
+   INTEGER                                            :: request_numobs
+   INTEGER                                            :: total_numobs
+   TYPE (report) , DIMENSION ( total_numobs)          :: obs
+   INTEGER , INTENT ( IN )                            :: iew_alloc , &
+                                                         jns_alloc , &
+                                                         kbu_alloc , &
+                                                         total_dups , &
+                                                         map_projection
+   REAL                    , OPTIONAL , DIMENSION (:) :: get_value , &
+                                                         get_x_location , &
+                                                         get_y_location , &
+                                                         get_longitude
+   INTEGER                 , OPTIONAL , DIMENSION (:) :: get_array_index , &
+                                                         get_qc_info
+   LOGICAL                 , OPTIONAL , DIMENSION (:) :: get_over_water
+   CHARACTER ( LEN =   8 ) , OPTIONAL , DIMENSION (:) :: get_id
+   REAL                    , OPTIONAL , DIMENSION (:) :: put_value
+   INTEGER                 , OPTIONAL , DIMENSION (:) :: put_array_index , &
+                                                         put_qc_info
+
+END SUBROUTINE proc_ob_access

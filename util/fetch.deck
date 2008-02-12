@@ -1,0 +1,229 @@
+# QSUB -r fetch                         # request name
+# QSUB -q prem                          # job queue class
+# QSUB -o fetch.SEQN
+# QSUB -eo                              # stdout and stderr together
+# QSUB -lM 10Mw                         # maximum memory
+# QSUB -lT 3000                         # time limit
+# QSUB                                  # no more qsub commands
+
+ja
+
+#               ********************************************
+#               ****** fetch interactive/batch C shell *****
+#               *******          V2 System            ******
+#               *******           f90 only            ******
+#               ********************************************
+
+#	Note: when running this deck interactively, it assumes
+#	the source files are local and un-tared.
+
+#	This shell fetches ADP data from the NCAR MSS system and
+#	converts it into a format suitable for the little_r
+#	program.  The data are sent back to the local machine and
+#	stored on the NCAR MSS.
+
+#	This should be the user's case or experiment (used in MSS name).
+#	This is where the data will be stored on the MSS.
+
+set ExpName   = MM5V3/TEST    # MSS path name for output
+set RetPd     = 365           # MSS retention period in days
+
+#	Location where data are to be returned on local machine.
+
+set Host    = username@host.domain:/usr/tmp/username 
+
+#	The only user inputs to the fetch program are the beginning
+#	and ending dates of the observations, and a bounding box for the
+#	observation search.  These dates are given in YYYYMMDDHH.  The 
+#	ADP data are global, and include the surface observations and 
+#	upper-air soundings.  A restrictive bounding box (where 
+#	possible) reduces the cost substantially.
+#
+#       Note: No observational data are available prior to 1973, and
+#             no or limited surface observations are available 
+#             prior to 1976.
+
+set starting_date = 1993031300
+set ending_date   = 1993031400
+
+set lon_e         =  180
+set lon_w         = -180
+set lat_s         =  -90
+set lat_n         =   90
+
+#	Is there a personal copy of the source?
+
+set UseMySource = no
+
+#	########################################################
+#	########                                       #########
+#	########       END OF USER  MODIFICATIONS      #########
+#	########                                       #########
+#	########################################################
+
+unalias cd ls rm
+
+if ( $?ENVIRONMENT ) then
+   echo "environment variable defined as $ENVIRONMENT"
+else
+   setenv ENVIRONMENT INTERACTIVE
+   echo "environment variable defined as $ENVIRONMENT"
+endif
+
+if ( $ENVIRONMENT == BATCH ) then
+   cd $TMPDIR
+endif
+
+#       Get source code.
+
+if ( $ENVIRONMENT == BATCH ) then
+   if ( $UseMySource == yes ) then
+      rcp $Host/fetch.tar .
+   else
+      cp /fs/othrorgs/home0/mesouser/MM5V2/Fetch/fetch.tar fetch.tar
+      if ( ! -e fetch.tar ) then
+         msread fetch.tar /MESOUSER/MM5V2/FETCH/fetch.tar
+      endif
+   endif
+   if ( ! -e fetch.tar ) then
+      echo "The fetch.tar file does not exist.  Stopping."
+      exit ( 1 )
+   endif
+   tar -xf fetch.tar
+   rm fetch.tar
+   ls -ls
+endif
+
+#	Pull ADP surface data from the MSS.
+
+pushd adp_sfc
+./fetch_adp_sfc.csh $starting_date $ending_date >&! fetch_sfc_print &
+
+#	Build the conversion routine, set the namelist up.
+
+make cray
+m4 -Dxstryy=`echo $starting_date | cut -c1-4`  \
+   -Dxstrmm=`echo $starting_date | cut -c5-6`  \
+   -Dxstrdd=`echo $starting_date | cut -c7-8`  \
+   -Dxstrhh=`echo $starting_date | cut -c9-10` \
+   -Dxendyy=`echo $ending_date | cut -c1-4`  \
+   -Dxendmm=`echo $ending_date | cut -c5-6`  \
+   -Dxenddd=`echo $ending_date | cut -c7-8`  \
+   -Dxendhh=`echo $ending_date | cut -c9-10` \
+   -Dxloe=$lon_e -Dxlow=$lon_w -Dxlas=$lat_s -Dxlan=$lat_n \
+   namelist.template >! namelist.input
+
+#	The msreads are in the background, wait for everyone 
+#	to catch up.
+
+wait
+
+#	Run the program (convert data to little_r format).
+#	At least a single file must exist for input.
+
+if ( ( -e A.1 ) || ( -e B.1 ) || ( -e E.1 ) || ( -e F.1 ) ) then
+	( timex ./adp_sfc.exe [ABEF].[1-9]* ) >&! adp_sfc_print
+endif
+
+#	Send surface data to local machine and to MSS.
+
+set y = `echo $starting_date | cut -c1-4`
+set m = `echo $starting_date | cut -c5-6`
+set d = `echo $starting_date | cut -c7-8`
+set h = `echo $starting_date | cut -c9-10`
+
+if ( -e surface_obs_r:${y}-${m}-${d}_${h} ) then
+	if ( -e surface_obs_r.tar ) rm surface_obs_r.tar
+	if ( -e surface_obs_r.tar.gz ) rm surface_obs_r.tar.gz
+	tar -cvf surface_obs_r.tar surface_obs_r*
+	gzip surface_obs_r.tar
+	mswrite -t $RetPd surface_obs_r.tar.gz ${ExpName}/SURFACE_OBS_R.TAR.gz &
+	rcp surface_obs_r.tar.gz $Host
+endif
+popd
+
+#	Pull ADP upper-air data from the MSS
+
+pushd adp_upa
+./fetch_adp_upa.csh $starting_date $ending_date >&! fetch_upa_print &
+
+#	Build the conversion routine, set the namelist up.
+
+make cray
+m4 -Dxstryy=`echo $starting_date | cut -c1-4`  \
+   -Dxstrmm=`echo $starting_date | cut -c5-6`  \
+   -Dxstrdd=`echo $starting_date | cut -c7-8`  \
+   -Dxstrhh=`echo $starting_date | cut -c9-10` \
+   -Dxendyy=`echo $ending_date | cut -c1-4`  \
+   -Dxendmm=`echo $ending_date | cut -c5-6`  \
+   -Dxenddd=`echo $ending_date | cut -c7-8`  \
+   -Dxendhh=`echo $ending_date | cut -c9-10` \
+   -Dxloe=$lon_e -Dxlow=$lon_w -Dxlas=$lat_s -Dxlan=$lat_n \
+   namelist.template >! namelist.input
+
+#	The msreads are in the background, wait for everyone 
+#	to catch up.
+
+wait
+
+#	Run the program (convert data to little_r format).
+#	At least a single file must exist for input.
+
+if ( -e UPA.1 ) then
+	( timex ./adp_upa.exe UPA.* ) >&! adp_upa_print
+endif
+
+#	Send upper-air data to local machine and to MSS.
+
+set y = `echo $starting_date | cut -c1-4`
+set m = `echo $starting_date | cut -c5-6`
+set d = `echo $starting_date | cut -c7-8`
+set h = `echo $starting_date | cut -c9-10`
+
+if ( -e upper-air_obs_r:${y}-${m}-${d}_${h} ) then
+	if ( -e upper-air_obs_r.tar ) rm upper-air_obs_r.tar
+	if ( -e upper-air_obs_r.tar.gz ) rm upper-air_obs_r.tar.gz
+	tar -cvf upper-air_obs_r.tar upper-air_obs_r*
+	gzip upper-air_obs_r.tar
+	mswrite -t $RetPd upper-air_obs_r.tar.gz ${ExpName}/UPPER-AIR_OBS_R.TAR.gz &
+	rcp upper-air_obs_r.tar.gz $Host
+endif
+popd
+
+#	Put additional files on MSS.  These are the standard out
+#	files from the ADP program processing.
+
+cp adp_sfc/adp_sfc_print .
+cp adp_sfc/fetch_sfc_print .
+cp adp_upa/adp_upa_print .
+cp adp_upa/fetch_upa_print .
+cp adp_upa/namelist.input .
+tar -cvf fetch_info.tar adp_sfc_print adp_upa_print namelist.input fetch_sfc_print fetch_upa_print 
+mswrite -t ${RetPd} fetch_info.tar ${ExpName}/FETCH_INFO.TAR &
+
+#	Print the standard out in this file for the user's benefit.
+
+echo ADP_SFC fetch print
+cat fetch_sfc_print
+
+echo ADP_SFC print
+cat adp_sfc_print
+
+echo ADP_UPA fetch print
+cat fetch_upa_print
+
+echo ADP_UPA print
+cat adp_upa_print
+
+echo NAMELIST
+cat namelist.input
+
+#	Accounting and clean-up.
+
+if ( $ENVIRONMENT == BATCH ) then
+	date
+	echo "Waiting on mswrites ..."
+	wait
+	date
+	ja -chlst
+endif

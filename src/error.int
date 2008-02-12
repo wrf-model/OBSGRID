@@ -1,0 +1,6 @@
+SUBROUTINE error_handler ( error_number , error_message , fatal , listing )
+   INTEGER , INTENT ( IN )                    :: error_number 
+   CHARACTER *(*) , INTENT ( IN )             :: error_message
+   LOGICAL , INTENT ( IN )                    :: fatal 
+   LOGICAL , INTENT ( IN )                    :: listing
+END SUBROUTINE error_handler

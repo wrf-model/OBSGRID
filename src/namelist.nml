@@ -1,0 +1,81 @@
+   !  Record 1 NAMELIST variables.
+
+   NAMELIST /record1/  start_year                  , &
+                       start_month                 , &
+                       start_day                   , &
+                       start_hour                  , &
+                         end_year                  , &
+                         end_month                 , &
+                         end_day                   , &
+                         end_hour                  , &
+                      interval    
+
+   !  Record 2 NAMELIST variables.
+
+   NAMELIST /record2/ fg_filename                  , &
+                      obs_filename                 , &
+                      sfc_obs_filename
+
+   !  Record 3 NAMELIST variables.
+
+   NAMELIST /record3/ max_number_of_obs            , &
+                      fatal_if_exceed_max_obs    
+
+   !  Record 4 NAMELIST variables.
+
+   NAMELIST /record4/ qc_test_error_max            , &
+                      qc_test_buddy                , &
+                      qc_test_vert_consistency     , &
+                      qc_test_convective_adj       , &
+                      max_error_t                  , &
+                      max_error_uv                 , &
+                      max_error_z                  , &
+                      max_error_rh                 , &
+                      max_error_p                  , &
+                      max_buddy_t                  , &
+                      max_buddy_uv                 , &
+                      max_buddy_z                  , &
+                      max_buddy_rh                 , &
+                      max_buddy_p                  , &
+                      buddy_weight                 , &
+                      max_p_extend_t               , &
+                      max_p_extend_w    
+
+   !  Record 5 NAMELIST variables.
+
+   NAMELIST /record5/ print_found_obs              , & 
+                      print_header                 , & 
+                      print_analysis               , &
+                      print_qc_vert                , & 
+                      print_qc_dry                 , & 
+                      print_obs_files              , & 
+                      print_error_max              , &
+                      print_buddy                  , &
+                      print_oa    
+
+   !  Record 7 NAMELIST variables.
+
+   NAMELIST /record7/ use_first_guess              , &
+                      f4d                          , &
+                      intf4d                       , &
+                      lagtem
+
+   !  Record 8 NAMELIST variables.
+
+   NAMELIST /record8/ smooth_type                  , &
+                      smooth_sfc_wind              , &
+                      smooth_sfc_temp              , &
+                      smooth_sfc_rh                , &
+                      smooth_sfc_slp               , &
+                      smooth_upper_wind            , &
+                      smooth_upper_temp            , &
+                      smooth_upper_rh      
+
+   !  Record 9 NAMELIST variables.
+
+   NAMELIST /record9/ oa_type                      , &
+                      mqd_minimum_num_obs          , &
+                      mqd_maximum_num_obs          , &
+                      radius_influence             , &
+                      oa_min_switch                , &
+                      oa_max_switch    

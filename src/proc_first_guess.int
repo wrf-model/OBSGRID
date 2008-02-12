@@ -1,0 +1,47 @@
+SUBROUTINE proc_first_guess ( filename , &
+bhi , bhr , &
+num3d , num2d , num1d , &
+t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
+latitude_x , longitude_x , latitude_d , longitude_d , &
+slp_x , slp_C , sst , &
+iewd , jnsd , kbu , pressure , &
+print_analysis , &
+current_date_8 , current_time_6 , date_char , icount )
+   CHARACTER ( LEN = 132 ) ,INTENT ( IN )           :: filename
+
+   INTEGER                , INTENT ( OUT )          :: num3d , &
+                                                       num2d , &
+                                                       num1d
+   INTEGER                , INTENT ( IN )           :: iewd       , &
+                                                       jnsd       , &
+                                                       kbu      
+
+   REAL, INTENT ( OUT ) , DIMENSION(kbu)            :: pressure
+
+   REAL , INTENT ( OUT ) , DIMENSION(jnsd,iewd,kbu) :: t  , &
+                                                       u  , &
+                                                       v  , &
+                                                       uA , &
+                                                       vA , &
+                                                       uC , &
+                                                       vC , &
+                                                       h  , &
+                                                       rh , &
+                                                       pres
+
+   REAL , INTENT ( OUT ) , DIMENSION(jnsd,iewd)     :: terrain      , &
+                                                       latitude_x   , &
+                                                       longitude_x  , &
+                                                       latitude_d   , &
+                                                       longitude_d  , &
+                                                       slp_x        , &
+                                                       slp_C        , &
+                                                       sst
+   LOGICAL                                          :: print_analysis
+   INTEGER , INTENT ( IN )          :: current_date_8 , & 
+                                       current_time_6 , & 
+                                       icount
+   CHARACTER (LEN=19)                               :: date_char
+   INCLUDE 'big_header.inc'
+
+END SUBROUTINE proc_first_guess

@@ -1,0 +1,15 @@
+SUBROUTINE sample ( name , istagu , istagv , &
+field1 , field2 , field3 , &
+iewd , jnsd , kbu )
+   CHARACTER *(*) , INTENT ( IN )                 :: name
+   REAL , DIMENSION ( : , : , : ) , &
+                         OPTIONAL , INTENT ( IN ) :: field3
+   REAL , DIMENSION ( : , : ) , &
+                         OPTIONAL , INTENT ( IN ) :: field2
+   REAL , DIMENSION ( : ) , &
+                         OPTIONAL , INTENT ( IN ) :: field1
+   INTEGER , OPTIONAL , INTENT ( IN )             :: iewd , &
+                                                     jnsd , &
+                                                     kbu
+   INTEGER , OPTIONAL , INTENT ( IN )             :: istagu , istagv
+END SUBROUTINE sample

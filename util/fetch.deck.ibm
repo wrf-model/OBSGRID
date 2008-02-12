@@ -1,0 +1,226 @@
+#!/bin/csh
+## for serial job
+# @ environment = COPY_ALL;
+# @ job_name   = REGRID.job
+# @ output     = fetch.out
+# @ error      = fetch.err
+# @ checkpoint = no
+# @ wall_clock_limit = 1500
+# @ class      = com_reg
+# @ queue
+
+if ( ! -e /ptmp/$USER ) then
+   mkdir  /ptmp/$USER
+endif
+set TMPDIR=/ptmp/$USER
+cd $TMPDIR
+
+
+#               ********************************************
+#               ****** fetch interactive/batch C shell *****
+#               *******        NCAR IBM's only        ******
+#               *******           f90 only            ******
+#               ********************************************
+
+#	This shell fetches ADP data from the NCAR MSS system and
+#	converts it into a format suitable for the little_r
+#	program.  The data are stored on the NCAR MSS.
+
+#       Three types of data files are created:
+#             obs:DATE             : Upper-air and surface data used as 
+#                                    input to little_R
+#             surface_obs_r:DATE   : Surface data needed for FDDA in lillte_r 
+#                                    (if no FDDA will be done, these are not 
+#                                    needed, since they are also contained 
+#                                    in obs:DATE)
+#             upper-air_obs_r:DATE : Upper-air data (this file is contained 
+#                                    in obs:DATE file, and is not needed for 
+#                                    input to little_r)
+#
+
+#	This should be the user's case or experiment (used in MSS name).
+#	This is where the data will be stored on the MSS.
+
+set ExpName   = MM5V3/TEST    # MSS path name for output
+set RetPd     = 365           # MSS retention period in days
+
+#	The only user inputs to the fetch program are the beginning
+#	and ending dates of the observations, and a bounding box for the
+#	observation search.  These dates are given in YYYYMMDDHH.  The 
+#	ADP data are global, and include the surface observations and 
+#	upper-air soundings.  A restrictive bounding box (where 
+#	possible) reduces the cost substantially.
+#
+#       Note: No observational data are available prior to 1973, and
+#             no or limited surface observations are available 
+#             prior to 1976.
+
+set starting_date = 1993031300
+set ending_date   = 1993031400
+
+set lon_e         =  180
+set lon_w         = -180
+set lat_s         =  -90
+set lat_n         =   90
+
+
+#	########################################################
+#	########                                       #########
+#	########       END OF USER  MODIFICATIONS      #########
+#	########                                       #########
+#	########################################################
+
+#       Get source code.
+
+      cp /fs/othrorgs/home0/mesouser/MM5V3/FETCH.TAR.gz fetch.tar.gz
+      if ( ! -e fetch.tar.gz ) then
+         msread fetch.tar.gz /MESOUSER/MM5V3/FETCH.TAR.gz
+      endif
+      gunzip fetch.tar.gz
+      if ( ! -e fetch.tar ) then
+         echo "The fetch.tar file does not exist.  Stopping."
+         exit ( 1 )
+      endif
+      tar -xf fetch.tar
+      rm fetch.tar
+   
+   cd FETCH
+
+#	Pull ADP surface data from the MSS.
+
+pushd adp_sfc
+./fetch_adp_sfc.csh $starting_date $ending_date >&! fetch_sfc_print &
+
+#	Build the conversion routine, set the namelist up.
+
+make 
+m4 -Dxstryy=`echo $starting_date | cut -c1-4`  \
+   -Dxstrmm=`echo $starting_date | cut -c5-6`  \
+   -Dxstrdd=`echo $starting_date | cut -c7-8`  \
+   -Dxstrhh=`echo $starting_date | cut -c9-10` \
+   -Dxendyy=`echo $ending_date | cut -c1-4`  \
+   -Dxendmm=`echo $ending_date | cut -c5-6`  \
+   -Dxenddd=`echo $ending_date | cut -c7-8`  \
+   -Dxendhh=`echo $ending_date | cut -c9-10` \
+   -Dxloe=$lon_e -Dxlow=$lon_w -Dxlas=$lat_s -Dxlan=$lat_n \
+   namelist.template >! namelist.input
+
+#	The msreads are in the background, wait for everyone 
+#	to catch up.
+
+wait
+
+#	Run the program (convert data to little_r format).
+#	At least a single file must exist for input.
+
+if ( ( -e A.1 ) || ( -e B.1 ) || ( -e E.1 ) || ( -e F.1 ) ) then
+	( timex ./adp_sfc.exe [ABEF].[1-9]* ) >&! adp_sfc_print
+endif
+
+#	Send surface data to MSS.
+
+set y = `echo $starting_date | cut -c1-4`
+set m = `echo $starting_date | cut -c5-6`
+set d = `echo $starting_date | cut -c7-8`
+set h = `echo $starting_date | cut -c9-10`
+
+if ( -e surface_obs_r:${y}-${m}-${d}_${h} ) then
+	if ( -e surface_obs_r.tar ) rm surface_obs_r.tar
+	if ( -e surface_obs_r.tar.gz ) rm surface_obs_r.tar.gz
+	tar -cvf surface_obs_r.tar surface_obs_r*
+	gzip surface_obs_r.tar
+	mswrite -t $RetPd surface_obs_r.tar.gz ${ExpName}/SURFACE_OBS_R.TAR.gz &
+endif
+popd
+
+#	Pull ADP upper-air data from the MSS
+
+pushd adp_upa
+./fetch_adp_upa.csh $starting_date $ending_date >&! fetch_upa_print &
+
+#	Build the conversion routine, set the namelist up.
+
+make 
+m4 -Dxstryy=`echo $starting_date | cut -c1-4`  \
+   -Dxstrmm=`echo $starting_date | cut -c5-6`  \
+   -Dxstrdd=`echo $starting_date | cut -c7-8`  \
+   -Dxstrhh=`echo $starting_date | cut -c9-10` \
+   -Dxendyy=`echo $ending_date | cut -c1-4`  \
+   -Dxendmm=`echo $ending_date | cut -c5-6`  \
+   -Dxenddd=`echo $ending_date | cut -c7-8`  \
+   -Dxendhh=`echo $ending_date | cut -c9-10` \
+   -Dxloe=$lon_e -Dxlow=$lon_w -Dxlas=$lat_s -Dxlan=$lat_n \
+   namelist.template >! namelist.input
+
+#	The msreads are in the background, wait for everyone 
+#	to catch up.
+
+wait
+
+#	Run the program (convert data to little_r format).
+#	At least a single file must exist for input.
+
+if ( -e UPA.1 ) then
+	( timex ./adp_upa.exe UPA.* ) >&! adp_upa_print
+endif
+
+#	Send upper-air data to MSS.
+
+set y = `echo $starting_date | cut -c1-4`
+set m = `echo $starting_date | cut -c5-6`
+set d = `echo $starting_date | cut -c7-8`
+set h = `echo $starting_date | cut -c9-10`
+
+if ( -e upper-air_obs_r:${y}-${m}-${d}_${h} ) then
+	if ( -e upper-air_obs_r.tar ) rm upper-air_obs_r.tar
+	if ( -e upper-air_obs_r.tar.gz ) rm upper-air_obs_r.tar.gz
+	tar -cvf upper-air_obs_r.tar upper-air_obs_r*
+	gzip upper-air_obs_r.tar
+	mswrite -t $RetPd upper-air_obs_r.tar.gz ${ExpName}/UPPER-AIR_OBS_R.TAR.gz &
+
+	if ( -e obs.tar ) rm obs.tar
+	if ( -e obs.tar.gz ) rm obs.tar.gz
+          foreach fil ( upper-air_obs_r:* )
+            set dd = ` echo $fil | cut -c17-30 `
+            set fil2 = ../adp_sfc/surface\*{$dd}
+            cat $fil > obs:$dd
+            cat $fil2 >> obs:$dd
+        end
+	tar -cvf obs.tar obs*
+	gzip obs.tar
+	mswrite -t $RetPd obs.tar.gz ${ExpName}/OBS.TAR.gz &
+
+endif
+popd
+
+#	Put additional files on MSS.  These are the standard out
+#	files from the ADP program processing.
+
+cp adp_sfc/adp_sfc_print .
+cp adp_sfc/fetch_sfc_print .
+cp adp_upa/adp_upa_print .
+cp adp_upa/fetch_upa_print .
+cp adp_upa/namelist.input .
+tar -cvf fetch_info.tar adp_sfc_print adp_upa_print namelist.input fetch_sfc_print fetch_upa_print 
+mswrite -t ${RetPd} fetch_info.tar ${ExpName}/FETCH_INFO.TAR &
+
+#	Print the standard out in this file for the user's benefit.
+
+echo ADP_SFC fetch print
+cat fetch_sfc_print
+
+echo ADP_SFC print
+cat adp_sfc_print
+
+echo ADP_UPA fetch print
+cat fetch_upa_print
+
+echo ADP_UPA print
+cat adp_upa_print
+
+echo NAMELIST
+cat namelist.input
+
+echo "DONE"
+
+exit

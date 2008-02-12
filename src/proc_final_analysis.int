@@ -1,0 +1,36 @@
+SUBROUTINE proc_final_analysis ( filename , filename_out , &
+bhid , bhrd , t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
+latitude_x , longitude_x , latitude_d , longitude_d , &
+slp_x , slp_C , sst , tobbox , &
+pressure , ptop , &
+iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , & 
+print_header , print_analysis , & 
+current_date_8 , current_time_6 , fdda_loop , icount_fdda , &
+icount , total_count , interval , &
+max_error_t , max_error_uv           , &
+max_error_z , max_error_p , &
+buddy_weight , start_date , root_filename )
+
+   CHARACTER *(*)         , INTENT ( INOUT )      :: filename
+   CHARACTER *(*)         , INTENT ( INOUT )      :: filename_out
+   CHARACTER *(*)         , INTENT ( INOUT )      :: root_filename
+   INTEGER , DIMENSION (50,20) , INTENT ( INOUT ) :: bhid
+   REAL , DIMENSION (20,20)    , INTENT ( INOUT ) :: bhrd
+   INCLUDE 'first_guess_size.inc'
+   INCLUDE 'first_guess.inc'
+   LOGICAL                                        :: print_header , &
+                                                     print_analysis
+   INTEGER                                        :: current_date_8 , & 
+                                                     current_time_6 , &
+                                                     fdda_loop
+   INTEGER                                        :: icount , total_count , &
+                                                     interval , icount_fdda
+   REAL                                           :: max_error_t  , &
+                                                     max_error_uv , &
+                                                     max_error_z  , &
+                                                     max_error_p  , &
+                                                     buddy_weight
+   CHARACTER(LEN=19)                              :: start_date
+   REAL , DIMENSION(jns_alloc,iew_alloc)          :: tobbox
+   INCLUDE 'proc_get_info_header.inc'
+END SUBROUTINE proc_final_analysis

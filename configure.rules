@@ -1,0 +1,24 @@
+#	The user should not need to modify any of this.
+
+#	Suffixes with which the LITTLE_R Makefile is to be concerned.
+
+.SUFFIXES: .F .i .o .f .c
+
+#	Build rules for the little_r program.
+
+.F.i:
+	$(RM) $@
+	$(CPP) $(CPPFLAGS) $*.F > $@
+
+.F.o:
+	$(RM) $@
+	$(CPP) $(CPPFLAGS) $*.F > $*.f
+	$(FC) -c $(FCFLAGS) $*.f
+
+.F.f:
+	$(RM) $@
+	$(CPP) $(CPPFLAGS) $*.F > $@
+
+.f.o:
+	$(RM) $@
+	$(FC) -c $(FCFLAGS) $*.f

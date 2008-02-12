@@ -1,0 +1,58 @@
+SUBROUTINE proc_qc ( iew , jns , kmax , number_of_obs , &
+                     total_dups , map_projection , &
+                     qc_test_error_max        , qc_test_buddy          , &
+                     qc_test_vert_consistency , qc_test_convective_adj , &
+                     max_error_t      , max_error_uv   , &
+                     max_error_z      , max_error_rh   , &
+                     max_error_p      , print_error_max , &
+                     max_buddy_t      , max_buddy_uv   , &
+                     max_buddy_z      , max_buddy_rh   , &
+                     max_buddy_p      , print_buddy    , &
+                     print_found_obs    , &
+                     print_vert       , print_dry       , & 
+                     pressure , date , time , dx , buddy_weight , &
+                     obs , index , max_number_of_obs , &
+                     t , u , v , h , rh , slp_x , sst , tobbox )
+   USE observation
+   INTEGER , INTENT ( IN )                    :: iew, jns, kmax ,    &
+                                                 number_of_obs ,     &
+                                                 total_dups ,        &
+                                                 map_projection
+   LOGICAL , INTENT ( IN )                    :: qc_test_error_max         , &
+                                                 qc_test_buddy             , &
+                                                 qc_test_vert_consistency  , &
+                                                 qc_test_convective_adj
+   REAL    , INTENT ( IN )                    :: max_error_p,             &
+                                                 max_error_t,             &
+                                                 max_error_uv,            &
+                                                 max_error_z,             &
+                                                 max_error_rh,            &
+                                                 max_buddy_p,             &
+                                                 max_buddy_t,             &
+                                                 max_buddy_uv,            &
+                                                 max_buddy_z,             &
+                                                 max_buddy_rh
+   LOGICAL , INTENT ( IN )                    :: print_error_max,         &
+                                                 print_buddy    ,         &
+                                                 print_found_obs ,        &
+                                                 print_vert      ,        &
+                                                 print_dry
+   REAL    , INTENT ( IN ) , DIMENSION (kmax) :: pressure
+   INTEGER , INTENT ( IN )                    :: date , time
+   REAL    , INTENT ( IN )                    :: dx , & 
+                                                 buddy_weight
+   INTEGER , INTENT ( IN )                    :: max_number_of_obs
+   TYPE (report) , DIMENSION (max_number_of_obs ) &
+                                              :: obs
+   INTEGER       , DIMENSION (max_number_of_obs ) &
+                                              :: index
+   REAL , DIMENSION(jns,iew,kmax)  :: t  , &
+                                      u  , &
+                                      v  , &
+                                      h  , &
+                                      rh
+
+   REAL , DIMENSION(jns,iew)       :: slp_x        , &
+                                      sst          , &
+                                      tobbox
+END SUBROUTINE proc_qc

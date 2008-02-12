@@ -1,0 +1,473 @@
+#!/bin/csh
+## for serial job
+# @ environment = COPY_ALL;
+# @ job_name   = myjob.job
+# @ output     = myjob.out
+# @ error      = myjob.err
+# @ checkpoint = no
+# @ wall_clock_limit = 1500
+# @ class      = com_reg
+# @ queue
+
+
+if ( ! -e /ptmp/$USER ) then
+   mkdir  /ptmp/$USER
+endif
+set TMPDIR=/ptmp/$USER
+cd $TMPDIR
+
+
+#               ********************************************
+#               ****** fetch interactive/batch C shell *****
+#               *******        NCAR IBM's only        ******
+#               *******           f90 only            ******
+#               ********************************************
+#       This shell fetches ADP data from the NCAR MSS system and
+#       converts it into a format suitable for the little_r
+
+#	This should be the user's case or experiment (used in MSS name).
+#	This is where the data will be stored on the MSS.
+
+set ExpName   = MM5V3/V35        # MSS path name for output
+set RetPd     = 365              # MSS retention period in days
+
+#
+# Set the starting date of the time period you want to process:
+#
+ set START_YEAR  = 1993   # Year (Four digits)
+ set START_MONTH = 03     # Month ( 01 - 12 )
+ set START_DAY   = 13     # Day ( 01 - 31 )
+ set START_HOUR  = 00     # Hour ( 00 - 23 )
+
+ set END_YEAR  = 1993   # Year (Four digits)
+ set END_MONTH = 03     # Month ( 01 - 12 )
+ set END_DAY   = 14     # Day ( 01 - 31 )
+ set END_HOUR  = 00     # Hour ( 00 - 23 )
+
+ set INTERVAL =  43200 # Time interval (seconds) to process.
+
+#
+# Set boxing for observational data search
+#
+set lon_e         =  180
+set lon_w         = -180
+set lat_s         =  -89
+set lat_n         =   89
+
+#
+# Set input file name
+#
+set regrid = ( REGRID_DOMAIN1 )      # File should be on mass storage and will be read from $ExpName
+
+#
+# Namelist parameters for little_r record3
+ set max_number_of_obs           = 10000
+ set fatal_if_exceed_max_obs     = .TRUE.
+
+#
+# Namelist parameters for little_r record4
+ set qc_test_error_max           = .TRUE.
+ set qc_test_buddy               = .TRUE.
+ set qc_test_vert_consistency    = .FALSE.
+ set qc_test_convective_adj      = .FALSE.
+ set max_error_t                 = 10
+ set max_error_uv                = 13
+ set max_error_z                 = 8
+ set max_error_rh                = 50
+ set max_error_p                 = 600
+ set max_buddy_t                 = 8
+ set max_buddy_uv                = 8
+ set max_buddy_z                 = 8
+ set max_buddy_rh                = 40
+ set max_buddy_p                 = 800
+ set buddy_weight                = 1.0
+ set max_p_extend_t              = 1300
+ set max_p_extend_w              = 1300
+
+#
+# Namelist parameters for little_r record5
+ set print_obs_files             = .TRUE.
+ set print_found_obs             = .FALSE.
+ set print_header                = .FALSE.
+ set print_analysis              = .FALSE.
+ set print_qc_vert               = .FALSE.
+ set print_qc_dry                = .FALSE.
+ set print_error_max             = .FALSE.
+ set print_buddy                 = .FALSE.
+ set print_oa                    = .FALSE.
+
+#
+# Namelist parameters for little_r record7
+ set use_first_guess             = .TRUE.
+ set f4d                         = .TRUE.
+ set intf4d                      =  10800 
+ set lagtem                      = .FALSE. 
+
+#
+# Namelist parameters for little_r record8
+ set smooth_type                 =  1
+ set smooth_sfc_wind             =  0
+ set smooth_sfc_temp             =  0
+ set smooth_sfc_rh               =  0
+ set smooth_sfc_slp              =  0
+ set smooth_upper_wind           =  0
+ set smooth_upper_temp           =  0
+ set smooth_upper_rh             =  0
+
+#
+# Namelist parameters for little_r record9
+ set oa_type                     = 'MQD'
+ set mqd_minimum_num_obs         = 30
+ set mqd_maximum_num_obs         = 1000
+ set radius_influence            = 4
+ set oa_min_switch               = .TRUE.
+ set oa_max_switch               = .TRUE.
+
+
+
+#	########################################################
+#	########                                       #########
+#	########       END OF USER  MODIFICATIONS      #########
+#	########                                       #########
+#	########################################################
+
+#       Get source code.
+
+#   if ( $UseMySource == yes ) then
+#      rcp $Host/FETCH.TAR .
+#      rcp $Host/LITTLE_R.TAR .
+#   else
+      cp /fs/othrorgs/home0/mesouser/MM5V3/FETCH.TAR.gz FETCH.TAR.gz
+      if ( ! -e FETCH.TAR.gz ) then
+         msread FETCH.TAR.gz /MESOUSER/MM5V3/FETCH.TAR.gz
+      endif
+      cp /fs/othrorgs/home0/mesouser/MM5V3/LITTLE_R.TAR.gz LITTLE_R.TAR.gz
+      if ( ! -e LITTLE_R.TAR.gz ) then
+         msread LITTLE_R.TAR.gz /MESOUSER/MM5V3/LITTLE_R.TAR.gz
+      endif
+#   endif
+   gunzip FETCH.TAR.gz
+   if ( ! -e FETCH.TAR ) then
+      echo "The FETCH.TAR file does not exist.  Stopping."
+      exit ( 1 )
+   endif
+   gunzip LITTLE_R.TAR.gz
+   if ( ! -e LITTLE_R.TAR ) then
+      echo "The LITTLE_R.TAR file does not exist.  Stopping."
+      exit ( 1 )
+   endif
+   tar -xf FETCH.TAR
+   rm FETCH.TAR
+   tar -xf LITTLE_R.TAR
+   rm LITTLE_R.TAR
+
+#____________________________________________________________________________
+# Get the observational data with FETCH
+#
+
+cd FETCH
+
+set starting_date = ` echo $START_YEAR""$START_MONTH""$START_DAY""$START_HOUR `
+set ending_date   = ` echo $END_YEAR""$END_MONTH""$END_DAY""$END_HOUR `
+
+#       Pull ADP surface data from the MSS.
+
+pushd adp_sfc
+./fetch_adp_sfc.csh $starting_date $ending_date >&! fetch_sfc_print &
+
+#       Build the conversion routine, set the namelist up.
+
+make
+m4 -Dxstryy=`echo $starting_date | cut -c1-4`  \
+   -Dxstrmm=`echo $starting_date | cut -c5-6`  \
+   -Dxstrdd=`echo $starting_date | cut -c7-8`  \
+   -Dxstrhh=`echo $starting_date | cut -c9-10` \
+   -Dxendyy=`echo $ending_date | cut -c1-4`  \
+   -Dxendmm=`echo $ending_date | cut -c5-6`  \
+   -Dxenddd=`echo $ending_date | cut -c7-8`  \
+   -Dxendhh=`echo $ending_date | cut -c9-10` \
+   -Dxloe=$lon_e -Dxlow=$lon_w -Dxlas=$lat_s -Dxlan=$lat_n \
+   namelist.template >! namelist.input
+
+#       The msreads are in the background, wait for everyone
+#       to catch up.
+
+wait
+
+#       Run the program (convert data to little_r format).
+#       At least a single file must exist for input.
+
+if ( ( -e A.1 ) || ( -e B.1 ) || ( -e E.1 ) || ( -e F.1 ) ) then
+        ( timex ./adp_sfc.exe [ABEF].[1-9]* ) >&! adp_sfc_print
+endif
+
+#       Send surface data to MSS.
+
+set y = `echo $starting_date | cut -c1-4`
+set m = `echo $starting_date | cut -c5-6`
+set d = `echo $starting_date | cut -c7-8`
+set h = `echo $starting_date | cut -c9-10`
+
+if ( -e surface_obs_r:${y}-${m}-${d}_${h} ) then
+        if ( -e SURFACE_OBS_R.TAR ) rm SURFACE_OBS_R.TAR
+        if ( -e SURFACE_OBS_R.TAR.gz ) rm SURFACE_OBS_R.TAR.gz
+        tar -cvf SURFACE_OBS_R.TAR.gz surface_obs_r*
+        gzip SURFACE_OBS_R.TAR.gz
+        echo " mswrite -t $RetPd ${ExpName}/SURFACE_OBS_R.TAR.gz "
+        mswrite -t $RetPd SURFACE_OBS_R.TAR.gz ${ExpName}/SURFACE_OBS_R.TAR.gz &
+        mv surface_obs_r*  ../../LITTLE_R/.
+endif
+popd
+
+#       Pull ADP upper-air data from the MSS
+
+pushd adp_upa
+./fetch_adp_upa.csh $starting_date $ending_date >&! fetch_upa_print &
+
+#       Build the conversion routine, set the namelist up.
+
+make
+m4 -Dxstryy=`echo $starting_date | cut -c1-4`  \
+   -Dxstrmm=`echo $starting_date | cut -c5-6`  \
+   -Dxstrdd=`echo $starting_date | cut -c7-8`  \
+   -Dxstrhh=`echo $starting_date | cut -c9-10` \
+   -Dxendyy=`echo $ending_date | cut -c1-4`  \
+   -Dxendmm=`echo $ending_date | cut -c5-6`  \
+   -Dxenddd=`echo $ending_date | cut -c7-8`  \
+   -Dxendhh=`echo $ending_date | cut -c9-10` \
+   -Dxloe=$lon_e -Dxlow=$lon_w -Dxlas=$lat_s -Dxlan=$lat_n \
+   namelist.template >! namelist.input
+
+#       The msreads are in the background, wait for everyone
+#       to catch up.
+
+wait
+
+#       Run the program (convert data to little_r format).
+#       At least a single file must exist for input.
+
+if ( -e UPA.1 ) then
+        ( timex ./adp_upa.exe UPA.* ) >&! adp_upa_print
+endif
+
+#       Send upper-air data to local machine and to MSS.
+
+set y = `echo $starting_date | cut -c1-4`
+set m = `echo $starting_date | cut -c5-6`
+set d = `echo $starting_date | cut -c7-8`
+set h = `echo $starting_date | cut -c9-10`
+
+if ( -e upper-air_obs_r:${y}-${m}-${d}_${h} ) then
+        if ( -e upper-air_obs_r.tar ) rm upper-air_obs_r.tar
+        if ( -e upper-air_obs_r.tar.gz ) rm upper-air_obs_r.tar.gz
+        tar -cvf upper-air_obs_r.tar upper-air_obs_r*
+        gzip upper-air_obs_r.tar
+        echo " mswrite -t $RetPd ${ExpName}/UPPER-AIR_OBS_R.TAR.gz "
+        mswrite -t $RetPd upper-air_obs_r.tar.gz ${ExpName}/UPPER-AIR_OBS_R.TAR.gz &
+
+        if ( -e OBS.TAR ) rm OBS.TAR
+        if ( -e OBS.TAR.gz ) rm OBS.TAR.gz
+          foreach fil ( upper-air_obs_r:* )
+            set dd = ` echo $fil | cut -c17-30 `
+            set fil2 = ../../LITTLE_R/surface\*{$dd}
+            cat $fil > obs:$dd
+            cat $fil2 >> obs:$dd
+        end
+        tar -cvf OBS.TAR obs*
+        gzip OBS.TAR
+        echo " mswrite -t $RetPd ${ExpName}/OBS.TAR.gz "
+        mswrite -t $RetPd OBS.TAR.gz ${ExpName}/OBS.TAR.gz &
+        mv obs:* ../../LITTLE_R/.
+
+endif
+popd
+
+cd ..
+
+#____________________________________________________________________________
+# Run Little_r
+#
+
+cd LITTLE_R
+
+# Make code
+make
+
+# 
+#  Get data
+# 
+
+msread regrid $ExpName/$regrid
+
+set dif1 = ` expr $INTERVAL \/ 3600 `
+set dif2 = ` expr $intf4d \/ 3600 `
+
+
+set startdate = ` echo $START_YEAR"-"$START_MONTH"-"$START_DAY"_"$START_HOUR `
+set endn = ` echo $END_YEAR""$END_MONTH""$END_DAY""$END_HOUR `
+set curn = ` echo $START_YEAR""$START_MONTH""$START_DAY""$START_HOUR `
+
+set num = 0
+set idth = 0
+set itimint = $dif1
+set odate = ( )
+while ( $curn < $endn )
+   @ num ++
+   set ndate = `./util/geth_newdate ${startdate} ${idth}`
+   set odate = ( ${odate} \'obs:${ndate}\' )
+   set curn = `echo ${ndate} | cut -c 1-4,6-7,9-10,12-13`
+   @ idth = $idth + $itimint
+end
+
+echo "odate = $odate"
+
+
+set curn = ` echo $START_YEAR""$START_MONTH""$START_DAY""$START_HOUR `
+set num = 0
+set idth = 0
+set itimint = $dif2
+set sdate = ( )
+while ( $curn < $endn )
+   @ num ++
+   set ndate = `./util/geth_newdate ${startdate} ${idth}`
+   set sdate = ( ${sdate} \'surface_obs_r:${ndate}\' )
+   set curn = `echo ${ndate} | cut -c 1-4,6-7,9-10,12-13`
+   @ idth = $idth + $itimint
+end
+
+echo "sdate = $sdate"
+
+
+#_____________________________________________________________________________
+cat << End_Of_Namelist | sed -e 's/#.*//; s/  *$//' > ./namelist.input
+&record1
+ start_year                  = $START_YEAR
+ start_month                 = $START_MONTH
+ start_day                   = $START_DAY
+ start_hour                  = $START_HOUR
+ end_year                    = $END_YEAR
+ end_month                   = $END_MONTH
+ end_day                     = $END_DAY
+ end_hour                    = $END_HOUR
+ interval                    = $INTERVAL 
+/
+
+&record2
+ fg_filename                 = 'regrid'
+ obs_filename                = $odate
+ sfc_obs_filename            = $sdate
+/
+
+&record3
+ max_number_of_obs           = $max_number_of_obs
+ fatal_if_exceed_max_obs     = $fatal_if_exceed_max_obs
+/
+
+&record4
+ qc_test_error_max           = $qc_test_error_max
+ qc_test_buddy               = $qc_test_buddy
+ qc_test_vert_consistency    = $qc_test_vert_consistency
+ qc_test_convective_adj      = $qc_test_convective_adj
+ max_error_t                 = $max_error_t
+ max_error_uv                = $max_error_uv
+ max_error_z                 = $max_error_z
+ max_error_rh                = $max_error_rh
+ max_error_p                 = $max_error_p
+ max_buddy_t                 = $max_buddy_t
+ max_buddy_uv                = $max_buddy_uv
+ max_buddy_z                 = $max_buddy_z
+ max_buddy_rh                = $max_buddy_rh
+ max_buddy_p                 = $max_buddy_p
+ buddy_weight                = $buddy_weight
+ max_p_extend_t              = $max_p_extend_t
+ max_p_extend_w              = $max_p_extend_w
+/
+
+&record5
+ print_obs_files             = $print_obs_files
+ print_found_obs             = $print_found_obs
+ print_header                = $print_header
+ print_analysis              = $print_analysis
+ print_qc_vert               = $print_qc_vert
+ print_qc_dry                = $print_qc_dry
+ print_error_max             = $print_error_max
+ print_buddy                 = $print_buddy
+ print_oa                    = $print_oa
+/
+
+&record7
+ use_first_guess             = $use_first_guess
+ f4d                         = $f4d
+ intf4d                      = $intf4d
+ lagtem                      = $lagtem
+/
+
+&record8
+ smooth_type                 = $smooth_type
+ smooth_sfc_wind             = $smooth_sfc_wind
+ smooth_sfc_temp             = $smooth_sfc_temp
+ smooth_sfc_rh               = $smooth_sfc_rh
+ smooth_sfc_slp              = $smooth_sfc_slp
+ smooth_upper_wind           = $smooth_upper_wind
+ smooth_upper_temp           = $smooth_upper_temp
+ smooth_upper_rh             = $smooth_upper_rh
+/
+
+&record9
+ oa_type                     = '$oa_type'
+ mqd_minimum_num_obs         = $mqd_minimum_num_obs
+ mqd_maximum_num_obs         = $mqd_maximum_num_obs
+ radius_influence            = $radius_influence
+ oa_min_switch               = $oa_min_switch
+ oa_max_switch               = $oa_max_switch
+/
+
+End_Of_Namelist
+
+#_____________________________________________________________________________
+# Run Little_r
+#
+
+little_r >& little_r.log
+
+#_____________________________________________________________________________
+# Clean up and write files to mass storage
+
+echo "Move LITTLE_R files to mass storage"
+echo " "
+foreach file ( LITTLE_R_DOMAIN* )
+  echo "mswrite " $file
+  mswrite -t $RetPd $file $ExpName/$file
+end
+echo " mswrite -t $RetPd $ExpName/little_r.log "
+mswrite -t $RetPd little_r.log $ExpName/little_r.log
+if ( $f4d == .TRUE. ) then
+  foreach file ( SFCFDDA_DOMAIN* )
+   echo " mswrite -t $RetPd ${ExpName}/$file "
+   mswrite -t $RetPd $file ${ExpName}/$file
+  end
+endif
+if ( $print_obs_files == .TRUE. ) then
+  tar -cf RESULT_OUT.tar result_out*
+  tar -cf USEFUL_OUT.tar useful_out*
+  tar -cf DISCARD_OUT.tar discard_out*
+  tar -cf QC_OUT.tar qc_out*
+  tar -cf OBS_USED.tar obs_used*
+  gzip *.tar
+  echo " mswrite -t $RetPd $ExpName/RESULT_OUT.tar.gz "
+  mswrite -t $RetPd RESULT_OUT.tar.gz $ExpName/RESULT_OUT.tar.gz
+  echo " mswrite -t $RetPd $ExpName/USEFUL_OUT.tar.gz "
+  mswrite -t $RetPd USEFUL_OUT.tar.gz $ExpName/USEFUL_OUT.tar.gz
+  echo " mswrite -t $RetPd $ExpName/DISCARD_OUT.tar.gz "
+  mswrite -t $RetPd DISCARD_OUT.tar.gz $ExpName/DISCARD_OUT.tar.gz
+  echo " mswrite -t $RetPd $ExpName/QC_OUT.tar.gz "
+  mswrite -t $RetPd QC_OUT.tar.gz $ExpName/QC_OUT.tar.gz
+  echo " mswrite -t $RetPd $ExpName/OBS_USED.tar.gz "
+  mswrite -t $RetPd OBS_USED.tar.gz $ExpName/OBS_USED.tar.gz
+endif
+
+#_____________________________________________________________________________
+
+echo "DONE"
+
+exit

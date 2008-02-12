@@ -1,0 +1,47 @@
+SUBROUTINE proc_get_info_header ( print_header , program , &
+iewc , jnsc , map_projection , expanded , iewe , jnse , &
+dxc , lat_center , lon_center , cone_factor , true_lat1 , true_lat2 , pole , &
+domain_id , mother_id , nest_level , &
+iewd , jnsd , iew_startm , jns_startm , &
+ratio_wrt_coarse , ratio_wrt_mother , &
+dxd , xew_startc , yns_startc , &
+kbu , &
+ptop , help )
+  
+   LOGICAL            :: print_header
+   
+   INTEGER , OPTIONAL :: iewc              , & ! coarse grid i size 
+                         jnsc              , & ! coarse grid j size
+                         map_projection    , & ! 1=LC, 2=PS, 3=MC
+                         expanded          , & ! 1=expanded; 0=not expanded
+                         iewe              , & ! expanded grid i size
+                         jnse              , & ! expanded grid j size
+                         domain_id         , & ! domain ID
+                         mother_id         , & ! mother ID
+                         nest_level        , & ! nest level (0=coarse)
+                         iewd              , & ! domain i size
+                         jnsd              , & ! domain j size
+                         iew_startm        , & ! LL location in mother i
+                         jns_startm        , & ! LL location in mother j
+                         ratio_wrt_coarse  , & ! grid ratio wrt coarse
+                         ratio_wrt_mother      ! grid ratio wrt mother
+                                                        
+   REAL ,    OPTIONAL :: dxc               , & ! coarse grid distance
+                         lat_center        , & ! center latitude
+                         lon_center        , & ! central longitude
+                         cone_factor       , & ! cone factor
+                         true_lat1         , & ! lat of true projection
+                         true_lat2         , & ! lat of true projection
+                         pole              , & ! location of pole in latitude
+                         dxd               , & ! domain grid distance
+                         xew_startc        , & ! LL location in coarse x
+                         yns_startc            ! LL location in coarse y 
+   
+   INTEGER , OPTIONAL :: program           , & ! 2=REGRID, 3=little_r
+                         kbu                   ! num vert levs, bottom up
+                                                        
+   REAL ,    OPTIONAL :: ptop                  ! top of analysis, lid
+                                                        
+   LOGICAL , OPTIONAL :: help                  ! T/F: print stuff only
+
+END SUBROUTINE proc_get_info_header

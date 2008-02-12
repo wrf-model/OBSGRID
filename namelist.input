@@ -1,0 +1,85 @@
+&record1
+ start_year                  =  2000
+ start_month                 =    01
+ start_day                   =    24
+ start_hour                  =    12
+ end_year                    =  2000
+ end_month                   =    01
+ end_day                     =    24
+ end_hour                    =    12
+ interval                    = 21600/
+
+&record2
+ fg_filename                 = './met_em.d01'
+ obs_filename                = '../JAN00/obs:2000-01-24_12' 
+                               '../JAN00/obs:2000-01-24_18' 
+                               '../JAN00/obs:2000-01-25_00' 
+                               '../JAN00/obs:2000-01-25_06' 
+                               '../JAN00/obs:2000-01-25_12' 
+ sfc_obs_filename            = '../JAN00/surface_obs_r:2000-01-24_12' 
+                               '../JAN00/surface_obs_r:2000-01-24_15' 
+                               '../JAN00/surface_obs_r:2000-01-24_18' 
+                               '../JAN00/surface_obs_r:2000-01-25_00' 
+                               '../JAN00/surface_obs_r:2000-01-25_03' 
+                               '../JAN00/surface_obs_r:2000-01-25_06' 
+                               '../JAN00/surface_obs_r:2000-01-25_09' 
+                               '../JAN00/surface_obs_r:2000-01-25_12' /
+
+&record3
+ max_number_of_obs           = 10000
+ fatal_if_exceed_max_obs     = .TRUE./
+
+&record4
+ qc_test_error_max           = .TRUE.
+ qc_test_buddy               = .TRUE.
+ qc_test_vert_consistency    = .FALSE.
+ qc_test_convective_adj      = .FALSE.
+ max_error_t                 = 10
+ max_error_uv                = 13
+ max_error_z                 = 8 
+ max_error_rh                = 50
+ max_error_p                 = 600
+ max_buddy_t                 = 8
+ max_buddy_uv                = 8
+ max_buddy_z                 = 8
+ max_buddy_rh                = 40
+ max_buddy_p                 = 800
+ buddy_weight                = 1.0
+ max_p_extend_t              = 1300
+ max_p_extend_w              = 1300/
+
+&record5
+ print_obs_files             = .TRUE.
+ print_found_obs             = .FALSE.
+ print_header                = .FALSE.
+ print_analysis              = .FALSE.
+ print_qc_vert               = .FALSE.
+ print_qc_dry                = .FALSE.
+ print_error_max             = .FALSE.
+ print_buddy                 = .FALSE.
+ print_oa                    = .FALSE./
+
+&record7
+ use_first_guess             = .TRUE.
+ f4d                         = .TRUE.
+ intf4d                      =  10800
+ lagtem                      = .FALSE. /
+
+&record8
+ smooth_type                 =  1
+ smooth_sfc_wind             =  0
+ smooth_sfc_temp             =  0
+ smooth_sfc_rh               =  0
+ smooth_sfc_slp              =  0
+ smooth_upper_wind           =  0
+ smooth_upper_temp           =  0
+ smooth_upper_rh             =  0/
+
+&record9
+ oa_type                     = 'Cressman'
+ mqd_minimum_num_obs         = 30
+ mqd_maximum_num_obs         = 1000
+ radius_influence            = 5,4,3,2,
+ oa_min_switch               = .TRUE.
+ oa_max_switch               = .TRUE./
+
