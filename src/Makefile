@@ -93,6 +93,7 @@ final_analysis_module.o:	error.inc error.int big_header.inc sample.int \
 
 first_guess_module.o:	error.inc error.int first_guess_size.inc first_guess.inc big_header.inc \
 			input_data_module.o date_pack_module.o small_header_data_module.o \
+			oa_module.o \
 			../configure.rules ./Makefile ../Makefile
 
 

@@ -104,6 +104,8 @@ current_date_8 , current_time_6 , date_char , icount , print_analysis )
 !  data is passed back through the argument list after a successful
 !  sequence of READs.
 
+   USE obj_analysis
+
    IMPLICIT NONE
    INCLUDE 'netcdf.inc'
 
@@ -352,7 +354,6 @@ current_date_8 , current_time_6 , date_char , icount , print_analysis )
                ALLOCATE ( all_2d(loop2,tt)%array(jns_alloc,iew_alloc) ) 
                all_2d(loop2,tt)%array(:,:) = all_2d(loop2-1,tt)%array(:,:)
                all_2d(loop2,tt)%small_header = small_header
-print*,"cB - getting data ", all_2d(loop2,tt)%array(10,65)
             END IF
 
          END IF
@@ -417,6 +418,9 @@ print*,"cB - getting data ", all_2d(loop2,tt)%array(10,65)
                h( jns_alloc,:iew_alloc-1,kbu_alloc) = h( jns_alloc-1,:iew_alloc-1,kbu_alloc)
                h(:jns_alloc,iew_alloc   ,kbu_alloc) = h(:jns_alloc  , iew_alloc-1,kbu_alloc)
             ELSE IF ( all_3d(loop_count,tt)%small_header%name(1:8) .EQ. 'RH      ' ) THEN
+               DO kp = 1, kbu_alloc
+                 CALL clean_rh ( all_3d(loop_count,tt)%array(:,:,kp) , iew_alloc , jns_alloc , 0. , 100. )
+               END DO 
                rh= all_3d(loop_count,tt)%array
                rh( jns_alloc,:iew_alloc-1,kbu_alloc) = rh( jns_alloc-1,:iew_alloc-1,kbu_alloc)
                rh(:jns_alloc,iew_alloc   ,kbu_alloc) = rh(:jns_alloc  , iew_alloc-1,kbu_alloc)
