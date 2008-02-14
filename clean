@@ -1,0 +1,47 @@
+#!/bin/csh -f
+
+set DEV_TOP = `pwd`
+
+set TOUCH = ORIG
+if ( ! -e configure.oa ) then
+	touch configure.oa
+	set TOUCH = TOUCH
+endif
+
+set nonomatch
+
+set DIRS = ( src )
+set EXES = ( OBSGRID )
+
+set i = 1
+foreach dir ( $DIRS )
+	if ( -d $dir ) then 
+		( cd $dir ; make -i DEV_TOP="${DEV_TOP}" TARGET="$EXES[$i].exe" clean )
+	endif
+	/bin/rm -f $EXES[$i].exe
+	@ i ++
+end
+
+#	The nuclear option
+
+find . -name \*.exe -exec \rm {} \; 
+find . -name \*.o -exec \rm {} \; 
+find . -name \*.a -exec \rm {} \; 
+
+
+if ( "$1" == '-a' ) then
+	/bin/rm -rf ./netcdf_links
+	foreach dir ( $DIRS )
+		if ( -d $dir ) then 
+			( cd $dir ; make -i DEV_TOP="${DEV_TOP}" TARGET="${dir}.exe" clobber >& /dev/null )
+		endif
+	end
+	if ( -e configure.oa ) then
+		/bin/cp configure.oa configure.oa.backup
+		/bin/rm -f configure.oa
+	endif
+endif
+
+if ( ( $TOUCH == TOUCH ) && ( -e configure.oa ) ) then
+	/bin/rm -f configure.oa
+endif

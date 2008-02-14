@@ -1,0 +1,29 @@
+#!/bin/csh -f
+
+if ( ! -e configure.oa ) then
+	echo "Do 'configure' first"
+	exit ( 1 ) 
+endif
+
+if  ( ( ! $?NETCDF ) && ( -d netcdf_links ) ) then
+	setenv NETCDF `pwd`/netcdf_links
+	setenv temp_netcdf 1
+else
+	setenv temp_netcdf 0
+endif
+
+echo " "
+echo "**** Compiling oa ****"
+echo " "
+
+( cd src ; make -i -r obsgrid.exe )
+     if ( -e src/obsgrid.exe ) then
+             ln -sf src/obsgrid.exe .
+     endif
+
+
+if ( $temp_netcdf == 1 ) then
+	unsetenv NETCDF
+endif
+
+exit(0)
