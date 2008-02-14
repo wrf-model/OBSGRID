@@ -1,0 +1,148 @@
+###########################################################
+#ARCH	AIX	
+#
+FC		=	xlf90_r
+FFLAGS		=	-qfree=f90 -qlanglvl=90pure -q64 -qarch=auto -qnosave -qmaxmem=-1 -qspillsize=20000 -Q
+F77FLAGS	=	-qfixed
+FNGFLAGS	=	$(FFLAGS)
+LDFLAGS		=	-q64
+CC		=	cc
+CFLAGS		=	
+CPP		=	/usr/lib/cpp 
+CPPFLAGS	=	-I. -C -P -DIBM
+
+###########################################################
+#ARCH	Compaq OSF1 alpha	
+#
+FC		=	f90
+FFLAGS		=	-automatic -convert big_endian -fast -fpe -free -pipeline -O4 -std
+F77FLAGS	=	-convert big_endian
+FNGFLAGS	=	$(FFLAGS)
+LDFLAGS		=	
+CC		=	cc
+CFLAGS		=	
+CPP		=	/usr/bin/cpp 
+CPPFLAGS	=	-I. -C -P -DDEC
+
+###########################################################
+#ARCH	PC Linux i486 i586 i686 x86_64, PGI compiler	
+#
+FC		=	pgf90
+FFLAGS		=	-Mfreeform -byteswapio -pc 32
+F77FLAGS	=	-byteswapio -O
+FNGFLAGS	=	$(FFLAGS)
+LDFLAGS		=	
+CC		=	gcc
+CFLAGS		=	-O
+CPP		=	/lib/cpp 
+CPPFLAGS	=	-I. -C -P -DDEC -traditional
+
+###########################################################
+#ARCH	PC Linux ia64, PGI compiler	
+#
+FC		=	pgf90
+FFLAGS		=	-Mfreeform -byteswapio -pc 32
+F77FLAGS	=	-byteswapio -O
+FNGFLAGS	=	$(FFLAGS)
+LDFLAGS		=	
+CC		=	gcc
+CFLAGS		=	-O
+CPP		=	/lib/cpp 
+CPPFLAGS	=	-I. -C -P -DDEC -traditional
+
+###########################################################
+#ARCH	PC Linux i486 i586 i686 x86_64, Intel compiler	
+#
+FC		=	ifort
+FFLAGS		=	-FR -convert big_endian
+F77FLAGS	=	-convert big_endian
+FNGFLAGS	=	$(FFLAGS)
+LDFLAGS		=	
+CC		=	gcc
+CFLAGS		=	-w
+CPP		=	/lib/cpp 
+CPPFLAGS	=	-I. -C -P -DDEC -traditional
+
+###########################################################
+#ARCH	PC Linux ia64, Intel compiler	
+#
+FC		=	ifort
+FFLAGS		=	-FR -convert big_endian
+F77FLAGS	=	-convert big_endian
+FNGFLAGS	=	$(FFLAGS)
+LDFLAGS		=	
+CC		=	gcc
+CFLAGS		=	-w
+CPP		=	/lib/cpp 
+CPPFLAGS	=	-I. -C -P -DDEC -traditional
+
+###########################################################
+#ARCH	SGI 64 bit IRIX64	
+#
+FC		=	f90
+FFLAGS		=	-freeform -64
+F77FLAGS	=	-64
+FNGFLAGS	=	$(FFLAGS)
+LDFLAGS		=	
+CC		=	cc
+CFLAGS		=	-64
+CPP		=	/lib/cpp 
+CPPFLAGS	=	-I. -C -P -DSGI
+
+###########################################################
+#ARCH	Sun SunOS	
+#
+FC		=	f90
+FFLAGS		=	-ansi -free
+F77FLAGS	=	
+FNGFLAGS	=	$(FFLAGS)
+LDFLAGS		=	
+CC		=	cc
+CFLAGS		=	-O
+CPP		=	/usr/ccs/lib/cpp 
+CPPFLAGS	=	-I. -C -P -DSUN
+
+###########################################################
+#ARCH	Darwin	
+#
+FC		=	xlf90_r
+FFLAGS		=	-qfree=f90 -qarch=auto
+F77FLAGS	=	-qfixed
+FNGFLAGS	=	$(FFLAGS) -qextname
+LDFLAGS		=	-Wl,-stack_size,10000000,-stack_addr,0xc0000000
+CC		=	cc
+CFLAGS		=	-O
+CPP		=	/usr/bin/cpp 
+CPPFLAGS	=	-I. -C -P -DIBM -xassembler-with-cpp
+RANLIB		=	ranlib
+
+###########################################################
+#ARCH	Darwin - with SystemStuds	
+#
+FC		=	xlf90_r
+FFLAGS		=	-qfree=f90 -qarch=auto
+F77FLAGS	=	-qfixed
+FNGFLAGS	=	$(FFLAGS) -qextname
+LDFLAGS		=	-Wl,-stack_size,10000000,-stack_addr,0xc0000000 -L/usr/lib -lSystemStubs
+CC		=	gcc-3.3
+CFLAGS		=	-O
+CPP		=	/usr/bin/cpp 
+CPPFLAGS	=	-I. -C -P -DIBM -xassembler-with-cpp
+RANLIB		=	ranlib
+
+###########################################################
+#ARCH	Darwin - with g95 compiler	
+#
+FC		=	g95
+FFLAGS		=	-ffree-form -fendian=big
+F77FLAGS	=	-ffixed-form -fendian=big
+FNGFLAGS	=	$(FFLAGS) 
+LDFLAGS		=	-Wl,-stack_size,10000000,-stack_addr,0xc0000000
+CC		=	gcc
+CFLAGS		=	
+CPP		=	/usr/bin/cpp 
+CPPFLAGS	=	-C -P -traditional
+RANLIB		=	
+
+###########################################################
+#ARCH	NULL
