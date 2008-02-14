@@ -1,7 +1,6 @@
 #	Lower level Makefile for OBSGRID and plotting packages
 
 include ../configure.oa
-#include ../macros_little_r
 
 .IGNORE:
 
