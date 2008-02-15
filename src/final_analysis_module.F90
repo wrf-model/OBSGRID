@@ -291,8 +291,6 @@ iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
       d3_data1(jmet,imet,1) =    pres(jmet,imet,1) + &
                                ( pres(jmet,imet,1)/slp_C(jmet,imet) ) * &
                                ( slp_x(jmet,imet)-slp_C(jmet,imet) )   
-if ( imet == 10 .AND. jmet == 10 ) print*,"psfc for 10 ", pres(jmet,imet,1), slp_x(jmet,imet), slp_C(jmet,imet)
-if ( imet == 65 .AND. jmet == 10 ) print*,"psfc for 65 ", pres(jmet,imet,1), slp_x(jmet,imet), slp_C(jmet,imet)
    ENDDO
    ENDDO
    ALLOCATE ( met_em_3d (iewd-1, jnsd-1, kbu_alloc) )
