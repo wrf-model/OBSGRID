@@ -22,8 +22,8 @@ AR		=	ar ru
 	$(FC) $(FFLAGS) -c $*.f 
 	$(RM) $*.f
 
-.F.o:
+.F90.o:
 	$(RM) $@ $*.mod
 	$(CPP) $(CPPFLAGS) $(FDEFS) $< > $*.f
-	$(FC) $(FFLAGS) -c $*.f 
+	$(FC) $(FFLAGS) -c $*.f ${NETCDF_INC}
 	$(RM) $*.f
