@@ -49,7 +49,7 @@ OBJS_SND	=	$(SRC_SND:.F=.o)
 MODULES_SND 	=	module_mapinfo.o module_report.o module_skewt.o
 
 
-all:			obsgrid.exe plot_level plot_soundings \
+all:			obsgrid.exe plot_level.exe plot_soundings.exe \
 			$(OBJS) $(MODULES) $(INTS) $(INCS) $(NML) $(COMMON) \
 			$(OBJS_OBS) $(MODULES_OBS) \
 			$(OBJS_SND) $(MODULES_SND) 
@@ -57,10 +57,10 @@ all:			obsgrid.exe plot_level plot_soundings \
 obsgrid.exe: 		$(OBJS) $(MODULES) $(INTS) $(INCS) $(NML) $(COMMON) 
 			$(FC) -o $@ $(FCFLAGS) $(OBJS) $(MODULES) ${NETCDF_LIBS} ${NETCDF_INC} $(LDFLAGS)
 
-plot_level: 		$(OBJS_OBS) $(MODULES_OBS) 
+plot_level.exe: 	$(OBJS_OBS) $(MODULES_OBS) 
 			$(FC) -o $@ $(FCFLAGS) $(LDFLAGS) $(OBJS_OBS) $(MODULES_OBS) $(NCARG_LIBS)
 
-plot_soundings:		$(OBJS_SND) $(MODULES_SND) 
+plot_soundings.exe:	$(OBJS_SND) $(MODULES_SND) 
 			$(FC) -o $@ $(FCFLAGS) $(LDFLAGS) $(OBJS_SND) $(MODULES_SND) $(NCARG_LIBS)
 
 #	obsgrid files
@@ -140,4 +140,4 @@ module_report.o:
 module_skewt.o:		
 
 clean:
-			$(RM) *.o *.f core obsgrid plot_level plot_soundings *.kmo ctmi* *.mod *_out_* output *.out
+			$(RM) *.o *.f core *.exe *.kmo ctmi* *.mod *_out_* output *.out

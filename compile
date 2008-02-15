@@ -16,10 +16,32 @@ echo " "
 echo "**** Compiling oa ****"
 echo " "
 
+if      ( ${#argv} == 0 ) then
+( cd src ; make -i -r all )
+     if ( -e src/obsgrid.exe ) then
+             ln -sf src/obsgrid.exe .
+     endif
+     if ( -e src/plot_level.exe ) then
+             ln -sf src/plot_level.exe .
+     endif
+     if ( -e src/plot_sounding.exe ) then
+             ln -sf src/plot_sounding.exe .
+     endif
+else if ( $1 == obsgrid ) then
 ( cd src ; make -i -r obsgrid.exe )
      if ( -e src/obsgrid.exe ) then
              ln -sf src/obsgrid.exe .
      endif
+else if ( $1 == utils ) then
+( cd src ; make -i -r plot_level.exe )
+     if ( -e src/plot_level.exe ) then
+             ln -sf src/plot_level.exe .
+     endif
+( cd src ; make -i -r plot_sounding.exe )
+     if ( -e src/plot_sounding.exe ) then
+             ln -sf src/plot_sounding.exe .
+     endif
+endif
 
 
 if ( $temp_netcdf == 1 ) then
