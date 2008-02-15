@@ -9,7 +9,7 @@ current_date_8 , current_time_6 , fdda_loop , icount_fdda , &
 icount , total_count , interval , &
 max_error_t , max_error_uv           , &
 max_error_z , max_error_p , &
-buddy_weight , start_date , root_filename )
+buddy_weight , date_char , root_filename )
 
    CHARACTER *(*)         , INTENT ( INOUT )      :: filename
    CHARACTER *(*)         , INTENT ( INOUT )      :: filename_out
@@ -30,7 +30,7 @@ buddy_weight , start_date , root_filename )
                                                      max_error_z  , &
                                                      max_error_p  , &
                                                      buddy_weight
-   CHARACTER(LEN=19)                              :: start_date
+   CHARACTER(LEN=19)                              :: date_char
    REAL , DIMENSION(jns_alloc,iew_alloc)          :: tobbox
    INCLUDE 'proc_get_info_header.inc'
 END SUBROUTINE proc_final_analysis

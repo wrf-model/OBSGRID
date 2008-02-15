@@ -443,7 +443,6 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
       !  time (so that there was no objective analysis) we write it out
       !  as well.
 
-print*,"cB - before final ", slp_C(10,65)
       IF ( ( .NOT. nml%record_7%f4d ) .OR. & 
            ( (     nml%record_7%f4d ) .AND. ( fdda_loop .EQ. 1 ) ) ) THEN 
          CALL proc_final_analysis ( filename , filename_out , &
@@ -457,7 +456,7 @@ print*,"cB - before final ", slp_C(10,65)
          icount , total_count , nml%record_1%interval , &
          nml%record_4%max_error_t , nml%record_4%max_error_uv           , &
          nml%record_4%max_error_z , nml%record_4%max_error_p/100. , &
-         nml%record_4%buddy_weight , nml%record_1%start_date , &
+         nml%record_4%buddy_weight , date_char , &
          nml%record_2%fg_filename )
       ELSE 
          CALL proc_final_analysis ( filename , filename_out , &

@@ -10,7 +10,7 @@ SUBROUTINE write_analysis ( met_ncid, oa_ncid , &
 t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
 latitude_x , longitude_x , latitude_d , longitude_d , &
 slp_x , slp_C , sst , tobbox , &
-iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , print_analysis )
+iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
 
 !  This routine assembles the correct data fields and outputs them with the
 !  appropriate small header.
@@ -34,6 +34,7 @@ iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , print_analysis )
    REAL , DIMENSION ( iewd , jnsd )             :: met_em_dum2d
    REAL , ALLOCATABLE , DIMENSION(:,:,:)        :: met_em_3d
    REAL , ALLOCATABLE , DIMENSION(:,:)          :: met_em_2d
+   CHARACTER (LEN=19)                           :: date_char
 
    INTERFACE 
       INCLUDE 'error.int'
@@ -173,6 +174,7 @@ iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , print_analysis )
           IF     (itype == 2) THEN        
             allocate (text(dims_in(1), dims_in(2), dims_in(3)))
             rcode = nf_get_var_text (met_ncid, i, text)
+            text = date_char
             rcode = nf_put_vara_text(oa_ncid, i, start_dims, dims_in, text)
             deallocate (text)
 

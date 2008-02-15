@@ -79,13 +79,14 @@ PROGRAM main
                                              second , &
                                              interval, ilen
    LOGICAL                                :: is_used
+   LOGICAL                                :: does_exist
 #ifdef NCARG
 call opngks
 #endif
 
       WRITE ( UNIT = * , FMT = '("                                 ")' ) 
       WRITE ( UNIT = * , FMT = '("################################ ")' ) 
-      WRITE ( UNIT = * , FMT = '("         WRF OBS GRID            ")' ) 
+      WRITE ( UNIT = * , FMT = '("          WRF OBSGRID            ")' ) 
       WRITE ( UNIT = * , FMT = '("          Version 1.0            ")' ) 
       WRITE ( UNIT = * , FMT = '("################################ ")' ) 
       WRITE ( UNIT = * , FMT = '("                                 ")' ) 
@@ -179,6 +180,12 @@ call opngks
    current_date = nml%record_1%start_date
    filename = nml%record_2%fg_filename 
    filename = trim(filename)//"."//current_date//".nc"
+   INQUIRE ( EXIST = does_exist , FILE = filename )
+   IF ( .NOT. does_exist ) THEN
+      WRITE ( UNIT = * , FMT = '("   ")' ) 
+      WRITE ( UNIT = * , FMT = '("###   Could not find file: ",A )' ) trim(filename)
+      STOP '      STOP: Missing input file'
+   ENDIF
 
    !  Now that the NAMELIST has been input, the other source of initial
    !  data is from the record header.  This file provides the information

@@ -10,7 +10,7 @@ current_date_8 , current_time_6 , fdda_loop , icount_fdda , &
 icount , total_count , interval , &
 max_error_t , max_error_uv           , &
 max_error_z , max_error_p , &
-buddy_weight , start_date , root_filename )
+buddy_weight , date_char , root_filename )
 
 !  This routine is a driver for the required utilities to output the 
 !  final analysis of this program.  The input values are the objectively 
@@ -40,7 +40,7 @@ buddy_weight , start_date , root_filename )
                                                      max_error_z  , &
                                                      max_error_p  , &
                                                      buddy_weight
-   CHARACTER (LEN=19)                             :: start_date
+   CHARACTER (LEN=19)                             :: date_char
    CHARACTER (LEN=24)                             :: fdda_date_24
    INTEGER , SAVE                                 :: interval_analysis
   
@@ -113,7 +113,7 @@ buddy_weight , start_date , root_filename )
       t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
       latitude_x , longitude_x , latitude_d , longitude_d , &
       slp_x , slp_C , sst , tobbox , &
-      iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , print_analysis )
+      iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
    ELSE
       CALL make_date ( current_date_8 , current_time_6 , fdda_date_24 )
       slp_x(:jns_alloc-1,:iew_alloc-1) = slp_x(:jns_alloc-1,:iew_alloc-1) * 100.

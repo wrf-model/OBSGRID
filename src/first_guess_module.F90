@@ -145,6 +145,7 @@ current_date_8 , current_time_6 , date_char , icount , print_analysis )
    CHARACTER (LEN=31),ALLOCATABLE, DIMENSION(:) :: dim_names
    CHARACTER (LEN=19)                           :: date_char
    REAL, DIMENSION(16)                          :: rval
+   CHARACTER (LEN=19)                           :: times_in_file
 
    INCLUDE 'error.inc'
    INCLUDE 'big_header.inc'
@@ -194,6 +195,17 @@ current_date_8 , current_time_6 , date_char , icount , print_analysis )
       DO idims = 1, ndims
          rcode = nf_inq_dim(met_ncid, idims, dim_names(idims), dim_values(idims))
       ENDDO
+
+      !! Test to see which date we have in the met_em files
+      rcode = nf_inq_varid ( met_ncid, "Times", iv )
+      rcode = nf_get_var_text(met_ncid, iv, times_in_file)
+      IF ( trim(times_in_file) /= trim(date_char) ) THEN
+         print*,"   WARNING: Mismatch between datastamp in file and date on file. "
+         print*,"            Date on file:                  ", trim(date_char)
+         print*,"            Datestamp in file:             ", trim(times_in_file)
+         print*,"            OUTPUT file will contain date: ", trim(date_char)
+         print*," "
+      ENDIF
 
       variable_loop : DO iv = 1, nvars
 
@@ -461,7 +473,6 @@ current_date_8 , current_time_6 , date_char , icount , print_analysis )
                slp_C = all_2d(loop_count,tt)%array
                slp_C       ( jns_alloc,:iew_alloc-1) = slp_C       ( jns_alloc-1,:iew_alloc-1)
                slp_C       (:jns_alloc,iew_alloc   ) = slp_C       (:jns_alloc  , iew_alloc-1)
-print*,"cB - assigning data ", slp_C(10,65)
             ELSE IF ( all_2d(loop_count,tt)%small_header%name(1:8) .EQ. 'SKINTEMP' ) THEN
                sst = all_2d(loop_count,tt)%array
                sst         ( jns_alloc,:iew_alloc-1) = sst         ( jns_alloc-1,:iew_alloc-1)
