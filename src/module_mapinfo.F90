@@ -15,32 +15,64 @@ module mapinfo_module
 
 contains
 
-  subroutine get_mapinfo(bhi, bhr)
-! Given the big header arrays (bhi, bhr), fills the mapinfo 
-! structure with the details of the map projection.
-    integer, dimension(50,20) :: bhi
-    real, dimension(20,20) :: bhr
-    character(LEN=2), parameter, dimension(3) :: NPROJ = (/'LC','ST','ME'/)
-    mapinfo%phic = bhr(2,1)
-    mapinfo%xlonc = bhr(3,1)
-    mapinfo%truelat1 = bhr(5,1)
-    mapinfo%truelat2 = bhr(6,1)
-    mapinfo%dskm = bhr(9,1)*0.001
+  subroutine get_mapinfo( met_ncid )
 
-    mapinfo%ix = bhi(16,1)
-    mapinfo%jx = bhi(17,1)
-    mapinfo%ixmoad = bhi(5,1)
-    mapinfo%jxmoad = bhi(6,1)
-    if ((bhi(13,1) == 1).and.(bhi(8,1) == 1)) then
-       mapinfo%ix = bhi(9,1)
-       mapinfo%jx = bhi(10,1)
-       mapinfo%ixmoad = bhi(9,1)
-       mapinfo%jxmoad = bhi(10,1)
-    endif
-    mapinfo%xsouth = bhr(10,1)
-    mapinfo%xwest = bhr(11,1)
-    mapinfo%xratio = float(bhi(20,1))
-    mapinfo%project = NPROJ(bhi(7,1))
+    INCLUDE 'netcdf.inc'
+
+    real :: rdummy
+    integer :: i, idummy
+    integer :: met_ncid
+    integer :: rcode
+    integer :: ndims, nvars, ngatts, nunlimdimid
+    integer :: wedim, sndim
+    integer :: dim_val
+    CHARACTER (LEN=31) :: dim_name
+
+    character(LEN=2), parameter, dimension(3) :: NPROJ = (/'LC','ST','ME'/)
+
+    rcode = nf_inq(met_ncid, ndims, nvars, ngatts, nunlimdimid)
+    dims_loop : DO i = 1, ndims
+       rcode = nf_inq_dim(met_ncid, i, dim_name, dim_val)
+       IF ( dim_name == 'west_east_stag'    ) wedim  = dim_val
+       IF ( dim_name == 'south_north_stag'  ) sndim  = dim_val
+    ENDDO dims_loop
+
+    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "CEN_LAT", rdummy )
+            mapinfo%phic = rdummy
+    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "STAND_LON", rdummy )
+            mapinfo%xlonc = rdummy
+    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "TRUELAT1", truelat1 )
+            mapinfo%truelat1 = rdummy   
+    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "TRUELAT2", truelat2 )
+            mapinfo%truelat2 = rdummy   
+    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "DX", rdummy )
+            mapinfo%dskm = rdummy*0.001
+        
+    !! HARDCODE - we are only working with metoa files - 
+    !!            so no need to keep track of expanded domain
+    mapinfo%ix = sndim
+    mapinfo%jx = wedim
+    mapinfo%ixmoad = sndim
+    mapinfo%jxmoad = wedim
+
+    !! Expanded domains
+    !! (13,1) is domain
+    !! (8,1) is expanded
+    !!if ((bhi(13,1) == 1).and.(bhi(8,1) == 1)) then
+       !!mapinfo%ix = bhi(9,1)
+       !!mapinfo%jx = bhi(10,1)
+       !!mapinfo%ixmoad = bhi(9,1)
+       !!mapinfo%jxmoad = bhi(10,1)
+    !!endif
+
+    rcode = NF_GET_ATT_INT(met_ncid, nf_global, "j_parent_start", idummy )
+            mapinfo%xsouth = real(idummy)
+    rcode = NF_GET_ATT_INT(met_ncid, nf_global, "i_parent_start", idummy )
+            mapinfo%xwest = real(idummy)
+    rcode = NF_GET_ATT_INT(met_ncid, nf_global, "parent_grid_ratio", idummy )
+            mapinfo%xratio = float(idummy)
+    rcode = NF_GET_ATT_INT(met_ncid, nf_global, "MAP_PROJ", idummy )
+            mapinfo%project = NPROJ(idummy)
 
   end subroutine get_mapinfo
 

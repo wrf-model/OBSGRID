@@ -10,7 +10,7 @@
  interval                    = 21600/
 
 &record2
- fg_filename                 = './met_em.d01'
+ fg_filename                 = '../JAN00/met_em.d01'
  obs_filename                = '../JAN00/obs:2000-01-24_12' 
                                '../JAN00/obs:2000-01-24_18' 
                                '../JAN00/obs:2000-01-25_00' 
@@ -82,4 +82,15 @@
  radius_influence            = 5,4,3,2,
  oa_min_switch               = .TRUE.
  oa_max_switch               = .TRUE./
+
+
+&plot_sounding
+ file_type                   = 'useful'
+ read_metoa                  = .TRUE.
+ domain                      = 1
+/
+ file_type                   = 'qc'
+ file_type                   = 'results'
+ file_type                   = 'discard'
+
 

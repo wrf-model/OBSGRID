@@ -46,7 +46,7 @@ SRC_SND		=	plot_soundings.F
 
 OBJS_SND	=	$(SRC_SND:.F=.o)
 
-MODULES_SND 	=	module_mapinfo.o module_report.o module_skewt.o
+MODULES_SND 	=	module_mapinfo.o module_report.o module_skewt.o date_pack_module.o
 
 
 all:			obsgrid.exe plot_level.exe plot_soundings.exe \
@@ -61,7 +61,7 @@ plot_level.exe: 	$(OBJS_OBS) $(MODULES_OBS)
 			$(FC) -o $@ $(FCFLAGS) $(LDFLAGS) $(OBJS_OBS) $(MODULES_OBS) $(NCARG_LIBS)
 
 plot_soundings.exe:	$(OBJS_SND) $(MODULES_SND) 
-			$(FC) -o $@ $(FCFLAGS) $(LDFLAGS) $(OBJS_SND) $(MODULES_SND) $(NCARG_LIBS)
+			$(FC) -o $@ $(FCFLAGS) $(LDFLAGS) $(OBJS_SND) $(MODULES_SND) $(NCARG_LIBS) ${NETCDF_LIBS} ${NETCDF_INC}
 
 #	obsgrid files
 
