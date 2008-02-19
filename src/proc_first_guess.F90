@@ -80,6 +80,10 @@ current_date_8 , current_time_6 , date_char , icount )
 
    !  Each date time is in a new file - so open every time     
       rcode = nf_open(filename, 0, met_ncid)
+      IF ( rcode /= 0 ) THEN
+         print*,"  ERROR opening file: ", trim(filename)
+         STOP
+      ENDIF
 
    !  Read in the analysis data for this time period.
 
