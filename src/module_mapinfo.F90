@@ -41,9 +41,9 @@ contains
             mapinfo%phic = rdummy
     rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "STAND_LON", rdummy )
             mapinfo%xlonc = rdummy
-    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "TRUELAT1", truelat1 )
+    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "TRUELAT1", rdummy )
             mapinfo%truelat1 = rdummy   
-    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "TRUELAT2", truelat2 )
+    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "TRUELAT2", rdummy )
             mapinfo%truelat2 = rdummy   
     rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "DX", rdummy )
             mapinfo%dskm = rdummy*0.001
@@ -160,6 +160,8 @@ contains
                (tan((pi * 0.5 - rclt) * 0.5) / &
                tan((pi * 0.5 - flat1) * 0.5))**confac) &
                /mapinfo%dskm
+!print*,"map info ", y
+!print*,ci, di, re, confac, rclt, flat1, mapinfo%dskm
        else
           bm = tan( 0.5*(rlat + pi * 0.5))
           djovrdi = tan((rlon - rcln)*confac)
@@ -216,6 +218,7 @@ contains
        confac = confac/(log10(tan((45.-float(msign)*mapinfo%truelat1/2.)*conv))-&
             log10(tan((45.-float(msign)*mapinfo%truelat2/2.)*conv)))
     endif
+
   end subroutine lccone_mapinfo
 
 end module mapinfo_module
