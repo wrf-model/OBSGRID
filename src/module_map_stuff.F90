@@ -3,10 +3,19 @@ MODULE map_stuff
 CONTAINS
 
 !-------------------------------------------
-   SUBROUTINE plotmap (bhi, bhr)
+   SUBROUTINE plotmap ( met_ncid )
 
-      INTEGER , DIMENSION(50,20) :: bhi
-      REAL    , DIMENSION(20,20) :: bhr
+      INCLUDE 'netcdf.inc'
+
+      REAL :: rdummy
+      INTEGER :: idummy
+      INTEGER :: met_ncid
+      INTEGER :: rcode
+      INTEGER :: ndims, nvars, ngatts, nunlimdimid
+      INTEGER :: wedim, sndim
+      INTEGER :: dim_val
+      CHARACTER (LEN=31) :: dim_name
+
       CHARACTER (LEN=2) :: project
       CHARACTER (LEN=2) , DIMENSION(3) , PARAMETER :: nproj = (/ 'LC','ST','ME' /)
 
@@ -16,57 +25,69 @@ CONTAINS
       REAL :: vl , vr , vb , vt , wl , wr , wb , wt
       INTEGER :: ixmoad , jxmoad , kproj , ix , jx , jlts , jgrid , idot , iusout , ier , ls
 
-      !  What projection are we using?
+      rcode = nf_inq(met_ncid, ndims, nvars, ngatts, nunlimdimid)
+      dims_loop : DO i = 1, ndims
+         rcode = nf_inq_dim(met_ncid, i, dim_name, dim_val)
+         IF ( dim_name == 'west_east_stag'    ) wedim  = dim_val
+         IF ( dim_name == 'south_north_stag'  ) sndim  = dim_val
+      ENDDO dims_loop
 
-      project = nproj(bhi(7,1))
+
+      !  What projection are we using?
+      rcode = NF_GET_ATT_INT(met_ncid, nf_global, "MAP_PROJ", idummy )
+      project = nproj(idummy)
 
       !  Grid distance in km, center lat/lon.
-      
-      ds = bhr(9,1)/1000.
-      phic = bhr(2,1)
-      xlonc = bhr(3,1)
+      rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "DX", rdummy ) 
+      ds = rdummy/1000.
+      rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "CEN_LAT", phic )
+      rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "STAND_LON", xlonc )
 
       !  The i and j dimensions, in Mother Of All Domain space.
-
-      ixmoad = bhi(5,1)
-      jxmoad = bhi(6,1)
+      ixmoad = sndim
+      jxmoad = wedim
 
       !  The starting locations of this domain, wrt to MOAD.
+      rcode = NF_GET_ATT_INT(met_ncid, nf_global, "j_parent_start", idummy )
+      xsouth = real(idummy)
+      rcode = NF_GET_ATT_INT(met_ncid, nf_global, "i_parent_start", idummy )
+      xwest = real(idummy)
 
-      IF ((bhi(8,1).EQ.0) .and. (bhi(13,1).EQ.1)) THEN 
-         xsouth = bhr(10,1)
-         xwest = bhr(11,1)
-      ELSEIF (bhi(13,1) .GT. 1) THEN
-         xsouth = bhr(10,1)
-         xwest = bhr(11,1)
-      ELSE
-         xsouth = bhr(10,1) - bhi(11,1)
-         xwest = bhr(11,1) - bhi(12,1)
-      END IF
+      !! For now - domain 1 and no expansion
+      !!IF ((bhi(8,1).EQ.0) .and. (bhi(13,1).EQ.1)) THEN 
+         !!xsouth = bhr(10,1)
+         !!xwest = bhr(11,1)
+      !!ELSEIF (bhi(13,1) .GT. 1) THEN
+         !!xsouth = bhr(10,1)
+         !!xwest = bhr(11,1)
+      !!ELSE
+         !!xsouth = bhr(10,1) - bhi(11,1)
+         !!xwest = bhr(11,1) - bhi(12,1)
+      !!END IF
 
       !  The ratio of the grid distance of the mother domain to the grid distance
       !  from this domain.
-
-      xratio = REAL(bhi(20,1))
+      rcode = NF_GET_ATT_INT(met_ncid, nf_global, "parent_grid_ratio", idummy )
+      xratio = REAL(idummy)
 
       !  The latitude where the projection is true (map factors = 1).
-
-      truelat1 = bhr(5,1)
-      truelat2 = bhr(6,1)
+      rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "TRUELAT1", truelat1 )
+      rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "TRUELAT2", truelat2 )
 
       !  Get the lat/lon of the lower left hand corner.
 
       CALL xytoll(1.,1.,pl1,pl2,project,ds,phic,xlonc,ixmoad,jxmoad,xsouth,xwest,xratio,truelat1,truelat2)
 
       !  Is there some sort of expanded domain with which to concern ourselves?
-
-      IF ((bhi(8,1) .EQ. 1) .and. (bhi(13,1) .EQ. 1)) THEN
-         ix = bhi(9,1)
-         jx = bhi(10,1)
-      ELSE
-         ix = bhi(16,1)
-         jx = bhi(17,1)
-      END IF
+      ix = sndim
+      jx = wedim
+      !!IF ((bhi(8,1) .EQ. 1) .and. (bhi(13,1) .EQ. 1)) THEN
+         !!ix = bhi(9,1)
+         !!jx = bhi(10,1)
+      !!ELSE
+         !!ix = bhi(16,1)
+         !!jx = bhi(17,1)
+      !!END IF
 
       !  Get the lat/lon of the upper right corner point.
 

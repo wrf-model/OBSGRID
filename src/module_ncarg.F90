@@ -17,16 +17,15 @@ CONTAINS
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   SUBROUTINE start_it
+   SUBROUTINE start_it( fname )
 
       INTEGER :: idum
+      CHARACTER(LEN=*) :: fname
       CHARACTER(LEN=80) :: cdum, fdum
 
       !  Initialize the NCAR Graphics routines.
+      fdum = trim(fname)
 
-       
-      fdum = 'levels.cgm                                                                      '
-   
 !     CALL opngks
       CALL gopks(6,idum)
       CALL gesc(-1391,1,fdum,1,1,cdum)

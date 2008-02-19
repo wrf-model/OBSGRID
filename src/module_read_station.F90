@@ -44,7 +44,7 @@ CONTAINS
          !  Bypass the beginning print in the obs file.
 
          READ (9,'(a80)') fmt
-         PRINT '(A,A)','format statement is = ',fmt
+         !PRINT '(A,A)','format statement is = ',fmt
 
       ELSE
 

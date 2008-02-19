@@ -93,4 +93,9 @@
  file_type                   = 'results'
  file_type                   = 'discard'
 
+&plot_level
+ file_type                   = '3D'
+ domain                      = 1
+/
+ file_type                   = 'sfc_fdda'
 

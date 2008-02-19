@@ -38,7 +38,7 @@ SRC_OBS		=	plot_level.F
 
 OBJS_OBS	=	$(SRC_OBS:.F=.o)
 
-MODULES_OBS 	=	module_header.o module_map_stuff.o module_ncarg.o module_read_station.o
+MODULES_OBS 	=	module_header.o module_map_stuff.o module_ncarg.o module_read_station.o date_pack_module.o
 
 #	plot_soundings
 
@@ -58,7 +58,7 @@ obsgrid.exe: 		$(OBJS) $(MODULES) $(INTS) $(INCS) $(NML) $(COMMON)
 			$(FC) -o $@ $(FCFLAGS) $(OBJS) $(MODULES) ${NETCDF_LIBS} ${NETCDF_INC} $(LDFLAGS)
 
 plot_level.exe: 	$(OBJS_OBS) $(MODULES_OBS) 
-			$(FC) -o $@ $(FCFLAGS) $(LDFLAGS) $(OBJS_OBS) $(MODULES_OBS) $(NCARG_LIBS)
+			$(FC) -o $@ $(FCFLAGS) $(LDFLAGS) $(OBJS_OBS) $(MODULES_OBS) $(NCARG_LIBS) ${NETCDF_LIBS} ${NETCDF_INC}
 
 plot_soundings.exe:	$(OBJS_SND) $(MODULES_SND) 
 			$(FC) -o $@ $(FCFLAGS) $(LDFLAGS) $(OBJS_SND) $(MODULES_SND) $(NCARG_LIBS) ${NETCDF_LIBS} ${NETCDF_INC}
