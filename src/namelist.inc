@@ -19,6 +19,8 @@
    CHARACTER ( LEN = 132 ) :: fg_filename     
    CHARACTER ( LEN = 132 ) , DIMENSION(max_times) ::  obs_filename    
    CHARACTER ( LEN = 132 ) , DIMENSION(max_times) ::  sfc_obs_filename    
+   LOGICAL :: trim_domain
+   INTEGER :: trim_value, grid_id
 
    !  Record 3 NAMELIST variables.
 

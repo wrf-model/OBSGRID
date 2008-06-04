@@ -14,7 +14,10 @@
 
    NAMELIST /record2/ fg_filename                  , &
                       obs_filename                 , &
-                      sfc_obs_filename
+                      sfc_obs_filename             , &
+                      trim_domain                  , &
+                      trim_value                   , &
+                      grid_id
 
    !  Record 3 NAMELIST variables.
 

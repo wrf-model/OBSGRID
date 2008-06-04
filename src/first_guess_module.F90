@@ -399,7 +399,7 @@ current_date_8 , current_time_6 , date_char , icount , print_analysis )
          !  are usually only 13 2d arrays.  If there are more than that, we gotta
          !  have room for the data and associated header information.
    
-         IF      ( ( first_loop) .AND. ( icount .EQ. 1 ) .AND. ( bhi(1,1) .EQ. 8 ) ) THEN
+         IF      ( ( first_loop) .AND. ( icount .EQ. 1 ) .AND. ( bhi(1) .EQ. 8 ) ) THEN
             CALL alloc_lots_of_2d_data ( jns_alloc , iew_alloc , num2d-13+1 )
          ELSE IF ( ( first_loop) .AND. ( icount .EQ. 1 ) ) THEN
             CALL alloc_lots_of_2d_data ( jns_alloc , iew_alloc , num2d-13   )

@@ -23,11 +23,11 @@ buddy_weight , date_char , root_filename )
    IMPLICIT NONE 
    INCLUDE 'netcdf.inc'
 
-   CHARACTER *(*)              , INTENT ( INOUT ) :: filename
+   CHARACTER *(*)              , INTENT ( IN    ) :: filename
    CHARACTER *(*)              , INTENT ( INOUT ) :: filename_out
-   CHARACTER *(*)              , INTENT ( INOUT ) :: root_filename
-   INTEGER , DIMENSION (50,20) , INTENT ( INOUT ) :: bhid
-   REAL , DIMENSION (20,20)    , INTENT ( INOUT ) :: bhrd
+   CHARACTER *(*)              , INTENT ( IN    ) :: root_filename
+   INTEGER , DIMENSION(50)                        :: bhid
+   REAL    , DIMENSION(20)                        :: bhrd
    LOGICAL                                        :: print_header , &
                                                      print_analysis
    INTEGER                                        :: current_date_8 , &
@@ -44,7 +44,8 @@ buddy_weight , date_char , root_filename )
    CHARACTER (LEN=24)                             :: fdda_date_24
    INTEGER , SAVE                                 :: interval_analysis
   
-   INTEGER                                        :: rcode, met_ncid, oa_ncid, sfc_ncid, ilen
+   INTEGER                                        :: rcode, met_ncid, oa_ncid, ilen
+   INTEGER , SAVE                                 :: sfc_ncid
    CHARACTER (LEN=50)                             :: sfcfile
 
    !  Temporary holding arrays for the header information.  What is in the header
@@ -52,8 +53,8 @@ buddy_weight , date_char , root_filename )
    !  to store the final analysis header in the bhi, bhr, arrays.  So that
    !  we do not clobber the input data, we use this temporary storage.  
 
-   INTEGER                , DIMENSION (50,20) :: bhi_hold
-   REAL                   , DIMENSION (20,20) :: bhr_hold
+   INTEGER , DIMENSION (50) :: bhi_hold
+   REAL    , DIMENSION (20) :: bhr_hold
 
    !  Temporary date integers
 
@@ -88,7 +89,7 @@ buddy_weight , date_char , root_filename )
 
    IF ( ( icount .EQ. 1 ) .AND. ( fdda_loop .EQ. 2 ) ) THEN
       ilen = len_trim(root_filename)
-      sfcfile = 'wrfsfcfdda_'//root_filename(ilen-2:ilen)
+      sfcfile = 'wrfsfdda_'//root_filename(ilen-2:ilen)
       rcode = nf_create( sfcfile, 0, sfc_ncid )
    END IF
 
@@ -129,15 +130,10 @@ buddy_weight , date_char , root_filename )
    !  out some data.
 
    IF      ( fdda_loop .EQ. 1 ) THEN
-      CALL proc_get_info_header ( print_header , program , &
-      iewc , jnsc , map_projection , expanded , iewe , jnse , &
+      CALL proc_get_info_header ( print_header , &
+      iewd , jnsd , kbu , grid_id , map_projection , expanded , iewe , jnse , &
       dxc , lat_center , lon_center , cone_factor , true_lat1 , true_lat2 , pole , &
-      domain_id , mother_id , nest_level , &
-      iewd , jnsd , iew_startm , jns_startm , &
-      ratio_wrt_coarse , ratio_wrt_mother , &
-      dxd , xew_startc , yns_startc , &
-      kbu , &
-      ptop )
+      dxd , ptop )
    END IF
 
    !  Now that we have all of this data input, we can do a fast run

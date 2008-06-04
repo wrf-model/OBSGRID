@@ -34,10 +34,9 @@ PROGRAM main
       bhi , bhr , nml , iew_alloc , jns_alloc, kbu_alloc , &
       current_date_8 , current_time_6 , date_char , icount , total_count )
          USE namelist
+         INCLUDE 'big_header.inc'
          CHARACTER ( LEN = 132 ) ,    INTENT ( IN )    :: filename
          CHARACTER ( LEN = 132 ) ,    INTENT ( INOUT ) :: filename_out
-         INTEGER, DIMENSION (50,20) , INTENT ( INOUT ) :: bhi
-         REAL, DIMENSION (20,20) ,    INTENT ( INOUT ) :: bhr
          TYPE ( all_nml ) , INTENT (IN )               :: nml
          INTEGER , INTENT ( IN )                       :: iew_alloc , &
                                                           jns_alloc , &
@@ -56,14 +55,6 @@ PROGRAM main
    INTEGER                                :: iew_alloc , &
                                              jns_alloc , &
                                              kbu_alloc
-
-   INTEGER                                :: iewe_dummy , &
-                                             jnse_dummy , &
-                                             iewd_dummy , &
-                                             jnsd_dummy , &
-                                             expanded_dummy , &
-                                             program_dummy , &
-                                             nest_level_dummy
 
    INTEGER                                :: icount , &
                                              total_count    , &
@@ -104,7 +95,6 @@ call opngks
    END DO
    filename = 'namelist.input'
    CALL proc_namelist ( unit , filename , nml )
-   expanded_dummy = 0
 
    !  Compute the time perids that are to be processed.  This is specified
    !  in the NAMELIST.  The two dates are 19 digit long character strings
@@ -172,6 +162,7 @@ call opngks
    ALLOCATE ( all_2d(100,2) )
    ALLOCATE ( all_1d( 10) )
 
+
    !  Pass all of the data from the NAMELIST and record header to the
    !  driver routine.  Pick off the first guess field and the logical unit
    !  number.  Re-initialize the current date to the first time period
@@ -198,34 +189,21 @@ call opngks
 
    CALL proc_header ( filename , bhi , bhr , nml )
 
+   !  We will always do the analysis on the incoming domain size - iewe & jnse
+   !  We will only need the cut down size for the output
+
    CALL proc_get_info_header ( nml%record_5%print_header , &
-   nest_level=nest_level_dummy , &
-   iewe=iewe_dummy , jnse=jnse_dummy ,  &
-   iewd=iewd_dummy , jnsd=jnsd_dummy ,  &
+   iewe=iew_alloc , jnse=jns_alloc ,  &
    kbu=kbu_alloc )
-
-   !  Depending on the values of these domain parameters, we need to set the
-   !  2D and 3D arrays to different choices.  If this is REGRID input, and if
-   !  REGRID used the expanded option, and if this is the most coarse grid, then
-   !  we have to use the expanded size for the I and J dimensions.  If any of these
-   !  conditions is false, then we use the domain size as the I and J dimensions.
-
-   IF ( ( expanded_dummy .EQ. 1 ) .AND. ( nest_level_dummy .EQ. 0 ) ) THEN
-      iew_alloc = iewe_dummy
-      jns_alloc = jnse_dummy
-   ELSE
-      iew_alloc = iewd_dummy
-      jns_alloc = jnsd_dummy
-   END IF
 
    icount = 0
 
    time_loop_2 : DO
 
       filename = nml%record_2%fg_filename 
-      ilen = len_trim(filename)
-      filename_out = "metoa_em."//filename(ilen-2:ilen)//"."//current_date//".nc"
       filename = trim(filename)//"."//current_date//".nc"
+      WRITE(filename_out,'("./metoa_em.d",i2.2,".")') nml%record_2%grid_id
+      filename_out = trim(filename_out)//current_date//".nc"
 
       !  Which time period are we processing.
 

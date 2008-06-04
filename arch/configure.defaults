@@ -131,6 +131,19 @@ CPPFLAGS	=	-I. -C -P -DIBM -xassembler-with-cpp
 RANLIB		=	ranlib
 
 ###########################################################
+#ARCH	Darwin - with pgf90 compiler 
+#
+FC		=	pgf90
+FFLAGS		=	-Mfreeform -byteswapio -pc 32
+F77FLAGS	=	-byteswapio -O
+FNGFLAGS	=	$(FFLAGS)
+LDFLAGS		=	
+CC		=	gcc
+CFLAGS		=	-O
+CPP		=	/lib/cpp 
+CPPFLAGS	=	-I. -C -P -DDEC -traditional
+
+###########################################################
 #ARCH	Darwin - with g95 compiler	
 #
 FC		=	g95

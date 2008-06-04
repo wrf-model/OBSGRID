@@ -25,16 +25,17 @@ iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
    INCLUDE 'first_guess.inc'
    INCLUDE 'error.inc'
  
-   INTEGER                                      :: met_ncid, oa_ncid
-   REAL , DIMENSION ( jns_alloc , iew_alloc )   :: tobbox
-   INTEGER                                      :: iewd , jnsd
-   REAL , DIMENSION ( jnsd , iewd , kbu_alloc ) :: dum3d, pertubation
-   REAL , DIMENSION ( iewd , jnsd , kbu_alloc ) :: met_em_dum3d
-   REAL , DIMENSION ( jnsd , iewd )             :: dum2d
-   REAL , DIMENSION ( iewd , jnsd )             :: met_em_dum2d
-   REAL , ALLOCATABLE , DIMENSION(:,:,:)        :: met_em_3d
-   REAL , ALLOCATABLE , DIMENSION(:,:)          :: met_em_2d
-   CHARACTER (LEN=19)                           :: date_char
+   INTEGER                                                :: met_ncid, oa_ncid
+   REAL , DIMENSION ( jns_alloc , iew_alloc )             :: tobbox
+   INTEGER                                                :: iewd , jnsd
+   REAL , DIMENSION ( jns_alloc , iew_alloc , kbu_alloc ) :: pertubation
+   REAL , DIMENSION ( jnsd , iewd , kbu_alloc )           :: dum3d
+   REAL , DIMENSION ( iewd , jnsd , kbu_alloc )           :: met_em_dum3d
+   REAL , DIMENSION ( jnsd , iewd )                       :: dum2d
+   REAL , DIMENSION ( iewd , jnsd )                       :: met_em_dum2d
+   REAL , ALLOCATABLE , DIMENSION(:,:,:)                  :: met_em_3d
+   REAL , ALLOCATABLE , DIMENSION(:,:)                    :: met_em_2d
+   CHARACTER (LEN=19)                                     :: date_char
 
    INTERFACE 
       INCLUDE 'error.int'
@@ -60,7 +61,7 @@ iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
    INTEGER                                           :: ilen, itype, ival, idm, natt
    INTEGER, DIMENSION(6)                             :: ishape
    REAL                                              :: rval
-   REAL, DIMENSION(16)                               :: rval_corners
+   REAL, DIMENSION(16)                               :: rval_corners, corner_lats, corner_lons
    CHARACTER (LEN=19), ALLOCATABLE, DIMENSION(:,:,:) :: text
    REAL, ALLOCATABLE, DIMENSION(:,:,:)               :: d3_data1, d3_data2
    REAL, ALLOCATABLE, DIMENSION(:,:)                 :: d2_data1, d2_data2
@@ -182,7 +183,7 @@ iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
             allocate (d3_data1(dims_in(1), dims_in(2), dims_in(3) ))
             allocate (d3_data2(dims_out(1),dims_out(2),dims_out(3)))
             rcode = nf_get_var_real(met_ncid, i, d3_data1)
-            CALL unexpand3 ( d3_data1, dims_in(1), dims_in(2), dims_in(3), d3_data2, dims_out(1), dims_out(2) ) 
+            CALL unexpand3 ( d3_data1, dims_in(2), dims_in(1), dims_in(3), d3_data2, dims_out(2), dims_out(1) ) 
             rcode = nf_put_vara_real (oa_ncid, i, start_dims, dims_out, d3_data2)
             deallocate(d3_data1)
             deallocate(d3_data2)
@@ -191,12 +192,55 @@ iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
             allocate (d2_data1(dims_in(1), dims_in(2) ))
             allocate (d2_data2(dims_out(1),dims_out(2)))
             rcode = nf_get_var_real(met_ncid, i, d2_data1)
-            CALL unexpand2 ( d2_data1, dims_in(1), dims_in(2), d2_data2, dims_out(1), dims_out(2) ) 
+            CALL unexpand2 ( d2_data1, dims_in(2), dims_in(1), d2_data2, dims_out(2), dims_out(1) ) 
             rcode = nf_put_vara_real (oa_ncid, i, start_dims, dims_out, d2_data2)
+                IF ( trim(cval) == 'XLAT_M' ) THEN
+                   corner_lats( 1) = d2_data2(1          ,1          )
+                   corner_lats( 2) = d2_data2(1          ,dims_out(2))
+                   corner_lats( 3) = d2_data2(dims_out(1),dims_out(2))
+                   corner_lats( 4) = d2_data2(dims_out(1),1          )
+            ELSEIF ( trim(cval) == 'XLAT_U' ) THEN
+                   corner_lats( 5) = d2_data2(1          ,1          )
+                   corner_lats( 6) = d2_data2(1          ,dims_out(2))
+                   corner_lats( 7) = d2_data2(dims_out(1),dims_out(2))
+                   corner_lats( 8) = d2_data2(dims_out(1),1          )
+                   corner_lats(13) = corner_lats( 5) - (d2_data2(1          ,2          )-d2_data2(1          ,1            ))/2.0
+                   corner_lats(14) = corner_lats( 6) + (d2_data2(1          ,dims_out(2))-d2_data2(1          ,dims_out(2)-1))/2.0
+                   corner_lats(15) = corner_lats( 7) + (d2_data2(dims_out(1),dims_out(2))-d2_data2(dims_out(1),dims_out(2)-1))/2.0
+                   corner_lats(16) = corner_lats( 8) - (d2_data2(dims_out(1),2          )-d2_data2(dims_out(1),1            ))/2.0
+            ELSEIF ( trim(cval) == 'XLAT_V' ) THEN
+                   corner_lats( 9) = d2_data2(1          ,1          )
+                   corner_lats(10) = d2_data2(1          ,dims_out(2))
+                   corner_lats(11) = d2_data2(dims_out(1),dims_out(2))
+                   corner_lats(12) = d2_data2(dims_out(1),1          )
+            ELSEIF ( trim(cval) == 'XLONG_M' ) THEN
+                   corner_lons( 1) = d2_data2(1          ,1          )
+                   corner_lons( 2) = d2_data2(1          ,dims_out(2))
+                   corner_lons( 3) = d2_data2(dims_out(1),dims_out(2))
+                   corner_lons( 4) = d2_data2(dims_out(1),1          )
+            ELSEIF ( trim(cval) == 'XLONG_U' ) THEN
+                   corner_lons( 5) = d2_data2(1          ,1          )
+                   corner_lons( 6) = d2_data2(1          ,dims_out(2))
+                   corner_lons( 7) = d2_data2(dims_out(1),dims_out(2))
+                   corner_lons( 8) = d2_data2(dims_out(1),1          )
+            ELSEIF ( trim(cval) == 'XLONG_V' ) THEN
+                   corner_lons( 9) = d2_data2(1          ,1          )
+                   corner_lons(10) = d2_data2(1          ,dims_out(2))
+                   corner_lons(11) = d2_data2(dims_out(1),dims_out(2))
+                   corner_lons(12) = d2_data2(dims_out(1),1          )
+                   corner_lons(13) = corner_lons( 9) - (d2_data2(2          ,1          )-d2_data2(1            ,1          ))/2.0 
+                   corner_lons(14) = corner_lons(10) - (d2_data2(2          ,dims_out(2))-d2_data2(1            ,dims_out(2)))/2.0
+                   corner_lons(15) = corner_lons(11) + (d2_data2(dims_out(1),dims_out(2))-d2_data2(dims_out(1)-1,dims_out(2)))/2.0
+                   corner_lons(16) = corner_lons(12) + (d2_data2(dims_out(1),1          )-d2_data2(dims_out(1)-1,1          ))/2.0
+            ENDIF
             deallocate(d2_data1)
             deallocate(d2_data2)
          ENDIF
    ENDDO
+
+   !! Replace the corner meta data
+   rcode = nf_put_att_real(oa_ncid, NF_GLOBAL, 'corner_lats', 5, 16, corner_lats)
+   rcode = nf_put_att_real(oa_ncid, NF_GLOBAL, 'corner_lons', 5, 16, corner_lons)
 
 
    !! NOW replace the changed fields in the output file
@@ -240,6 +284,7 @@ iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
    rcode = nf_inq_varid    ( oa_ncid, "RH", ivar_number )
    rcode = nf_put_var_real ( oa_ncid, ivar_number, met_em_3d )
    DEALLOCATE (met_em_3d)
+
  
    !! Get the diff between the unchanged A grid and modified A grid
    !! This pertubation will be interpolated to the C grid before it is added to the 

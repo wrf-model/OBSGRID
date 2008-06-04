@@ -11,11 +11,11 @@ max_error_t , max_error_uv           , &
 max_error_z , max_error_p , &
 buddy_weight , date_char , root_filename )
 
-   CHARACTER *(*)         , INTENT ( INOUT )      :: filename
+   CHARACTER *(*)         , INTENT ( IN    )      :: filename
    CHARACTER *(*)         , INTENT ( INOUT )      :: filename_out
-   CHARACTER *(*)         , INTENT ( INOUT )      :: root_filename
-   INTEGER , DIMENSION (50,20) , INTENT ( INOUT ) :: bhid
-   REAL , DIMENSION (20,20)    , INTENT ( INOUT ) :: bhrd
+   CHARACTER *(*)         , INTENT ( IN    )      :: root_filename
+   INTEGER , DIMENSION(50)                        :: bhid
+   REAL    , DIMENSION(20)                        :: bhrd
    INCLUDE 'first_guess_size.inc'
    INCLUDE 'first_guess.inc'
    LOGICAL                                        :: print_header , &

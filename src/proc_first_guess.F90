@@ -21,16 +21,16 @@ current_date_8 , current_time_6 , date_char , icount )
    INCLUDE 'netcdf.inc'
 
    CHARACTER ( LEN = 132 ) ,INTENT ( IN )           :: filename
-   INTEGER                , INTENT ( OUT )          :: num3d , &
+   INTEGER                                          :: num3d , &
                                                        num2d , &
                                                        num1d
    INTEGER                , INTENT ( IN )           :: iew_alloc  , &
                                                        jns_alloc  , &
                                                        kbu_alloc
 
-   REAL, INTENT ( OUT ) , DIMENSION(kbu_alloc)      :: pressure
+   REAL                 , DIMENSION(kbu_alloc)      :: pressure
 
-   REAL, INTENT ( OUT ) , DIMENSION(jns_alloc,iew_alloc,kbu_alloc) &
+   REAL                 , DIMENSION(jns_alloc,iew_alloc,kbu_alloc) &
                                                     :: t  , &
                                                        u  , &
                                                        v  , &
@@ -42,7 +42,7 @@ current_date_8 , current_time_6 , date_char , icount )
                                                        rh , &
                                                        pres
 
-   REAL , INTENT ( OUT ) , DIMENSION(jns_alloc,iew_alloc)  &
+   REAL                  , DIMENSION(jns_alloc,iew_alloc)  &
                                                     :: terrain      , &
                                                        latitude_x   , &
                                                        longitude_x  , &

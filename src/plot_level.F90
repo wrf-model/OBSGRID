@@ -23,7 +23,7 @@ PROGRAM plot_obs
    INTEGER ::   end_year,   end_month,   end_day,   end_hour,   end_minute,   end_second
    INTEGER :: interval, idiff, n_times
    CHARACTER (LEN=19) :: start_date, end_date, rdate
-   INTEGER :: domain
+   INTEGER :: grid_id
    INTEGER :: met_ncid
    INTEGER :: rcode
    CHARACTER (LEN=80) :: file_type
@@ -88,14 +88,14 @@ PROGRAM plot_obs
                         interval
     namelist /record7/ use_first_guess, f4d, intf4d, lagtem
 
-    namelist /plot_level/ file_type, domain
+    namelist /plot_level/ file_type, grid_id
   
    ! default 
    start_minute = 0
    start_second = 0
    end_minute = 0
    end_second = 0
-   domain = 1
+   grid_id = 1
    file_type = "3D"
    
    print*," "
@@ -128,7 +128,7 @@ PROGRAM plot_obs
    n_times = idiff / interval
  
    ! Build metoa file
-   WRITE(oa_file, '("metoa_em.d",I2.2".",A19,".nc")') domain, start_date
+   WRITE(oa_file, '("metoa_em.d",I2.2".",A19,".nc")') grid_id, start_date
    print*," Attempting to open file: ", trim(oa_file)
    rcode = nf_open(oa_file, 0, met_ncid)
    IF ( rcode /= 0 ) THEN

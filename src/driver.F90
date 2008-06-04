@@ -21,10 +21,10 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
    !  The record header for this domain, for this time, in the original
    !  form.
 
-   CHARACTER ( LEN = 132 ) ,     INTENT ( IN )    :: filename
-   CHARACTER ( LEN = 132 ) ,     INTENT ( INOUT ) :: filename_out
-   INTEGER , DIMENSION (50,20) , INTENT ( INOUT ) :: bhi
-   REAL , DIMENSION (20,20)    , INTENT ( INOUT ) :: bhr
+   INCLUDE 'big_header.inc'
+
+   CHARACTER ( LEN = 132 )  , INTENT ( IN )       :: filename
+   CHARACTER ( LEN = 132 )  , INTENT ( INOUT )    :: filename_out
    INTEGER , INTENT ( IN )                        :: current_date_8 , & 
                                                      current_time_6 , & 
                                                      icount , total_count
@@ -143,15 +143,10 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
          !  is defined with optional arguments, allowing for limited access to
          !  specific values.
 
-         CALL proc_get_info_header ( nml%record_5%print_header , program, &
-         iewc , jnsc , map_projection , expanded , iewe , jnse , &
+         CALL proc_get_info_header ( nml%record_5%print_header , &
+         iewd , jnsd , kbu_alloc , grid_id , map_projection , expanded , iewe , jnse , &
          dxc , lat_center , lon_center , cone_factor , true_lat1 , true_lat2 , pole , &
-         domain_id , mother_id , nest_level , &
-         iewd , jnsd , iew_startm , jns_startm , &
-         ratio_wrt_coarse , ratio_wrt_mother , &
-         dxd , xew_startc , yns_startc , &
-         kbu_alloc , &
-         ptop )
+         dxd , ptop )
 
          !  All of the following routines assume distances to be in km, and the pressures
          !  are assumed to be in hPa.
@@ -160,24 +155,11 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
          dxd = dxd * 0.001
          ptop = NINT ( ptop * 0.01 )
 
-         !  These values (*_map) are set for the mapping utilities.  They need to know how
-         !  big this domain is, which we supply from the above values.  If this is
-         !  DATAGRID, and expanded, and the most coarse domain, then we give the
-         !  expanded size.  If this is the coarse grid and unexpanded, we give that
-         !  size.  If this is a nest, that is the horizontal size needed.
-       
-         IF ( ( program    .EQ. 2 ) .AND. &
-              ( expanded   .EQ. 1 ) .AND. &
-              ( nest_level .EQ. 0 ) ) THEN
-            iew_map   = iewe
-            jns_map   = jnse
-         ELSE IF ( ( nest_level .EQ. 0 ) .AND. ( expanded .EQ. 0 ) ) THEN
-            iew_map   = iewc
-            jns_map   = jnsc
-         ELSE
-            iew_map   = iewc
-            jns_map   = jnsc
-         END IF
+         !  These values (*_map) are set for the mapping utilities.  
+         !  They need to know how big this domain is, which we supply from the above values. 
+         
+         iew_map   = iewe
+         jns_map   = jnse
 
          !  Process the first guess data set.
 

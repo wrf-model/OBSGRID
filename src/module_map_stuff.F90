@@ -54,15 +54,15 @@ CONTAINS
       xwest = real(idummy)
 
       !! For now - domain 1 and no expansion
-      !!IF ((bhi(8,1).EQ.0) .and. (bhi(13,1).EQ.1)) THEN 
-         !!xsouth = bhr(10,1)
-         !!xwest = bhr(11,1)
-      !!ELSEIF (bhi(13,1) .GT. 1) THEN
-         !!xsouth = bhr(10,1)
-         !!xwest = bhr(11,1)
+      !!IF ((bhi(8).EQ.0) .and. (bhi(13).EQ.1)) THEN 
+         !!xsouth = bhr(10)
+         !!xwest = bhr(11)
+      !!ELSEIF (bhi(13) .GT. 1) THEN
+         !!xsouth = bhr(10)
+         !!xwest = bhr(11)
       !!ELSE
-         !!xsouth = bhr(10,1) - bhi(11,1)
-         !!xwest = bhr(11,1) - bhi(12,1)
+         !!xsouth = bhr(10) - bhi(11)
+         !!xwest = bhr(11) - bhi(12)
       !!END IF
 
       !  The ratio of the grid distance of the mother domain to the grid distance
@@ -81,12 +81,12 @@ CONTAINS
       !  Is there some sort of expanded domain with which to concern ourselves?
       ix = sndim
       jx = wedim
-      !!IF ((bhi(8,1) .EQ. 1) .and. (bhi(13,1) .EQ. 1)) THEN
-         !!ix = bhi(9,1)
-         !!jx = bhi(10,1)
+      !!IF ((bhi(8) .EQ. 1) .and. (bhi(13) .EQ. 1)) THEN
+         !!ix = bhi(9)
+         !!jx = bhi(10)
       !!ELSE
-         !!ix = bhi(16,1)
-         !!jx = bhi(17,1)
+         !!ix = bhi(16)
+         !!jx = bhi(17)
       !!END IF
 
       !  Get the lat/lon of the upper right corner point.

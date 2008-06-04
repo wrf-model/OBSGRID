@@ -1156,7 +1156,7 @@ SUBROUTINE inside_window ( lat , lon , iew , jns , outside_window )
 
    REAL ::  XLATC, XLONC, XN, POLE, DS,   &
             TRUE_LAT1, TRUE_LAT2 , &
-            dxd , xew_startc , yns_startc
+            dxd 
 
    INTEGER ::  KPROJ,    &
             IMAX, JMAX, &
@@ -1164,7 +1164,7 @@ SUBROUTINE inside_window ( lat , lon , iew , jns , outside_window )
 
    COMMON /MAP_STUFF/ XLATC, XLONC, XN, POLE, DS, KPROJ,    &
                       IMAX, JMAX, TRUE_LAT1, TRUE_LAT2 , &
-                      dxd , xew_startc , yns_startc , iewe , jnse
+                      dxd , iewe , jnse
 
 
    IF ( ABS(lat) .GT. 90. ) THEN

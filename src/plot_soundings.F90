@@ -30,7 +30,7 @@ program plot_raobs
   INTEGER ::   end_year,   end_month,   end_day,   end_hour,   end_minute,   end_second
   INTEGER :: interval, idiff, n_times
   CHARACTER (LEN=19) :: start_date, end_date, rdate
-  INTEGER :: domain
+  INTEGER :: grid_id
 
   INTEGER, DIMENSION(4)                        :: iend
   INTEGER                                      :: met_ncid, iv, idims
@@ -47,11 +47,11 @@ program plot_raobs
                         end_year,   end_month,   end_day,   end_hour,   end_minute,   end_second, &
                       interval
 
-  namelist /plot_sounding/ file_type, read_metoa, domain
+  namelist /plot_sounding/ file_type, read_metoa, grid_id
  
   ! default
   file_type = 'useful'
-  domain    = 1
+  grid_id    = 1
   start_minute = 0
   start_second = 0
   end_minute = 0
@@ -83,7 +83,7 @@ program plot_raobs
   n_times = idiff / interval
 
   ! Build metoa file
-  WRITE(oa_file, '("metoa_em.d",I2.2".",A19,".nc")') domain, start_date
+  WRITE(oa_file, '("metoa_em.d",I2.2".",A19,".nc")') grid_id, start_date
   
   IF ( read_metoa ) THEN
      print*," Attempting to open file: ", trim(oa_file)

@@ -23,6 +23,8 @@ MODULE namelist
       CHARACTER ( LEN = 132) , DIMENSION(max_times)             & 
                               :: obs_filename                 , & ! observation filename 
                                  sfc_obs_filename                 ! off-hour sfc fdda observation filename 
+      LOGICAL :: trim_domain
+      INTEGER :: trim_value, grid_id
    END TYPE nml_record_2
 
    TYPE nml_record_3
@@ -175,22 +177,7 @@ SUBROUTINE check_namelist ( nml )
       call error_handler ( error_number , error_message , fatal , listing )
    END IF test_103
  
-   !  201: Does the first-guess file supplied from the NAMELIST file
-   !  exist?
 
-   !INQUIRE ( EXIST = exist , FILE = nml%record_2%fg_filename ) 
-   !test_201 : IF ( .NOT. exist ) THEN
-      !error_message = ' '
-      !error_number = 00013201
-      !error_message(1:31) = 'check_namelist                 '
-      !error_message(32:)  = ' The first guess filename supplied &
-      !&in the namelist (' // TRIM ( nml%record_2%fg_filename ) // &
-      !') does not exist.'
-      !fatal = .true.
-      !listing = .false.
-      !call error_handler ( error_number , error_message , fatal , listing )
-   !END IF test_201
- 
    !  202: Does the observation data file supplied from the NAMELIST file
    !  exist?
 
@@ -714,6 +701,9 @@ SUBROUTINE store_namelist ( nml )
    nml%record_2%fg_filename              = fg_filename    
    nml%record_2%obs_filename             = obs_filename    
    nml%record_2%sfc_obs_filename         = sfc_obs_filename    
+   nml%record_2%trim_domain              = trim_domain         
+   nml%record_2%trim_value               = trim_value          
+   nml%record_2%grid_id                  = grid_id             
 
    !  Record 3 NAMELIST values:
 

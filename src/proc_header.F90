@@ -8,12 +8,10 @@ SUBROUTINE proc_header ( filename , bhid , bhrd , nml )
    IMPLICIT NONE
    INCLUDE 'netcdf.inc'
 
-   CHARACTER ( LEN = 132 ) ,INTENT ( IN )        :: filename
-   INTEGER                , INTENT (OUT ) , &
-                            DIMENSION (50,20)    :: bhid
-   REAL                   , INTENT (OUT ) , &
-                            DIMENSION (20,20)    :: bhrd
+   CHARACTER ( LEN = 132 ) ,  INTENT ( IN )      :: filename
    TYPE ( all_nml ) , INTENT ( IN )              :: nml
+   INTEGER , DIMENSION (50)                      :: bhid
+   REAL    , DIMENSION (20)                      :: bhrd
 
    INTEGER                                       :: i, idummy
    REAL                                          :: rdummy
@@ -56,61 +54,39 @@ SUBROUTINE proc_header ( filename , bhid , bhrd , nml )
    ALLOCATE ( ptop (wedim-1, sndim-1, btdim, ntimes) )
    rcode = nf_inq_varid    ( met_ncid, "PRES", i )
    rcode = nf_get_var_real ( met_ncid, i, ptop )
-
-
-        bhid( 1,1) = 2
-        bhid( 5,1) = sndim                     !!! sn dim (unstaggered)
-        bhid( 6,1) = wedim                     !!! we dim (unstaggered)
    rcode = NF_GET_ATT_INT(met_ncid, nf_global, "MAP_PROJ", map_proj )
-        bhid( 7,1) = map_proj
-        bhid( 9,1) = bhid( 5,1)
-        bhid(10,1) = bhid( 6,1)
-   rcode = NF_GET_ATT_INT(met_ncid, nf_global, "grid_id", idummy )
-        bhid(13,1) = idummy                    !!! domain ID
-        bhid(15,1) = 0                         !!! nest level
-        IF ( idummy > 1 ) bhid(15,1) = 1
-   rcode = NF_GET_ATT_INT(met_ncid, nf_global, "parent_id", idummy )
-        bhid(14,1) = idummy                    !!! mother domain ID
-        bhid(16,1) = bhid( 5,1)
-        bhid(17,1) = bhid( 6,1)
-   rcode = NF_GET_ATT_INT(met_ncid, nf_global, "j_parent_start", idummy )
-        bhid(18,1) = idummy                    !!! location in mother domain
-        bhrd(10,1) = real(idummy) 
-   rcode = NF_GET_ATT_INT(met_ncid, nf_global, "i_parent_start", idummy )
-        bhid(19,1) = idummy                    !!! location in mother domain
-        bhrd(11,1) = real(idummy) 
-   rcode = NF_GET_ATT_INT(met_ncid, nf_global, "parent_grid_ratio", idummy )
-        bhid(20,1) = idummy                    !!! grid ratio wrt coarse domain
-        bhid(21,1) = idummy                    !!! grid ratio wrt mother domain
 
-   READ(times(1)(1:4),'(i4)')idummy
-        bhid( 5,2) = idummy               !!! year of the start time
-   READ(times(1)(6:7),'(i2)')idummy
-        bhid( 6,2) = idummy               !!! month of the start time
-   READ(times(1)(9:10),'(i2)')idummy
-        bhid( 7,2) = idummy               !!! day of the start time
-   READ(times(1)(12:13),'(i2)')idummy
-        bhid( 8,2) = idummy               !!! hour of the start time
-   READ(times(1)(15:16),'(i2)')idummy
-        bhid( 9,2) = idummy               !!! minute of the start time
-   READ(times(1)(18:19),'(i2)')idummy
-        bhid(10,2) = idummy               !!! second of the start time
 
-        bhid(12,2) = btdim                !!! Anticipated number of vertical levels in 3d data
+   bhid( 1) = nml%record_2%grid_id      !!! grid ID
+   bhid( 2) = map_proj
+   bhid( 3) = btdim                     !!! number of vertical levels in 3d data
+   bhid( 4) = wedim                     !!! full incoming we dim (staggered)
+   bhid( 5) = sndim                     !!! full incoming sn dim (staggered)
+
+   if ( nml%record_2%trim_domain ) then
+      bhid( 6) = 1                         !!! domain expanded
+      bhid( 7) = wedim - 2 * nml%record_2%trim_value 
+      bhid( 8) = sndim - 2 * nml%record_2%trim_value
+   else
+      bhid( 6) = 0                         !!! domain not expanded
+      bhid( 7) = wedim                  
+      bhid( 8) = sndim                 
+   endif
+
 
    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "DX", rdummy )
-        bhrd( 1,1) = rdummy               !!! dx
-        bhrd( 9,1) = rdummy               !!! dx
+        bhrd( 1) = rdummy               !!! dx
+        bhrd( 8) = rdummy               !!! dx
    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "CEN_LAT", rdummy )
-        bhrd( 2,1) = rdummy               !!! center lat
+        bhrd( 2) = rdummy               !!! center lat
    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "STAND_LON", rdummy )
-        bhrd( 3,1) = rdummy               !!! stand lon
+        bhrd( 3) = rdummy               !!! stand lon
    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "TRUELAT1", truelat1 )
-        bhrd( 5,1) = truelat1             !!! truelat1
+        bhrd( 5) = truelat1             !!! truelat1
    rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "TRUELAT2", truelat2 )
-        bhrd( 6,1) = truelat2             !!! truelat2
+        bhrd( 6) = truelat2             !!! truelat2
 
-        bhrd( 2,2) =  ptop(1,1,btdim,1)   !!! Top pressure used in analysis, pressure defining model lid (Pa)
+        bhrd( 9) =  ptop(1,1,btdim,1)   !!! Top pressure used in analysis, pressure defining model lid (Pa)
 
 
     cone = 1.
@@ -124,7 +100,7 @@ SUBROUTINE proc_header ( filename , bhid , bhrd , nml )
          cone = SIN(ABS(truelat1)*RAD_PER_DEG )
       ENDIF
     endif
-        bhrd( 4,1) = cone                 !!! cone factor
+        bhrd( 4) = cone                 !!! cone factor
 
    rcode = nf_close(met_ncid) 
 

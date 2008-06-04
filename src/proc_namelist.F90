@@ -11,7 +11,7 @@ SUBROUTINE proc_namelist ( unit , filename , nml )
 
    INTEGER , INTENT ( IN )          :: unit
    CHARACTER *(*) , INTENT ( IN )   :: filename
-   TYPE ( all_nml ) ,  INTENT (OUT) :: nml
+   TYPE ( all_nml )                 :: nml
 
    INTEGER , DIMENSION ( 100 )      :: nml_read_errors
    INTEGER                          :: loop , i
@@ -56,6 +56,9 @@ SUBROUTINE proc_namelist ( unit , filename , nml )
 
    CALL exist_namelist ( unit , filename(1:LEN_TRIM(filename)) )
 
+   ! Default grid_id 
+   grid_id = 1
+
    !  Initialize the array of radius of influence scans.  This permits an easy way
    !  to determine the number of requested scans without an additional input value.
 
@@ -70,9 +73,12 @@ SUBROUTINE proc_namelist ( unit , filename , nml )
       &                                                                                    '
    ENDDO
 
-   !  Unless explicitly requested, we are not going down the FDDA path.
+   !  Unless explicitly requested, 
+   !     we are not going down the FDDA path.
+   !     we are not triming down the domain.
 
    f4d = .FALSE.
+   trim_domain = .FALSE.
 
    !  Input the NAMELIST data, from either the specified
    !  input unit, or the default standard in.
@@ -113,6 +119,12 @@ SUBROUTINE proc_namelist ( unit , filename , nml )
    !  be properly closed.
 
    CLOSE ( UNIT = unit )
+
+   !  Default input met_em file names 
+   !  Leave the namelist as a placehold, but we are not using it 
+   !  This overwrite anything from the namelist
+   
+   WRITE(fg_filename,'("./met_em.d",i2.2)') grid_id
 
    !  For completeness we output the NAMELIST record.
 

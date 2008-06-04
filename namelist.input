@@ -10,7 +10,7 @@
  interval                    = 21600/
 
 &record2
- fg_filename                 = '../JAN00/met_em.d01'
+ grid_id                     = 1
  obs_filename                = '../JAN00/obs:2000-01-24_12' 
                                '../JAN00/obs:2000-01-24_18' 
                                '../JAN00/obs:2000-01-25_00' 
@@ -23,7 +23,11 @@
                                '../JAN00/surface_obs_r:2000-01-25_03' 
                                '../JAN00/surface_obs_r:2000-01-25_06' 
                                '../JAN00/surface_obs_r:2000-01-25_09' 
-                               '../JAN00/surface_obs_r:2000-01-25_12' /
+                               '../JAN00/surface_obs_r:2000-01-25_12' 
+/
+ trim_domain                 = .TRUE.
+ trim_value                  = 5
+
 
 &record3
  max_number_of_obs           = 10000
@@ -87,7 +91,7 @@
 &plot_sounding
  file_type                   = 'useful'
  read_metoa                  = .TRUE.
- domain                      = 1
+ grid_id                     = 1
 /
  file_type                   = 'qc'
  file_type                   = 'results'
@@ -95,7 +99,7 @@
 
 &plot_level
  file_type                   = '3D'
- domain                      = 1
+ grid_id                     = 1
 /
  file_type                   = 'sfc_fdda'
 

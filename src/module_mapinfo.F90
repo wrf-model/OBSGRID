@@ -58,11 +58,11 @@ contains
     !! Expanded domains
     !! (13,1) is domain
     !! (8,1) is expanded
-    !!if ((bhi(13,1) == 1).and.(bhi(8,1) == 1)) then
-       !!mapinfo%ix = bhi(9,1)
-       !!mapinfo%jx = bhi(10,1)
-       !!mapinfo%ixmoad = bhi(9,1)
-       !!mapinfo%jxmoad = bhi(10,1)
+    !!if ((bhi(13) == 1).and.(bhi(8) == 1)) then
+       !!mapinfo%ix = bhi(9)
+       !!mapinfo%jx = bhi(10)
+       !!mapinfo%ixmoad = bhi(9)
+       !!mapinfo%jxmoad = bhi(10)
     !!endif
 
     rcode = NF_GET_ATT_INT(met_ncid, nf_global, "j_parent_start", idummy )
