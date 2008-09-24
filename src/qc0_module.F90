@@ -76,6 +76,59 @@ END SUBROUTINE ob_density
                  
 !------------------------------------------------------------------------------
 
+  SUBROUTINE obs_distance( tobbox, distance, iew, jns, dx )
+!
+! This routine computes the distance (array) to the closest obs for each 
+! grid point based on the obs density (array) that is used in
+! MM5 surface analysis nudging in determining the horizontal weighting
+! function (or confidence in the analysis) based on observation density 
+! at each grid point.  In WRF surface analysis nudging codes, the confidence 
+! is determined by the distance to the nearest obs.  The data density is 
+! no longer needed.
+!
+!                      Aijun Deng     06/11/2008 at Penn State
+!
+    IMPLICIT NONE
+
+    INTEGER                               :: jns, iew     ! Array x and y dimensions
+    REAL, INTENT(IN)                      :: dx           ! Grid distance in meters
+    REAL, DIMENSION( : , : ), INTENT(IN)  :: tobbox       ! Incoming density array
+    REAL, DIMENSION( : , : ), INTENT(OUT) :: distance     ! Outgoing distance array
+
+    INTEGER :: i, j, ii, jj
+    REAL    :: dijmin, di, dj, dij
+
+    distance(:,:) = sqrt( (iew-1)*dx*(iew-1)*dx + (jns-1)*dx*(jns-1)*dx )   ! Initialize 
+                    ! the distance array to be the domain diagonal size (something big).
+    dijmin = 0.0
+
+    DO i = 1, iew
+    DO j = 1, jns
+        IF( tobbox(j,i) > 0.5 ) THEN
+          distance(j,i) = 0.0
+        ELSE
+          dijmin = MAXVAL( distance )
+          DO ii = 1, iew
+          DO jj = 1, jns
+            IF( tobbox(jj,ii) > 0.5 ) THEN
+              di     = ABS( FLOAT(ii-i) )
+              dj     = ABS( FLOAT(jj-j) )
+              dij    = SQRT( di*di+dj*dj )
+              dijmin = MIN( dijmin,dij )
+            ENDIF
+          ENDDO
+          ENDDO
+
+          distance(j,i) = dijmin * dx
+
+        ENDIF
+    ENDDO
+    ENDDO
+
+  END SUBROUTINE obs_distance
+
+!------------------------------------------------------------------------------
+
 SUBROUTINE local ( time , lonob , local_time , num_obs )
 
 !  The "local" time is an approximation for the maximum difference 

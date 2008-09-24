@@ -5,7 +5,7 @@
  start_hour                  =    12
  end_year                    =  2000
  end_month                   =    01
- end_day                     =    24
+ end_day                     =    25
  end_hour                    =    12
  interval                    = 21600/
 
@@ -19,6 +19,7 @@
  sfc_obs_filename            = '../JAN00/surface_obs_r:2000-01-24_12' 
                                '../JAN00/surface_obs_r:2000-01-24_15' 
                                '../JAN00/surface_obs_r:2000-01-24_18' 
+                               '../JAN00/surface_obs_r:2000-01-24_21' 
                                '../JAN00/surface_obs_r:2000-01-25_00' 
                                '../JAN00/surface_obs_r:2000-01-25_03' 
                                '../JAN00/surface_obs_r:2000-01-25_06' 

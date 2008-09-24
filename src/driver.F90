@@ -53,7 +53,7 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
    INCLUDE 'first_guess_size.inc'
    INCLUDE 'first_guess.inc'
    INCLUDE 'map.inc'
-   REAL                        , DIMENSION (jns_alloc,iew_alloc) :: tobbox
+   REAL                        , DIMENSION (jns_alloc,iew_alloc) :: tobbox, cia
 
    INTERFACE 
       INCLUDE 'error.int'
@@ -112,8 +112,10 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
       END IF
    
       !  Initialize the observations per box to be zero.
+      !  Initialize the observation density to be zero.
 
       tobbox = 0
+      cia = 0
 
       !  Print out so that we know the time period that we are processing.
 
@@ -331,7 +333,7 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             nml%record_5%print_qc_vert            , nml%record_5%print_qc_dry           , &
             pressure , current_date_8 , current_time_6 , dxd , 1. , &
             obs , index , nml%record_3%max_number_of_obs , &
-            t , u , v , h , rh , slp_x , sst , tobbox )
+            t , u , v , h , rh , slp_x , sst , tobbox , cia )
          ELSE
             CALL proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
             total_dups , map_projection , &
@@ -347,7 +349,7 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             nml%record_5%print_qc_vert            , nml%record_5%print_qc_dry           , &
             pressure , fdda_date_8 , fdda_time_6 , dxd , 1. , &
             obs , index , nml%record_3%max_number_of_obs , &
-            t , u , v , h , rh , slp_x , sst , tobbox )
+            t , u , v , h , rh , slp_x , sst , tobbox , cia )
          END IF
       
          !  After the QC process, the observations are available for output
@@ -430,7 +432,7 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          CALL proc_final_analysis ( filename , filename_out , &
          bhi , bhr , t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
          latitude_x , longitude_x , latitude_d , longitude_d , &
-         slp_x , slp_C , sst , tobbox , &
+         slp_x , slp_C , sst , tobbox , cia , &
          pressure , ptop , &
          iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , & 
          nml%record_5%print_header , nml%record_5%print_analysis , &
@@ -444,7 +446,7 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          CALL proc_final_analysis ( filename , filename_out , &
          bhi , bhr , t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
          latitude_x , longitude_x , latitude_d , longitude_d , &
-         slp_x , slp_C , sst , tobbox , &
+         slp_x , slp_C , sst , tobbox , cia , &
          pressure , ptop , &
          iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , & 
          nml%record_5%print_header , nml%record_5%print_analysis , &

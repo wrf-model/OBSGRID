@@ -13,7 +13,7 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
                      print_vert       , print_dry       , & 
                      pressure , date , time , dx , buddy_weight , &
                      obs , index , max_number_of_obs , & 
-                     t , u , v , h , rh , slp_x , sst , tobbox )
+                     t , u , v , h , rh , slp_x , sst , tobbox , cia )
 
 ! Driver routine for QC
 !   
@@ -81,7 +81,7 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
    INTEGER       , INTENT ( IN )                  :: max_number_of_obs
    TYPE (report) , DIMENSION (max_number_of_obs)  :: obs
    INTEGER       , DIMENSION (max_number_of_obs)  :: index
-   REAL          , DIMENSION(jns_alloc,iew_alloc) :: tobbox
+   REAL          , DIMENSION(jns_alloc,iew_alloc) :: tobbox, cia
 
    !  Data from the call to the routine to provide all of the information
    !  for the the observations that we will need.
@@ -236,7 +236,7 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
             !  surface FDDA.
 
             IF ( kp .EQ. 1 ) THEN
-               CALL ob_density ( xob , yob , dx , num_obs_found , tobbox , iew_alloc , jns_alloc )
+               CALL ob_density   ( xob , yob , dx , num_obs_found , tobbox , iew_alloc , jns_alloc )
             END IF
    
             !  Perform the maximum error difference QC test with the available
@@ -280,6 +280,9 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
 
    tobbox = tobbox / 5.
    WHERE ( tobbox .LT. 1 ) tobbox = 0
+
+   ! Now get the distance to the obs so we can calculate the confidence in the analysis
+   CALL obs_distance ( tobbox , cia , iew_alloc , jns_alloc , dx )
 
    !  Now that each variable has gone throught the quality control checks individually,
    !  we should make sure that there is consistency between the variables that are
