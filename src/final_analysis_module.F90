@@ -124,17 +124,17 @@ iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
 
           ELSEIF ( itype == 4 ) THEN     ! integers
             rcode = nf_get_att_int (met_ncid, NF_GLOBAL, cname, ival)
-                IF(cname == 'EAST_GRID_DIMENSION' .OR. &
-                   cname == 'EAST_PATCH_END_STAG' .OR. &
+                IF(cname == 'WEST-EAST_GRID_DIMENSION' .OR. &
+                   cname == 'WEST-EAST_PATCH_END_STAG' .OR. &
                    cname == 'i_parent_end'             ) THEN
                    ival = iewd
-            ELSEIF(cname == 'NORTH_GRID_DIMENSION' .OR. &
-                   cname == 'NORTH_PATCH_END_STAG' .OR. &
+            ELSEIF(cname == 'SOUTH-NORTH_GRID_DIMENSION' .OR. &
+                   cname == 'SOUTH-NORTH_PATCH_END_STAG' .OR. &
                    cname == 'j_parent_end'             ) THEN
                    ival = jnsd
-            ELSEIF(cname == 'EAST_PATCH_END_UNSTAG'    ) THEN
+            ELSEIF(cname == 'WEST-EAST_PATCH_END_UNSTAG'    ) THEN
                    ival = iewd-1
-            ELSEIF(cname == 'NORTH_PATCH_END_UNSTAG'   ) THEN
+            ELSEIF(cname == 'SOUTH-NORTH_PATCH_END_UNSTAG'   ) THEN
                    ival = jnsd-1
             ENDIF
             rcode = nf_put_att_int(oa_ncid, NF_GLOBAL, cname, itype, ilen, ival)
