@@ -13,22 +13,22 @@
 
 .SUFFIXES: .F90 .f90 .F .f .c .o
 
-SHELL           	=       /bin/sh
+SHELL          	=       /bin/sh
 
 # Listing of options that are usually independent of machine type.
 # When necessary, these are over-ridden by each architecture.
 
-ARFLAGS			=	
+ARFLAGS		=	
 
-PERL			=	perl
+PERL		=	perl
 
-RANLIB			=	echo
+RANLIB		=	echo
 
-NETCDF_LIBS		=	-L${NETCDF}/lib -lnetcdf 
+NETCDF_LIBS	=	-L${NETCDF}/lib -lnetcdf 
 
-NETCDF_INC		=	-I${NETCDF}/include
+NETCDF_INC	=	-I${NETCDF}/include
 
-NCARG_LIBS		=	-L${NCARG_ROOT}/lib -lncarg -lncarg_gks -lncarg_c -lX11 -lm
+NCARG_LIBS	=	-L${NCARG_ROOT}/lib -lncarg -lncarg_gks -lncarg_c -lX11 -lm
 
 
 #### Architecture specific settings ####

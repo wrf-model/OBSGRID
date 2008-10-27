@@ -1,0 +1,44 @@
+WRF Objective Aanlysis Program - beta Version (August, 2008)
+
+The WRF Objective analysis (OA) program is a program
+that blends observations (in the form of ASCII format) and background
+(first guess) fields from WPS/metgrid. It provides a simple way to
+add observations to the incoming from another model.
+
+For questions and help to run the program, please see the 
+User's Guide at http://www.mmm.ucar.edu/wrf/users/docs/user_guide/contents.html
+and send email to wrfhelp@ucar.edu.
+
+===================================================
+
+Main program: obsgrid.exe
+
+- Perform objective analysis.
+
+Utility programs: plot_levels.exe, plot_soundings.exe
+
+- Make plots of observation data on pressure levels, and skew-T.
+
+===================================================
+
+How to compile and run?
+
+To create a configure file for your computer, type
+
+./configure
+
+and choose an option that best suits your computer environment.
+
+To compile, type
+
+./compile >& compile_oa.out &
+
+To run, edit namelist.oa, and type the following to run:
+
+./obsgrid.exe
+
+Input files to this program:
+
+- Output from metgrid: met_em.d01.<date> 
+- Observations in the format ('little_r' format) described in the User's Guide.
+

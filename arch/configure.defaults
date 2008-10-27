@@ -140,8 +140,9 @@ FNGFLAGS	=	$(FFLAGS)
 LDFLAGS		=	
 CC		=	gcc
 CFLAGS		=	-O
-CPP		=	/lib/cpp 
+CPP		=	/usr/bin/cpp 
 CPPFLAGS	=	-I. -C -P -DDEC -traditional
+LOCAL_LIBS	= -L${PGI}/lib -lpgftnrtl -lpgc -L/usr/X11R6/lib -L/usr/local/g95/lib/gcc-lib/i386-apple-darwin8.11.1/4.0.3 -lXpm -lX11 -lXext -lf95
 
 ###########################################################
 #ARCH	Darwin - with g95 compiler	
@@ -156,6 +157,7 @@ CFLAGS		=
 CPP		=	/usr/bin/cpp 
 CPPFLAGS	=	-C -P -traditional
 RANLIB		=	
+LOCAL_LIBS	=	-L/usr/X11R6/lib -lX11
 
 ###########################################################
 #ARCH	NULL
