@@ -93,7 +93,7 @@ call opngks
       INQUIRE(unit=unit, opened=is_used)
       IF (.not. is_used) EXIT
    END DO
-   filename = 'namelist.input'
+   filename = 'namelist.oa'
    CALL proc_namelist ( unit , filename , nml )
 
    !  Compute the time perids that are to be processed.  This is specified
