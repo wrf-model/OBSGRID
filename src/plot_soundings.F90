@@ -64,7 +64,7 @@ program plot_raobs
      inquire(unit=funit, opened=is_used)
      IF (.not. is_used) EXIT
   END DO
-  OPEN(funit,file='namelist.input',status='old',form='formatted')
+  OPEN(funit,file='namelist.oa',status='old',form='formatted')
   READ(funit,record1)
   READ(funit,plot_sounding)
   CLOSE(funit)
