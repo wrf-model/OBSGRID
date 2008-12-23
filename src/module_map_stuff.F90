@@ -12,14 +12,14 @@ CONTAINS
       INTEGER :: met_ncid
       INTEGER :: rcode
       INTEGER :: ndims, nvars, ngatts, nunlimdimid
-      INTEGER :: wedim, sndim
+      INTEGER :: wedim, sndim, map_proj
       INTEGER :: dim_val
       CHARACTER (LEN=31) :: dim_name
 
       CHARACTER (LEN=2) :: project
       CHARACTER (LEN=2) , DIMENSION(3) , PARAMETER :: nproj = (/ 'LC','ST','ME' /)
 
-      REAL :: ds , phic , xlonc , xsouth , xwest , xratio , truelat1 , truelat2 
+      REAL :: dx, ds, phic, xlonc, stdlon, xsouth, xwest, xratio, truelat1, truelat2 
       REAL :: pl1 , pl2 , pl3 , pl4 , polat , rot
       REAL :: xleft , xright
       REAL :: vl , vr , vb , vt , wl , wr , wb , wt
@@ -36,12 +36,14 @@ CONTAINS
       !  What projection are we using?
       rcode = NF_GET_ATT_INT(met_ncid, nf_global, "MAP_PROJ", idummy )
       project = nproj(idummy)
+      map_proj = idummy
 
       !  Grid distance in km, center lat/lon.
-      rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "DX", rdummy ) 
-      ds = rdummy/1000.
+      rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "DX", dx ) 
+      ds = dx/1000.
       rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "CEN_LAT", phic )
-      rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "STAND_LON", xlonc )
+      rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "CEN_LON", xlonc )
+      rcode = NF_GET_ATT_REAL(met_ncid, nf_global, "STAND_LON", stdlon )
 
       !  The i and j dimensions, in Mother Of All Domain space.
       ixmoad = sndim
@@ -76,7 +78,10 @@ CONTAINS
 
       !  Get the lat/lon of the lower left hand corner.
 
-      CALL xytoll(1.,1.,pl1,pl2,project,ds,phic,xlonc,ixmoad,jxmoad,xsouth,xwest,xratio,truelat1,truelat2)
+      !CALL xytoll(1.,1.,pl1,pl2,project,ds,phic,xlonc,ixmoad,jxmoad,xsouth,xwest,xratio,truelat1,truelat2)
+      CALL ij_to_ll( map_proj, truelat1, truelat2, stdlon, phic, xlonc, 0.0, 0.0,  &
+                     wedim/2.0, sndim/2.0, dx, dx, 0.0, 0.0, 1.0, 1.0, pl1, pl2 )
+
 
       !  Is there some sort of expanded domain with which to concern ourselves?
       ix = sndim
@@ -91,7 +96,9 @@ CONTAINS
 
       !  Get the lat/lon of the upper right corner point.
 
-      CALL xytoll(REAL(jx),REAL(ix),pl3,pl4,project,ds,phic,xlonc,ixmoad,jxmoad,xsouth,xwest,xratio,truelat1,truelat2)
+      !CALL xytoll(REAL(jx),REAL(ix),pl3,pl4,project,ds,phic,xlonc,ixmoad,jxmoad,xsouth,xwest,xratio,truelat1,truelat2)
+      CALL ij_to_ll( map_proj, truelat1, truelat2, stdlon, phic, xlonc, 0.0, 0.0,  &
+                     wedim/2.0, sndim/2.0, dx, dx, 0.0, 0.0, real(wedim), real(sndim), pl3, pl4 )
       
       ! kproj:  1 = stereographic, 3 = lambert conformal, 9 = mercator
       !  polat, lat of pole?
@@ -158,7 +165,7 @@ CONTAINS
 
       !  This is the "generate a map" call.
 
-      CALL supmap(kproj,polat,xlonc,rot,pl1,pl2,pl3,pl4,jlts,jgrid,iusout,idot,ier)
+      CALL supmap(kproj,polat,stdlon,rot,pl1,pl2,pl3,pl4,jlts,jgrid,iusout,idot,ier)
 
       !  Was everything OK?
 
@@ -571,4 +578,487 @@ CONTAINS
 
 !-----------------------------------------------------------
    
+      SUBROUTINE ll_to_ij( map_proj, truelat1, truelat2, stdlon, &
+                           lat1, lon1, pole_lat, pole_lon, &
+                           knowni, knownj, dx, dy, latinc, loninc,  &
+                           lat, lon, i, j )
+
+
+         ! Converts input lat/lon values to the cartesian (i,j) value
+         ! for the given projection. 
+
+         INTEGER map_proj
+         REAL truelat1, truelat2, stdlon
+         REAL lat1, lon1, pole_lat, pole_lon, knowni, knownj
+         REAL dx, dy, latinc, loninc, lat, lon
+
+         REAL clain, dlon, rsw, deltalon, deltalat
+         REAL reflon, scale_top, ala1, alo1, ala, alo, rm, polei, polej
+         REAL REbydx   ! Earth radius divided by dx
+         REAL deltalon1, tl1r, ctl1r, arg, cone, hemi
+         REAL i, j
+         REAL lat1n, lon1n, olat, olon
+
+         REAL PI, RAD_PER_DEG, DEG_PER_RAD, RE_M
+
+!!!      lat1     ! SW latitude (1,1) in degrees (-90->90N)
+!!!      lon1     ! SW longitude (1,1) in degrees (-180->180E)
+!!!      dx       ! Grid spacing in meters at truelats
+!!!      dlat     ! Lat increment for lat/lon grids
+!!!      dlon     ! Lon increment for lat/lon grids
+!!!      stdlon   ! Longitude parallel to y-axis (-180->180E)
+!!!      truelat1 ! First true latitude (all projections)
+!!!      truelat2 ! Second true lat (LC only)
+!!!      hemi     ! 1 for NH, -1 for SH
+!!!      cone     ! Cone factor for LC projections
+!!!      polei    ! Computed i-location of pole point
+!!!      polej    ! Computed j-location of pole point
+!!!      rsw      ! Computed radius to SW corner
+!!!      knowni   ! X-location of known lat/lon
+!!!      knownj   ! Y-location of known lat/lon
+!!!      RE_M     ! Radius of spherical earth, meters
+!!!      REbydx   ! Earth radius divided by dx
+
+         PI = 3.141592653589793
+         RAD_PER_DEG = PI/180.
+         DEG_PER_RAD = 180./PI
+         RE_M     = 6370000.  ! Radius of spherical earth, meters
+         REbydx = RE_M / dx
+
+         hemi = 1.0
+         if ( truelat1 < 0.0 ) then
+           hemi = -1.0
+         endif 
+
+
+         !MERCATOR
+         IF ( map_proj .eq. 3 ) THEN
+
+            !  Preliminary variables
+            clain = COS(RAD_PER_DEG*truelat1)
+            dlon = dx / (RE_M * clain)
+
+            ! Compute distance from equator to origin, and store in the rsw tag.
+            rsw = 0.
+            IF (lat1 .NE. 0.) THEN
+               rsw = (ALOG(TAN(0.5*((lat1+90.)*RAD_PER_DEG))))/dlon
+            ENDIF
+      
+            deltalon = lon - lon1
+            IF (deltalon .LT. -180.) deltalon = deltalon + 360.
+            IF (deltalon .GT. 180.) deltalon = deltalon - 360.
+            i = knowni + (deltalon/(dlon*DEG_PER_RAD))
+            j = knownj + (ALOG(TAN(0.5*((lat + 90.) * RAD_PER_DEG)))) /  &
+                   dlon - rsw
+       
+         !PS
+         ELSEIF ( map_proj .eq. 2 ) THEN
+
+            reflon = stdlon + 90.
+
+            ! Compute numerator term of map scale factor
+            scale_top = 1. + hemi * SIN(truelat1 * RAD_PER_DEG)
+      
+            ! Compute radius to lower-left (SW) corner
+            ala1 = lat1 * RAD_PER_DEG
+            rsw = REbydx*COS(ala1)*scale_top/(1.+hemi*SIN(ala1))
+      
+            ! Find the pole point
+            alo1 = (lon1 - reflon) * RAD_PER_DEG
+            polei = knowni - rsw * COS(alo1)
+            polej = knownj - hemi * rsw * SIN(alo1)
+      
+            ! Find radius to desired point
+            ala = lat * RAD_PER_DEG
+            rm = REbydx * COS(ala) * scale_top/(1. + hemi *SIN(ala))
+            alo = (lon - reflon) * RAD_PER_DEG
+            i = polei + rm * COS(alo)
+            j = polej + hemi * rm * SIN(alo)
+
+         !LAMBERT
+         ELSEIF ( map_proj .eq. 1 ) THEN
+
+            IF (ABS(truelat2) .GT. 90.) THEN
+               truelat2=truelat1
+            ENDIF
+
+            IF (ABS(truelat1-truelat2) .GT. 0.1) THEN
+               cone=(ALOG(COS(truelat1*RAD_PER_DEG))-            &
+                     ALOG(COS(truelat2*RAD_PER_DEG))) /          &
+               (ALOG(TAN((90.-ABS(truelat1))*RAD_PER_DEG*0.5 ))- &
+                ALOG(TAN((90.-ABS(truelat2))*RAD_PER_DEG*0.5 )) )
+            ELSE
+               cone = SIN(ABS(truelat1)*RAD_PER_DEG )
+            ENDIF
+      
+            ! Compute longitude differences and ensure we stay out of the
+            ! forbidden "cut zone"
+            deltalon1 = lon1 - stdlon
+            IF (deltalon1 .GT. +180.) deltalon1 = deltalon1 - 360.
+            IF (deltalon1 .LT. -180.) deltalon1 = deltalon1 + 360.
+      
+            ! Convert truelat1 to radian and compute COS for later use
+            tl1r = truelat1 * RAD_PER_DEG
+            ctl1r = COS(tl1r)
+      
+            ! Compute the radius to our known lower-left (SW) corner
+            rsw = REbydx * ctl1r/cone * &
+                  (TAN((90.*hemi-lat1)*RAD_PER_DEG/2.) / &
+                   TAN((90.*hemi-truelat1)*RAD_PER_DEG/2.))**cone
+      
+            ! Find pole point
+            arg = cone*(deltalon1*RAD_PER_DEG)
+            polei = hemi*knowni - hemi * rsw * SIN(arg)
+            polej = hemi*knownj + rsw * COS(arg)
+      
+            ! Compute deltalon between known longitude and standard lon and ensure
+            ! it is not in the cut zone
+            deltalon = lon - stdlon
+            IF (deltalon .GT. +180.) deltalon = deltalon - 360.
+            IF (deltalon .LT. -180.) deltalon = deltalon + 360.
+      
+            ! Radius to desired point
+            rm = REbydx * ctl1r/cone *   &
+                 (TAN((90.*hemi-lat)*RAD_PER_DEG/2.) /   &
+                  TAN((90.*hemi-truelat1)*RAD_PER_DEG/2.))**cone
+      
+            arg = cone*(deltalon*RAD_PER_DEG)
+            i = polei + hemi * rm * SIN(arg)
+            j = polej - rm * COS(arg)
+      
+            ! Finally, if we are in the southern hemisphere, flip the i/j
+            ! values to a coordinate system where (1,1) is the SW corner
+            ! (what we assume) which is different than the original NCEP
+            ! algorithms which used the NE corner as the origin in the 
+            ! southern hemisphere (left-hand vs. right-hand coordinate?)
+            i = hemi * i
+            j = hemi * j
+
+
+        !lat-lon
+        ELSEIF ( map_proj .eq. 6 ) THEN
+
+          if ( pole_lat /= 90. ) then
+            call rotate_coords(lat,lon,olat,olon, &
+              pole_lat,pole_lon,stdlon,-1)
+            lat = olat
+            lon = olon + stdlon
+          end if
+
+          ! make sure center lat/lon is good
+          if ( pole_lat /= 90. ) then
+            call rotate_coords(lat1,lon1,olat,olon, &
+              pole_lat,pole_lon,stdlon,-1)
+            lat1n = olat
+            lon1n = olon + stdlon
+            deltalat = lat - lat1n
+            deltalon = lon - lon1n
+          else
+            deltalat = lat - lat1
+            deltalon = lon - lon1
+          end if
+
+          ! Compute i/j
+          i = deltalon/loninc
+          j = deltalat/latinc
+
+          i = i + knowni
+          j = j + knownj
+
+         ELSE
+
+           print*,"ERROR: Do not know map projection ", map_proj
+
+         ENDIF
+
+      RETURN
+      END  SUBROUTINE ll_to_ij
+
+
+      SUBROUTINE ij_to_ll( map_proj, truelat1, truelat2, stdlon,  &
+                           lat1, lon1, pole_lat, pole_lon,  &
+                           knowni, knownj, dx, dy, latinc, loninc,  &
+                           ai, aj, lat, lon )
+
+        ! Converts input lat/lon values to the cartesian (i,j) value
+        ! for the given projection.
+
+        INTEGER map_proj
+        REAL truelat1, truelat2, stdlon
+        REAL lat1, lon1, pole_lat, pole_lon, knowni, knownj
+        REAL dx, dy, latinc, loninc, ai, aj
+
+        REAL clain, dlon, rsw, deltalon, deltalat
+        REAL reflon, scale_top, ala1, alo1, ala, alo, rm, polei, polej
+        REAL REbydx   ! Earth radius divided by dx
+        REAL deltalon1, tl1r, ctl1r, arg, cone, hemi
+
+        REAL PI, RAD_PER_DEG, DEG_PER_RAD, RE_M
+
+        REAL inew, jnew, r, r2
+        REAL chi,chi1,chi2
+        REAL xx, yy, lat, lon
+  
+        REAL rlat, rlon, olat, olon, lat1n, lon1n
+        REAL phi_np, lam_np, lam_0, dlam
+        REAL sinphi, cosphi, coslam, sinlam
+
+
+!!!     lat1     ! SW latitude (1,1) in degrees (-90->90N)
+!!!     lon1     ! SW longitude (1,1) in degrees (-180->180E)
+!!!     dx       ! Grid spacing in meters at truelats
+!!!     dlat     ! Lat increment for lat/lon grids
+!!!     dlon     ! Lon increment for lat/lon grids
+!!!     stdlon   ! Longitude parallel to y-axis (-180->180E)
+!!!     truelat1 ! First true latitude (all projections)
+!!!     truelat2 ! Second true lat (LC only)
+!!!     hemi     ! 1 for NH, -1 for SH
+!!!     cone     ! Cone factor for LC projections
+!!!     polei    ! Computed i-location of pole point
+!!!     polej    ! Computed j-location of pole point
+!!!     rsw      ! Computed radius to SW corner
+!!!     knowni   ! X-location of known lat/lon
+!!!     knownj   ! Y-location of known lat/lon
+!!!     RE_M     ! Radius of spherical earth, meters
+!!!     REbydx   ! Earth radius divided by dx
+   
+        PI = 3.141592653589793
+        RAD_PER_DEG = PI/180.
+        DEG_PER_RAD = 180./PI
+        RE_M     = 6370000.  ! Radius of spherical earth, meters
+        REbydx = RE_M / dx
+
+        hemi = 1.0
+        if ( truelat1 < 0.0 ) then
+          hemi = -1.0
+        endif
+
+
+        !MERCATOR
+        IF ( map_proj .eq. 3 ) THEN     
+
+          !  Preliminary variables
+          clain = COS(RAD_PER_DEG*truelat1)
+          dlon = dx / (RE_M * clain)
+
+          ! Compute distance from equator to origin, and store in the rsw tag.
+          rsw = 0.
+          IF (lat1 .NE. 0.) THEN
+             rsw = (ALOG(TAN(0.5*((lat1+90.)*RAD_PER_DEG))))/dlon
+          ENDIF
+
+          lat = 2.0*ATAN(EXP(dlon*(rsw + aj-knownj)))*deg_per_rad - 90.
+          lon = (ai-knowni)*dlon*deg_per_rad + lon1
+          IF (lon.GT.180.) lon = lon - 360.
+          IF (lon.LT.-180.) lon = lon + 360.
+
+
+        !PS
+        ELSEIF ( map_proj .eq. 2 ) THEN     
+
+          ! Compute the reference longitude by rotating 90 degrees to the east
+          ! to find the longitude line parallel to the positive x-axis.
+          reflon = stdlon + 90.
+    
+          ! Compute numerator term of map scale factor
+          scale_top = 1. + hemi * SIN(truelat1 * rad_per_deg)
+
+          ! Compute radius to known point
+          ala1 = lat1 * RAD_PER_DEG
+          rsw = REbydx*COS(ala1)*scale_top/(1.+hemi*SIN(ala1))
+
+          ! Find the pole point
+          alo1 = (lon1 - reflon) * RAD_PER_DEG
+          polei = knowni - rsw * COS(alo1)
+          polej = knownj - hemi * rsw * SIN(alo1)
+
+          ! Compute radius to point of interest
+          xx = ai - polei
+          yy = (aj - polej) * hemi
+          r2 = xx**2 + yy**2
+    
+          ! Now the magic code
+          IF (r2 .EQ. 0.) THEN
+             lat = hemi * 90.
+             lon = reflon
+          ELSE
+             gi2 = (rebydx * scale_top)**2.
+             lat = deg_per_rad * hemi * ASIN((gi2-r2)/(gi2+r2))
+             arccos = ACOS(xx/SQRT(r2))
+             IF (yy .GT. 0) THEN
+                lon = reflon + deg_per_rad * arccos
+             ELSE
+                lon = reflon - deg_per_rad * arccos
+             ENDIF
+          ENDIF
+
+          ! Convert to a -180 -> 180 East convention
+          IF (lon .GT. 180.) lon = lon - 360.
+          IF (lon .LT. -180.) lon = lon + 360.
+
+        !LAMBERT
+        ELSEIF ( map_proj .eq. 1 ) THEN     
+
+          IF (ABS(truelat2) .GT. 90.) THEN
+            truelat2=truelat1
+          ENDIF
+
+          IF (ABS(truelat1-truelat2) .GT. 0.1) THEN
+            cone=(ALOG(COS(truelat1*RAD_PER_DEG))-   &
+                  ALOG(COS(truelat2*RAD_PER_DEG))) /          &
+                  (ALOG(TAN((90.-ABS(truelat1))*RAD_PER_DEG*0.5 ))-  &
+                  ALOG(TAN((90.-ABS(truelat2))*RAD_PER_DEG*0.5 )) )
+          ELSE
+            cone = SIN(ABS(truelat1)*RAD_PER_DEG )
+          ENDIF
+   
+          ! Compute longitude differences and ensure we stay out of the
+          ! forbidden "cut zone"
+          deltalon1 = lon1 - stdlon 
+          IF (deltalon1 .GT. +180.) deltalon1 = deltalon1 - 360.
+          IF (deltalon1 .LT. -180.) deltalon1 = deltalon1 + 360.
+
+          ! Convert truelat1 to radian and compute COS for later use
+          tl1r = truelat1 * RAD_PER_DEG
+          ctl1r = COS(tl1r)
+      
+          ! Compute the radius to our known point
+          rsw = REbydx * ctl1r/cone *  &
+                (TAN((90.*hemi-lat1)*RAD_PER_DEG/2.) /  &
+                 TAN((90.*hemi-truelat1)*RAD_PER_DEG/2.))**cone
+
+          ! Find pole point
+          alo1 = cone*(deltalon1*RAD_PER_DEG)
+          polei = knowni - rsw * SIN(alo1)
+          polej = knownj + hemi * rsw * COS(alo1)
+
+          chi1 = (90. - hemi*truelat1)*rad_per_deg
+          chi2 = (90. - hemi*truelat2)*rad_per_deg
+ 
+          ! See if we are in the southern hemispere and flip the indices if we are.
+          inew = hemi * ai
+          jnew = hemi * aj
+
+          ! Compute radius**2 to i/j location
+          reflon = stdlon + 90.
+          xx = inew - polei
+          yy = polej - jnew
+          r2 = (xx*xx + yy*yy)
+          r = SQRT(r2)/rebydx
+
+          ! Convert to lat/lon
+          IF (r2 .EQ. 0.) THEN
+            lat = hemi * 90.
+            lon = stdlon
+          ELSE
+            lon = stdlon + deg_per_rad * ATAN2(hemi*xx,yy)/cone
+            lon = AMOD(lon+360., 360.)
+            IF (chi1 .EQ. chi2) THEN
+             chi =2.0*ATAN((r/TAN(chi1))**(1./cone)*TAN(chi1*0.5))
+            ELSE
+             chi =2.0*ATAN((r*cone/SIN(chi1))**(1./cone)*TAN(chi1*0.5))
+            ENDIF
+            lat = (90.0-chi*deg_per_rad)*hemi
+          ENDIF
+ 
+          IF (lon .GT. +180.) lon = lon - 360.
+          IF (lon .LT. -180.) lon = lon + 360.
+
+
+        !lat-lon
+        ELSEIF ( map_proj .eq. 6 ) THEN     
+
+          inew = ai - knowni
+          jnew = aj - knownj
+    
+          if (inew < 0.)        inew = inew + 360./loninc
+          if (inew >= 360./dx)  inew = inew - 360./loninc
+    
+          ! Compute deltalat and deltalon
+          deltalat = jnew*latinc
+          deltalon = inew*loninc
+        
+          if ( pole_lat /= 90. ) then
+            call rotate_coords(lat1,lon1,olat,olon, &
+              pole_lat,pole_lon,stdlon,-1)
+            lat1n = olat
+            lon1n = olon + stdlon
+            lat = deltalat + lat1n
+            lon = deltalon + lon1n
+          else
+            lat = deltalat + lat1
+            lon = deltalon + lon1
+          end if
+
+   
+          if ( pole_lat /= 90. ) then
+            lon = lon - stdlon
+            call rotate_coords(lat,lon,olat,olon, &
+              pole_lat,pole_lon,stdlon,1)
+            lat = olat
+            lon = olon
+          end if
+
+          if (lon < -180.) lon = lon + 360.
+          if (lon >  180.) lon = lon - 360.
+
+        ELSE
+     
+           print*,"ERROR: Do not know map projection ", map_proj
+
+        ENDIF
+
+        RETURN
+
+      END SUBROUTINE ij_to_ll
+
+
+      SUBROUTINE rotate_coords(ilat,ilon,olat,olon, &
+                 lat_np,lon_np,lon_0,direction)
+        REAL ilat, ilon
+        REAL olat, olon
+        REAL lat_np, lon_np, lon_0
+        INTEGER direction
+
+        ! >=0, default : computational -> geographical
+        ! < 0          : geographical  -> computational
+  
+        REAL rlat, rlon
+        REAL phi_np, lam_np, lam_0, dlam
+        REAL sinphi, cosphi, coslam, sinlam
+        REAL PI, RAD_PER_DEG, DEG_PER_RAD 
+
+        PI = 3.141592653589793
+        RAD_PER_DEG = PI/180.
+        DEG_PER_RAD = 180./PI
+  
+        ! Convert all angles to radians
+        phi_np = lat_np * rad_per_deg
+        lam_np = lon_np * rad_per_deg
+        lam_0  = lon_0  * rad_per_deg
+        rlat = ilat * rad_per_deg
+        rlon = ilon * rad_per_deg
+  
+        IF (direction < 0) THEN
+           ! The equations are exactly the same except for one small difference
+           ! with respect to longitude ...
+           dlam = PI - lam_0
+        ELSE
+           dlam = lam_np
+        END IF
+        sinphi = COS(phi_np)*COS(rlat)*COS(rlon-dlam) +  &
+                 SIN(phi_np)*SIN(rlat)
+        cosphi = SQRT(1.-sinphi*sinphi)
+        coslam = SIN(phi_np)*COS(rlat)*COS(rlon-dlam) -  &
+                 COS(phi_np)*SIN(rlat)
+        sinlam = COS(rlat)*SIN(rlon-dlam)
+        IF ( cosphi /= 0. ) THEN
+           coslam = coslam/cosphi
+           sinlam = sinlam/cosphi
+        END IF
+        olat = deg_per_rad*ASIN(sinphi)
+        olon = deg_per_rad*(ATAN2(sinlam,coslam)-dlam-lam_0+lam_np)
+
+      END SUBROUTINE rotate_coords
+
 END MODULE map_stuff
