@@ -13,7 +13,7 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
                      print_vert       , print_dry       , & 
                      pressure , date , time , dx , buddy_weight , &
                      obs , index , max_number_of_obs , & 
-                     t , u , v , h , rh , slp_x , sst , tobbox , cia )
+                     t , u , v , h , rh , slp_x , sst , tobbox , odis )
 
 ! Driver routine for QC
 !   
@@ -81,7 +81,7 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
    INTEGER       , INTENT ( IN )                  :: max_number_of_obs
    TYPE (report) , DIMENSION (max_number_of_obs)  :: obs
    INTEGER       , DIMENSION (max_number_of_obs)  :: index
-   REAL          , DIMENSION(jns_alloc,iew_alloc) :: tobbox, cia
+   REAL          , DIMENSION(jns_alloc,iew_alloc) :: tobbox, odis
 
    !  Data from the call to the routine to provide all of the information
    !  for the the observations that we will need.
@@ -282,7 +282,7 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
    WHERE ( tobbox .LT. 1 ) tobbox = 0
 
    ! Now get the distance to the obs so we can calculate the confidence in the analysis
-   CALL obs_distance ( tobbox , cia , iew_alloc , jns_alloc , dx )
+   CALL obs_distance ( tobbox , odis , iew_alloc , jns_alloc , dx )
 
    !  Now that each variable has gone throught the quality control checks individually,
    !  we should make sure that there is consistency between the variables that are

@@ -9,7 +9,7 @@ CONTAINS
 SUBROUTINE write_analysis ( met_ncid, oa_ncid , &
 t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
 latitude_x , longitude_x , latitude_d , longitude_d , &
-slp_x , slp_C , sst , tobbox , cia , &
+slp_x , slp_C , sst , tobbox , odis , &
 iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
 
 !  This routine assembles the correct data fields and outputs them with the
@@ -26,7 +26,7 @@ iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
    INCLUDE 'error.inc'
  
    INTEGER                                                :: met_ncid, oa_ncid
-   REAL , DIMENSION ( jns_alloc , iew_alloc )             :: tobbox , cia
+   REAL , DIMENSION ( jns_alloc , iew_alloc )             :: tobbox , odis
    INTEGER                                                :: iewd , jnsd
    REAL , DIMENSION ( jns_alloc , iew_alloc , kbu_alloc ) :: pertubation
    REAL , DIMENSION ( jnsd , iewd , kbu_alloc )           :: dum3d
@@ -376,7 +376,7 @@ END SUBROUTINE write_analysis
 
 SUBROUTINE write_analysis_fdda ( oa_met , sfc_ncid , total_count, icount_fdda , &
 t , u , v , uA , vA , uC , vC , h , rh , pres , &
-terrain , slp_x , slp_C , tobbox , cia , pressure , &
+terrain , slp_x , slp_C , tobbox , odis , pressure , &
 iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , &
 fdda_date_24 , ptop )
 
@@ -393,7 +393,7 @@ fdda_date_24 , ptop )
    INTEGER                                                :: iewd , jnsd , iew_alloc , jns_alloc , kbu_alloc
    REAL , DIMENSION ( jns_alloc , iew_alloc , kbu_alloc ) :: t , u , v , h , rh , qv
    REAL , DIMENSION ( jns_alloc , iew_alloc , kbu_alloc ) :: uA , vA , uC , vC , pertubation, pres
-   REAL , DIMENSION ( jns_alloc , iew_alloc )             :: terrain , slp_x , slp_C , tobbox , cia , psfc
+   REAL , DIMENSION ( jns_alloc , iew_alloc )             :: terrain , slp_x , slp_C , tobbox , odis , psfc
    REAL , DIMENSION ( jnsd , iewd )                       :: dum2d
    REAL , DIMENSION ( kbu_alloc )                         :: pressure
 
@@ -616,13 +616,13 @@ integer :: i , j
                      units = 'OBSERVATIONS'      
                      description = 'OBSERVATION DENSITY'
                 ELSEIF ( i == 20 ) THEN
-                     cval = 'CIA_NDG_OLD'
-                     units = '-'      
-                     description = 'CONFIDENCE IN THE ANALYSIS'
+                     cval = 'ODIS_NDG_OLD'
+                     units = 'km'      
+                     description = 'DISTANCE TO NEAREST OBSERVATION'
                 ELSEIF ( i == 21 ) THEN
-                     cval = 'CIA_NDG_NEW'
-                     units = '-'      
-                     description = 'CONFIDENCE IN THE ANALYSIS'
+                     cval = 'ODIS_NDG_NEW'
+                     units = 'km'      
+                     description = 'DISTANCE TO NEAREST OBSERVATION'
                 ENDIF
                 rcode = nf_def_var(sfc_ncid, cval, NF_FLOAT, 3, ishape, i)
                    rcode = nf_put_att_int(sfc_ncid, i, 'FieldType', NF_INT, 1, 104 )
@@ -840,8 +840,8 @@ integer :: i , j
    ENDIF
    DEALLOCATE (met_em_2d)
 
-   !! WRITING INFO FOR CIA_NDG
-   CALL unexpand2 ( cia , iew_alloc , jns_alloc , dum2d , iewd , jnsd ) 
+   !! WRITING INFO FOR ODIS_NDG
+   CALL unexpand2 ( odis , iew_alloc , jns_alloc , dum2d , iewd , jnsd ) 
    CALL yx2xy ( dum2d, jnsd, iewd, met_em_dum2d )
    ALLOCATE ( met_em_2d (iewd-1, jnsd-1) )
    DO jmet = 1,jnsd-1
@@ -850,11 +850,11 @@ integer :: i , j
    ENDDO
    ENDDO
    IF ( icount_fdda < total_count ) THEN
-     rcode = nf_inq_varid     ( sfc_ncid, "CIA_NDG_OLD", ivar_number )
+     rcode = nf_inq_varid     ( sfc_ncid, "ODIS_NDG_OLD", ivar_number )
      rcode = nf_put_vara_real ( sfc_ncid, ivar_number, start_dims, end_dims, met_em_2d )
    ENDIF
    IF ( icount_fdda > 1 ) THEN
-     rcode = nf_inq_varid     ( sfc_ncid, "CIA_NDG_NEW", ivar_number )
+     rcode = nf_inq_varid     ( sfc_ncid, "ODIS_NDG_NEW", ivar_number )
      rcode = nf_put_vara_real ( sfc_ncid, ivar_number, start_dims_new, end_dims, met_em_2d )
    ENDIF
    DEALLOCATE (met_em_2d)
