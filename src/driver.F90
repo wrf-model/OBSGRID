@@ -482,19 +482,19 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
    IF ( fdda_loop.EQ.1) THEN
      obs_file_count = (icount-1)*2 + 1
      IF ( .NOT. nml%record_7%f4d ) obs_file_count = icount
-     WRITE (obs_nudge_file,'("OBSDOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
+     WRITE (obs_nudge_file,'("OBS_DOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
      INQUIRE ( EXIST = exist , FILE = obs_nudge_file )
      CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
                        .TRUE., exist, nml%record_2%remove_data_above_qc_flag, kbu_alloc, pressure  )
    ELSEIF ( fdda_loop.EQ.2 .AND. fdda_loop.NE.fdda_loop_max) THEN
      obs_file_count = (icount-1)*2 
-     WRITE (obs_nudge_file,'("OBSDOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
+     WRITE (obs_nudge_file,'("OBS_DOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
      INQUIRE ( EXIST = exist , FILE = obs_nudge_file )
      CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
                        .TRUE., exist, nml%record_2%remove_data_above_qc_flag, kbu_alloc, pressure  )
    ELSEIF ( fdda_loop.GT.2 .AND. fdda_loop.NE.fdda_loop_max) THEN
      obs_file_count = (icount-1)*2 
-     WRITE (obs_nudge_file,'("OBSDOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
+     WRITE (obs_nudge_file,'("OBS_DOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
      CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
                        .TRUE., .FALSE., nml%record_2%remove_data_above_qc_flag, kbu_alloc, pressure  )
    ENDIF

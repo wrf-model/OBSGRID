@@ -2515,7 +2515,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
 
    IMPLICIT NONE
 
-   TYPE ( report ) , INTENT ( IN ) , DIMENSION ( : ) :: obs
+   TYPE ( report ) , INTENT (INOUT), DIMENSION ( : ) :: obs
    INTEGER , INTENT ( IN )                           :: num_obs
    INTEGER , INTENT ( IN )                           :: out_opt   
    INTEGER , INTENT ( IN )                           :: unit
@@ -2530,6 +2530,9 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
    REAL, DIMENSION(num_klvls), OPTIONAL              :: pressure
    REAL, DIMENSION(num_klvls)                        :: pres_hPA
    LOGICAL                                           :: RES=.TRUE.
+   LOGICAL                                           :: OBS_data=.FALSE.
+   LOGICAL                                           :: is_sounding      
+   INTEGER                                           :: true_num_obs
  
    end_meas%pressure%data    = end_data_r
    end_meas%height%data      = end_data_r
@@ -2564,10 +2567,12 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
      OPEN ( UNIT = unit , FILE = file_name ,  ACTION = 'write' , FORM = 'formatted' , &
             STATUS = 'unknown', POSITION = 'append' )
    ENDIF
+   IF ( file_name(1:10) == "OBS_DOMAIN" ) OBS_data = .TRUE.
 
    iout = 0
 
    DO i = 1 , num_obs
+      true_num_obs = 0
 
       IF (   out_opt .EQ. 0                                   .OR. &
            ( out_opt .GT. 0 .AND. .NOT. obs(i)%info%discard ) .OR. &
@@ -2575,8 +2580,33 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
 
          iout = iout + 1
          IF ( .NOT. forinput ) write(unit,*) '**************** Next Observation *******************'
-         WRITE ( UNIT = unit , FMT = rpt_format ) &
-            obs(i)%location , obs(i)%info , obs(i)%valid_time , obs(i)%ground
+         IF ( OBS_data ) THEN
+           is_sounding = obs(i)%info%is_sound
+           IF ( obs(i)%info%num_vld_fld == 1 ) THEN
+             is_sounding = .FALSE.
+             true_num_obs = obs(i)%info%num_vld_fld
+           ENDIF
+           IF ( is_sounding ) THEN
+             next => obs(i)%surface
+             DO WHILE ( ASSOCIATED ( next ) )
+                IF ( PRESENT (pressure) ) THEN
+                  RES = any ( ( pres_hPA .eq. next%meas%pressure%data ) )
+                  IF ( next%meas%height%data .eq. obs(i)%info%elevation ) RES = .TRUE.
+                  IF ( RES ) true_num_obs = true_num_obs + 1
+                ENDIF
+                next => next%next
+             END DO
+           ENDIF
+           WRITE ( UNIT = unit , FMT='(1x,A14)' ) obs(i)%valid_time%date_char(1:14)
+           WRITE ( UNIT = unit , FMT='(2x,2(F7.2,3x))' ) obs(i)%location%latitude, obs(i)%location%longitude
+           WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' ) obs(i)%location%id, obs(i)%location%name
+           WRITE ( UNIT = unit , FMT='(2x,2(A16,2x),F8.0,2x,2(L4,2x),I5)' )       &
+             obs(i)%info%platform, obs(i)%info%source, obs(i)%info%elevation, &
+             is_sounding, obs(i)%info%bogus, true_num_obs
+         ELSE
+           WRITE ( UNIT = unit , FMT = rpt_format ) &
+              obs(i)%location , obs(i)%info , obs(i)%valid_time , obs(i)%ground
+         ENDIF
          next => obs(i)%surface
          DO WHILE ( ASSOCIATED ( next ) )
             next%meas%speed%qc = next%meas%u%qc
@@ -2627,13 +2657,52 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
                 next%meas%thickness%data = missing_r
                 next%meas%thickness%qc = missing
               endif
-              WRITE ( UNIT = unit , FMT = meas_format )  next%meas
+              IF ( OBS_data ) THEN
+                IF (next%meas%pressure%data     == missing_r) next%meas%pressure%qc     = missing
+                IF (next%meas%height%data       == missing_r) next%meas%height%qc       = missing
+                IF (next%meas%temperature%data  == missing_r) next%meas%temperature%qc  = missing
+                IF (next%meas%u%data            == missing_r) next%meas%u%qc            = missing
+                IF (next%meas%v%data            == missing_r) next%meas%v%qc            = missing
+                IF (next%meas%rh%data           == missing_r) next%meas%rh%qc           = missing
+                IF (obs(i)%ground%slp%data      == missing_r) obs(i)%ground%slp%qc      = missing
+                IF (obs(i)%ground%ref_pres%data == missing_r) obs(i)%ground%ref_pres%qc = missing
+                IF (next%meas%height%data       == missing_r) next%meas%height%qc       = missing
+                IF (next%meas%temperature%data  == missing_r) next%meas%temperature%qc  = missing
+                IF (next%meas%u%data            == missing_r) next%meas%u%qc            = missing
+                IF (next%meas%v%data            == missing_r) next%meas%v%qc            = missing
+                IF (next%meas%rh%data           == missing_r) next%meas%rh%qc           = missing
+                IF (obs(i)%ground%precip%data   == missing_r) obs(i)%ground%precip%qc   = missing
+                IF ( is_sounding ) THEN
+                  WRITE ( UNIT = unit , FMT='(1x,6(F11.3,1x,F11.3,1x))' )        &
+                    next%meas%pressure%data,    real(next%meas%pressure%qc),     &
+                    next%meas%height%data,      real(next%meas%height%qc),       &
+                    next%meas%temperature%data, real(next%meas%temperature%qc),  &
+                    next%meas%u%data,           real(next%meas%u%qc),            &
+                    next%meas%v%data,           real(next%meas%v%qc),            &
+                    next%meas%rh%data,          real(next%meas%rh%qc)
+                ELSE
+                  WRITE ( UNIT = unit , FMT='(1x,9(F11.3,1x,F11.3,1x))' )        &
+                    obs(i)%ground%slp%data,      real(obs(i)%ground%slp%qc),     &
+                    obs(i)%ground%ref_pres%data, real(obs(i)%ground%ref_pres%qc),&
+                    next%meas%height%data,       real(next%meas%height%qc),      &
+                    next%meas%temperature%data,  real(next%meas%temperature%qc), &
+                    next%meas%u%data,            real(next%meas%u%qc),           &
+                    next%meas%v%data,            real(next%meas%v%qc),           &
+                    next%meas%rh%data,           real(next%meas%rh%qc),          &
+                    next%meas%pressure%data,     real(next%meas%pressure%qc),    &
+                    obs(i)%ground%precip%data,   real(obs(i)%ground%precip%qc)
+                ENDIF
+              ELSE
+                WRITE ( UNIT = unit , FMT = meas_format )  next%meas
+              ENDIF
             ENDIF
             next => next%next
          END DO
-         WRITE ( UNIT = unit , FMT = meas_format ) end_meas
-         WRITE ( UNIT = unit , FMT = end_format ) obs(i)%info%num_vld_fld, &
-            obs(i)%info%num_error, obs(i)%info%num_warning
+         IF ( .not. OBS_data ) THEN
+           WRITE ( UNIT = unit , FMT = meas_format ) end_meas
+           WRITE ( UNIT = unit , FMT = end_format ) obs(i)%info%num_vld_fld, &
+              obs(i)%info%num_error, obs(i)%info%num_warning
+         ENDIF
          IF ( .NOT. forinput ) &
             write(unit,*) 'End of measurements for observation ' , i
 
