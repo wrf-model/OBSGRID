@@ -11,7 +11,8 @@ smooth_sfc_slp           , smooth_upper_wind        , &
 smooth_upper_temp        , smooth_upper_rh          , &
 oa_type                  , mqd_minimum_num_obs      , & 
 mqd_maximum_num_obs      , oa_max_switch            , &
-radius_influence         , oa_min_switch            )
+radius_influence         , oa_min_switch            , & 
+grid_id )
 
    USE observation
 
@@ -46,7 +47,8 @@ radius_influence         , oa_min_switch            )
                                                          smooth_upper_temp  , & 
                                                          smooth_upper_rh    , &
                                                          mqd_minimum_num_obs, &
-                                                         mqd_maximum_num_obs
+                                                         mqd_maximum_num_obs, &
+                                                         grid_id
    INTEGER , DIMENSION ( 10 )                         :: radius_influence
    CHARACTER ( LEN = 132 )                            :: oa_type
    TYPE (report) , DIMENSION ( total_numobs )         :: obs

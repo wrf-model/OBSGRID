@@ -13,7 +13,8 @@ smooth_sfc_slp           , smooth_upper_wind        , &
 smooth_upper_temp        , smooth_upper_rh          , &
 oa_type                  , mqd_minimum_num_obs      , & 
 mqd_maximum_num_obs      , oa_max_switch            , &
-radius_influence         , oa_min_switch            )
+radius_influence         , oa_min_switch            , &
+grid_id )
 
 !  This routine is a driver routine for objective analysis.
 
@@ -54,7 +55,8 @@ radius_influence         , oa_min_switch            )
                                                          smooth_upper_temp  , & 
                                                          smooth_upper_rh    , &
                                                          mqd_minimum_num_obs, &
-                                                         mqd_maximum_num_obs
+                                                         mqd_maximum_num_obs, &
+                                                         grid_id
    INTEGER , DIMENSION(10)                            :: radius_influence
    CHARACTER ( LEN = 132 )                            :: oa_type
 
@@ -93,6 +95,8 @@ radius_influence         , oa_min_switch            )
    REAL , DIMENSION ( iew_alloc , jns_alloc )         :: u_banana           , &
                                                          v_banana
    CHARACTER (LEN=24)                                 :: date_time_char
+   CHARACTER ( LEN = 132 )                            :: tmp_filename
+
 
    !  Names of all of the variables to objectively analyze.  Also, define each of the
    !  horizontal staggerings for the variables.
@@ -110,49 +114,53 @@ radius_influence         , oa_min_switch            )
 
    IF ( print_obs_files ) THEN
       CALL make_date ( date , time , date_time_char )
-      INQUIRE ( UNIT = 4 , OPENED = connected )
-      IF ( .NOT. connected ) THEN
-         IF ( fdda_loop.EQ.1) THEN
-            OPEN ( UNIT   = 4                                      , &
-                   FILE   = 'obs_used_for_oa_out_'//date_time_char , &
-                   FORM   = 'FORMATTED'                            , &
-                   ACCESS = 'SEQUENTIAL'                           , &         
-                   STATUS = 'REPLACE'                                )
-         ELSE
-            OPEN ( UNIT   = 4                                      , &
-                   FILE   = 'obs_used_for_oa_out_sfc_fdda_'//date_time_char , &
-                   FORM   = 'FORMATTED'                            , &
-                   ACCESS = 'SEQUENTIAL'                           , &         
-                   STATUS = 'REPLACE'                                )
-         END IF
-   
-         WRITE ( UNIT = 4 , &
-         FMT = '( "( 3x,a8,3x,i6,3x,i5,3x,a8,3x,2(g13.6,3x),2(f7.2,3x),i7 )" )' )
-      ENDIF
+      !INQUIRE ( UNIT = 4 , OPENED = connected )
+      !IF ( .NOT. connected ) THEN
+      !   IF ( fdda_loop.EQ.1) THEN
+      !      OPEN ( UNIT   = 4                                      , &
+      !             FILE   = 'obs_used_for_oa_out_'//date_time_char , &
+      !             FORM   = 'FORMATTED'                            , &
+      !             ACCESS = 'SEQUENTIAL'                           , &         
+      !             STATUS = 'REPLACE'                                )
+      !   ELSE
+      !      OPEN ( UNIT   = 4                                      , &
+      !             FILE   = 'obs_used_for_oa_out_sfc_fdda_'//date_time_char , &
+      !             FORM   = 'FORMATTED'                            , &
+      !             ACCESS = 'SEQUENTIAL'                           , &         
+      !             STATUS = 'REPLACE'                                )
+      !   END IF
+      !
+      !   WRITE ( UNIT = 4 , &
+      !   FMT = '( "( 3x,a8,3x,i6,3x,i5,3x,a8,3x,2(g13.6,3x),2(f7.2,3x),i7 )" )' )
+      !ENDIF
    
       INQUIRE ( UNIT =74 , OPENED = connected )
       IF ( .NOT. connected ) THEN
          IF ( fdda_loop.EQ.1) THEN
+            WRITE (tmp_filename,'("plotobs_out.d",i2.2,".")') grid_id
             OPEN ( UNIT   =74                                      , &
-                   FILE   = 'plotobs_out_'//date_time_char , &
+                   FILE   = trim(tmp_filename)//date_time_char , &
                    FORM   = 'FORMATTED'                            , &
                    ACCESS = 'SEQUENTIAL'                           , &
                    STATUS = 'REPLACE'                                )
          ELSE
+            WRITE (tmp_filename,'("plotobs_out_sfc_fdda.d",i2.2,".")') grid_id
             OPEN ( UNIT   =74                                      , &
-                   FILE   = 'plotobs_out_sfc_fdda_'//date_time_char , &
+                   FILE   = trim(tmp_filename)//date_time_char , &
                    FORM   = 'FORMATTED'                            , &
                    ACCESS = 'SEQUENTIAL'                           , &
                    STATUS = 'REPLACE'                                )
          END IF
    
          WRITE ( UNIT =74 , &
-         FMT = '( "( 3x,a8,3x,i6,3x,i5,3x,a8,3x,g13.6,3x,16x,2(f7.2,3x),i7 )" )' )
+         FMT = '( "( 3x,a8,3x,i6,3x,i5,3x,a8,3x,2(g13.6,3x),2(f7.2,3x),i7 )" )' )
+        !FMT = '( "( 3x,a8,3x,i6,3x,i5,3x,a8,3x,g13.6,3x,16x,2(f7.2,3x),i7 )" )' )
       ENDIF
    END IF
 
    !  Loop through all analysis levels (remember that level kp=1 is the
    !  surface value of the 3-D field).
+
 
    vertical_level_loop : DO kp = 1 , kbu_alloc
 
@@ -219,15 +227,18 @@ radius_influence         , oa_min_switch            )
             WRITE ( UNIT =74 , FMT = '( "    Name      Level    Number    ID      &
             &      Value                     Location  Location  Value   " )' )
             station_loop_74 : DO num = 1, num_obs_pass
-               WRITE ( UNIT =74 , FMT = '( 3x,a8,3x,i6,3x,i5,3x,a8,3x,g13.6,3x,16x,2(f7.2,3x),i7 )' ) &
+               !WRITE ( UNIT =74 , FMT = '( 3x,a8,3x,i6,3x,i5,3x,a8,3x,g13.6,3x,16x,2(f7.2,3x),i7 )' ) &
+               WRITE ( UNIT =74 , FMT = '( 3x,a8,3x,i6,3x,i5,3x,a8,3x,2(g13.6,3x),2(f7.2,3x),i7 )' ) &
                  name(ivar) , NINT ( pressure(kp) ) , num , station_id(num) , &
-                 obs_value(num) , xob(num) , yob(num) , qc_flag(num)
+                 obs_value(num) , diff(num) , xob(num) , yob(num) , qc_flag(num)
+                 !obs_value(num) , xob(num) , yob(num) , qc_flag(num)
             END DO station_loop_74
          END IF
 
 
          !  Obtain observations for kp level and for variable ivar for this
          !  time period.
+
  
          CALL proc_ob_access ( 'use', name(ivar) , print_found_obs , &
          pressure(kp) , date , time , 1 , &
@@ -237,6 +248,7 @@ radius_influence         , oa_min_switch            )
          total_dups , map_projection , &
          get_value=obs_value , get_x_location=xob , get_y_location=yob , &
          get_id=station_id , get_array_index = array_index , get_qc_info = qc_flag ) 
+
 
          !  To do the print out, objective analysis, clean up, and storage, we need to have
          !  at least a minimum for the MQD technique.  We also need to have NOT too many
@@ -323,18 +335,18 @@ radius_influence         , oa_min_switch            )
 
             !  Output data that is used in the objective analysis to a file.
 
-            IF ( print_obs_files ) THEN
-               WRITE ( UNIT = 4 , FMT = '( " Number of Observations " / i8.8 )' ) num_obs_pass
-               WRITE ( UNIT = 4 , FMT = '( "   Variable   Press    Obs     Station   &
-               &       Obs           Obs-1st      X          Y        QC    " )' )
-               WRITE ( UNIT = 4 , FMT = '( "    Name      Level    Number    ID      &
-               &      Value           Guess     Location  Location  Value   " )' )
-               station_loop_4 : DO num = 1, num_obs_pass
-                  WRITE ( UNIT = 4 , FMT = '( 3x,a8,3x,i6,3x,i5,3x,a8,3x,2(g13.6,3x),2(f7.2,3x),i7 )' ) &
-                  name(ivar) , NINT ( pressure(kp) ) , num , station_id(num) , &
-                  obs_value(num) , diff(num) , xob(num) , yob(num) , qc_flag(num)
-               END DO station_loop_4
-            END IF
+            !IF ( print_obs_files ) THEN
+            !   WRITE ( UNIT = 4 , FMT = '( " Number of Observations " / i8.8 )' ) num_obs_pass
+            !   WRITE ( UNIT = 4 , FMT = '( "   Variable   Press    Obs     Station   &
+            !   &       Obs           Obs-1st      X          Y        QC    " )' )
+            !   WRITE ( UNIT = 4 , FMT = '( "    Name      Level    Number    ID      &
+            !   &      Value           Guess     Location  Location  Value   " )' )
+            !   station_loop_4 : DO num = 1, num_obs_pass
+            !      WRITE ( UNIT = 4 , FMT = '( 3x,a8,3x,i6,3x,i5,3x,a8,3x,2(g13.6,3x),2(f7.2,3x),i7 )' ) &
+            !      name(ivar) , NINT ( pressure(kp) ) , num , station_id(num) , &
+            !      obs_value(num) , diff(num) , xob(num) , yob(num) , qc_flag(num)
+            !   END DO station_loop_4
+            !END IF
    
             !  This is the multiquadric solver.
  
@@ -455,11 +467,11 @@ radius_influence         , oa_min_switch            )
       END DO variable_loop
 
    END DO vertical_level_loop
-
+  
    !  We need to close our sample print-out file.
 
    IF ( print_obs_files ) THEN
-      CLOSE ( 4 ) 
+      !CLOSE ( 4 ) 
       CLOSE ( 74 ) 
    END IF
 

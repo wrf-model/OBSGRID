@@ -25,11 +25,13 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
 
    CHARACTER ( LEN = 132 )  , INTENT ( IN )       :: filename
    CHARACTER ( LEN = 132 )  , INTENT ( INOUT )    :: filename_out
+   CHARACTER ( LEN = 132 )                        :: obs_nudge_file
    INTEGER , INTENT ( IN )                        :: current_date_8 , & 
                                                      current_time_6 , & 
                                                      icount , total_count
    CHARACTER (LEN=19) , INTENT(IN)                :: date_char
    CHARACTER (LEN=24)                             :: dt_char
+   LOGICAL                                        :: exist
 
    !  Observation information.
 
@@ -37,7 +39,7 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
    INTEGER                                        :: total_dups
    INTEGER       , ALLOCATABLE , DIMENSION ( : )  :: index
    TYPE (report) , ALLOCATABLE , DIMENSION ( : )  :: obs
-   CHARACTER ( LEN = 132 )                        :: dummy_filename
+   CHARACTER ( LEN = 132 )                        :: dummy_filename, tmp_filename
 
    !  The NAMELIST variables, with a small amount of error checks
    !  from the main program.
@@ -75,6 +77,8 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
    INTEGER :: fdda_loop , fdda_loop_max , icount_fdda , icount_1 , icount_2 
    INTEGER :: fdda_date_8 , fdda_time_6
    CHARACTER (LEN=19) :: date_char_fdda
+
+   INTEGER :: obs_file_count
 
    !  If we are doing sfc FDDA, the first time in we do the traditional analysis AND the surface
    !  FDDA fields for that time (fdda_loop_max=2).  All of the subsequent times, we process the 
@@ -251,22 +255,29 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
       !  We need to pick out either the traditional obs file or the one for the FDDA.
       !  The traditional and FDDA names are separate in the namelist.input file.  
 
+      IF ( ( nml%record_7%f4d ) .AND. ( fdda_loop .GT. 1 ) ) THEN 
+         CALL get_date ( fdda_date_8 , fdda_time_6 , date_char_fdda ) 
+      END IF
+
       IF (   (  .NOT. nml%record_7%f4d ) .OR. &
            ( (        nml%record_7%f4d ) .AND. ( fdda_loop .EQ. 1 ) ) ) THEN 
-         dummy_filename(1:LEN_TRIM(nml%record_2%obs_filename(icount))) = &
-         TRIM ( nml%record_2%obs_filename(icount) )
+         dummy_filename = &
+         TRIM ( nml%record_2%obs_filename )//":"//date_char(1:13)
       ELSE
          IF ( icount .EQ. 1 ) THEN
             icount_fdda = ( icount - 1 ) * ( nml%record_1%interval / nml%record_7%intf4d ) + 1
          ELSE
             icount_fdda = ( icount - 1 ) * ( nml%record_1%interval / nml%record_7%intf4d ) + 1 - ( fdda_loop_max - fdda_loop ) 
          END IF
-         dummy_filename(1:LEN_TRIM(nml%record_2%sfc_obs_filename(icount_fdda))) = &
-         TRIM ( nml%record_2%sfc_obs_filename(icount_fdda) )
+         dummy_filename = &
+         TRIM ( nml%record_2%sfc_obs_filename )//":"//date_char_fdda(1:13)
       END IF
-
-      IF ( ( nml%record_7%f4d ) .AND. ( fdda_loop .GT. 1 ) ) THEN 
-         CALL get_date ( fdda_date_8 , fdda_time_6 , date_char_fdda ) 
+      INQUIRE ( EXIST = exist , FILE = dummy_filename )
+      IF ( .NOT. exist ) THEN
+        print*,"WARNING: The following file does not exist - process as if file is empty"
+        print*,"        ", trim(dummy_filename)
+      ELSE
+        print*,"Using ", trim(dummy_filename), " as obs input file"
       END IF
 
       !  For real time applications, we are only processing the initial times with
@@ -362,12 +373,18 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
               ( (     nml%record_7%f4d ) .AND. ( fdda_loop .EQ. 1 ) ) ) THEN 
             CALL make_date ( current_date_8 , current_time_6 , dt_char )
             IF ( nml%record_5%print_obs_files ) THEN
-               CALL output_obs ( obs , 2 , 'qc_out_'//dt_char , number_of_obs ,  1 , .TRUE.  )  
+               !  April 2009 - name changed from qc_out to raw_obs_qc_out
+               !  We also add domain info here
+               WRITE (tmp_filename,'("raw_obs_qc_out.d",i2.2,".")') nml%record_2%grid_id
+               CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  &
+                                 1 , .TRUE., .TRUE., 200000, 100  )  
             END IF
          ELSE 
             CALL make_date ( fdda_date_8 , fdda_time_6 , dt_char )
             IF ( nml%record_5%print_obs_files ) THEN
-               CALL output_obs ( obs , 2 , 'qc_out_sfc_fdda_'//dt_char , number_of_obs ,  1 , .TRUE.  )  
+               WRITE (tmp_filename,'("raw_obs_qc_out_sfc_fdda.d",i2.2,".")') nml%record_2%grid_id
+               CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  &
+                                 1 , .TRUE., .TRUE., 200000, 100  )  
             END IF
          END IF
       
@@ -392,7 +409,8 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             nml%record_8%smooth_upper_temp        , nml%record_8%smooth_upper_rh          , &
             nml%record_9%oa_type                  , nml%record_9%mqd_minimum_num_obs      , &
             nml%record_9%mqd_maximum_num_obs      , nml%record_9%oa_max_switch            , &
-            nml%record_9%radius_influence         , nml%record_9%oa_min_switch            )
+            nml%record_9%radius_influence         , nml%record_9%oa_min_switch            , &
+            nml%record_2%grid_id )
 
             !  Store the final analysis back into the all_3d and all_2d arrays if we are doing
             !  SFC FDDA.  Why?  So that when we do the LAGTEM or temporal interpolation, we are
@@ -417,7 +435,8 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             nml%record_8%smooth_upper_temp        , nml%record_8%smooth_upper_rh          , &
             nml%record_9%oa_type                  , nml%record_9%mqd_minimum_num_obs      , &
             nml%record_9%mqd_maximum_num_obs      , nml%record_9%oa_max_switch            , &
-            nml%record_9%radius_influence         , nml%record_9%oa_min_switch            )
+            nml%record_9%radius_influence         , nml%record_9%oa_min_switch            , &
+            nml%record_2%grid_id )
          END IF
 
       END IF
@@ -458,6 +477,28 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          nml%record_2%fg_filename )
          !nml%record_4%buddy_weight , nml%record_1%start_date )
       END IF
+
+
+   IF ( fdda_loop.EQ.1) THEN
+     obs_file_count = (icount-1)*2 + 1
+     IF ( .NOT. nml%record_7%f4d ) obs_file_count = icount
+     WRITE (obs_nudge_file,'("OBSDOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
+     INQUIRE ( EXIST = exist , FILE = obs_nudge_file )
+     CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
+                       .TRUE., exist, nml%record_2%remove_data_above_qc_flag, kbu_alloc, pressure  )
+   ELSEIF ( fdda_loop.EQ.2 .AND. fdda_loop.NE.fdda_loop_max) THEN
+     obs_file_count = (icount-1)*2 
+     WRITE (obs_nudge_file,'("OBSDOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
+     INQUIRE ( EXIST = exist , FILE = obs_nudge_file )
+     CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
+                       .TRUE., exist, nml%record_2%remove_data_above_qc_flag, kbu_alloc, pressure  )
+   ELSEIF ( fdda_loop.GT.2 .AND. fdda_loop.NE.fdda_loop_max) THEN
+     obs_file_count = (icount-1)*2 
+     WRITE (obs_nudge_file,'("OBSDOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
+     CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
+                       .TRUE., .FALSE., nml%record_2%remove_data_above_qc_flag, kbu_alloc, pressure  )
+   ENDIF
+
 
       !  If this is the time that we have observations, we can de-allocate the space.
 

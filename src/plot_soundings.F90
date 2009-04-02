@@ -124,7 +124,8 @@ program plot_raobs
   rdate = start_date
   LOOP_TIMES : DO itimes = 1, n_times+1
 
-     flnm=trim(file_type)//"_out_"//rdate//".0000"
+     WRITE(flnm, '(A,"_out.d",I2.2".")') trim(file_type), grid_id
+     flnm=trim(flnm)//rdate//".0000"
      open(iunit, file=flnm, form='formatted', status='old', action='read',iostat=ios)
      IF ( ios == 0 ) THEN
         print*," Reading file: ", trim(flnm)

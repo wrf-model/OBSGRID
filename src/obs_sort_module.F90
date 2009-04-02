@@ -2500,7 +2500,8 @@ END SUBROUTINE merge_sort
 !
 ! -------------------------------------------------------------------------
 
-SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput )
+SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
+                        new_file, qc_flag_keep, num_klvls, pressure )
 
 !  Take the array of observations and write them including measurements
 !  at all levels.  The two options (out_opt and forinput) are described
@@ -2519,11 +2520,16 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput )
    INTEGER , INTENT ( IN )                           :: out_opt   
    INTEGER , INTENT ( IN )                           :: unit
    CHARACTER ( LEN = * ) , INTENT ( IN )             :: file_name
-   LOGICAL , INTENT ( IN )                           :: forinput
+   LOGICAL , INTENT ( IN )                           :: forinput, new_file
 
-   INTEGER                                           :: i , iout
+   INTEGER                                           :: i , iout, num_klvls
+   INTEGER                                           :: qc_flag_keep
    TYPE ( measurement ) , POINTER                    :: next
    TYPE ( meas_data   )                              :: end_meas
+
+   REAL, DIMENSION(num_klvls), OPTIONAL              :: pressure
+   REAL, DIMENSION(num_klvls)                        :: pres_hPA
+   LOGICAL                                           :: RES=.TRUE.
  
    end_meas%pressure%data    = end_data_r
    end_meas%height%data      = end_data_r
@@ -2546,7 +2552,18 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput )
    end_meas%rh%qc            = end_data  
    end_meas%thickness%qc     = end_data  
 
-   OPEN ( UNIT = unit , FILE = file_name ,  ACTION = 'write' , FORM = 'formatted' )
+   IF ( PRESENT (pressure) ) THEN
+     pres_hPA = pressure * 100.
+   ENDIF
+
+
+   IF ( new_file ) THEN
+     OPEN ( UNIT = unit , FILE = file_name ,  ACTION = 'write' , FORM = 'formatted' , &
+            STATUS = 'replace' )
+   ELSE
+     OPEN ( UNIT = unit , FILE = file_name ,  ACTION = 'write' , FORM = 'formatted' , &
+            STATUS = 'unknown', POSITION = 'append' )
+   ENDIF
 
    iout = 0
 
@@ -2562,8 +2579,56 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput )
             obs(i)%location , obs(i)%info , obs(i)%valid_time , obs(i)%ground
          next => obs(i)%surface
          DO WHILE ( ASSOCIATED ( next ) )
+            next%meas%speed%qc = next%meas%u%qc
+            next%meas%direction%qc = next%meas%u%qc
             if ( obs(i)%info%discard ) exit 
-            WRITE ( UNIT = unit , FMT = meas_format )  next%meas
+            IF ( PRESENT (pressure) ) THEN
+              RES = any ( ( pres_hPA .eq. next%meas%pressure%data ) )
+              IF ( next%meas%height%data .eq. obs(i)%info%elevation ) RES = .TRUE.
+            ENDIF
+            IF ( RES ) THEN
+              if ( next%meas%pressure%qc    >= qc_flag_keep ) then
+                next%meas%pressure%data = missing_r
+                next%meas%pressure%qc = missing
+              endif
+              if ( next%meas%height%qc      >= qc_flag_keep ) then
+                next%meas%height%data = missing_r
+                next%meas%height%qc = missing
+              endif
+              if ( next%meas%temperature%qc >= qc_flag_keep ) then
+                next%meas%temperature%data = missing_r
+                next%meas%temperature%qc = missing
+              endif
+              if ( next%meas%dew_point%qc   >= qc_flag_keep ) then
+                next%meas%dew_point%data = missing_r
+                next%meas%dew_point%qc = missing
+              endif
+              if ( next%meas%speed%qc       >= qc_flag_keep ) then
+                next%meas%speed%data = missing_r
+                next%meas%speed%qc = missing
+              endif
+              if ( next%meas%direction%qc   >= qc_flag_keep ) then
+                next%meas%direction%data = missing_r
+                next%meas%direction%qc = missing
+              endif
+              if ( next%meas%u%qc           >= qc_flag_keep ) then
+                next%meas%u%data = missing_r
+                next%meas%u%qc = missing
+              endif
+              if ( next%meas%v%qc           >= qc_flag_keep ) then
+                next%meas%v%data = missing_r
+                next%meas%v%qc = missing
+              endif
+              if ( next%meas%rh%qc          >= qc_flag_keep ) then
+                next%meas%rh%data = missing_r
+                next%meas%rh%qc = missing
+              endif
+              if ( next%meas%thickness%qc   >= qc_flag_keep ) then
+                next%meas%thickness%data = missing_r
+                next%meas%thickness%qc = missing
+              endif
+              WRITE ( UNIT = unit , FMT = meas_format )  next%meas
+            ENDIF
             next => next%next
          END DO
          WRITE ( UNIT = unit , FMT = meas_format ) end_meas

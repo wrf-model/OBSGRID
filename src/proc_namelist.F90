@@ -59,6 +59,8 @@ SUBROUTINE proc_namelist ( unit , filename , nml )
    ! Default grid_id 
    grid_id = 1
 
+   remove_data_above_qc_flag = 200000
+
    !  Initialize the array of radius of influence scans.  This permits an easy way
    !  to determine the number of requested scans without an additional input value.
 
@@ -66,12 +68,10 @@ SUBROUTINE proc_namelist ( unit , filename , nml )
 
    !  Initialize the array of observation file names to 'null'.
 
-   DO loop = 1 , max_times
-      obs_filename(loop)     = 'null                                            &
-      &                                                                                    '
-      sfc_obs_filename(loop) = 'null                                            &
-      &                                                                                    '
-   ENDDO
+   obs_filename     = 'null                                            &
+   &                                                                                    '
+   sfc_obs_filename = 'null                                            &
+   &                                                                                    '
 
    !  Unless explicitly requested, 
    !     we are not going down the FDDA path.
@@ -133,16 +133,8 @@ SUBROUTINE proc_namelist ( unit , filename , nml )
    WRITE ( UNIT = * , FMT = * ) 'Record 2 NAMELIST, no checks'
    WRITE ( UNIT = * , FMT = '(" &RECORD2")')
    WRITE ( UNIT = * , FMT = '(" FG_FILENAME = ",A)' ) TRIM(fg_filename)
-   i = 1
-   obs_names : DO WHILE ( obs_filename(i)(1:4) .NE. 'null' )
-      WRITE ( UNIT = * , FMT = '(" OBS_FILENAME(",I3,") = ",A)' ) i,TRIM(obs_filename(i))
-      i = i + 1
-   END DO obs_names
-   i = 1
-   sfc_obs_names : DO WHILE ( sfc_obs_filename(i)(1:4) .NE. 'null' )
-      WRITE ( UNIT = * , FMT = '(" SFC_OBS_FILENAME(",I3,") = ",A)' ) i,TRIM(sfc_obs_filename(i))
-      i = i + 1
-   END DO sfc_obs_names
+   WRITE ( UNIT = * , FMT = '(" OBS_FILENAMES = ",A)' ) TRIM(obs_filename)
+   WRITE ( UNIT = * , FMT = '(" SFC_OBS_FILENAMES = ",A)' ) TRIM(sfc_obs_filename)
    WRITE ( UNIT = * , FMT = '(" /")' )
    WRITE ( UNIT = * , FMT = * ) 'Record 3 NAMELIST, no checks'
    WRITE ( UNIT = * , NML = record3 )

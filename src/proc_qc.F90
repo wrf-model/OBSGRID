@@ -144,7 +144,7 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
                            ( .NOT. obs(i)%info%bogus       )   .AND. & 
                            ( obs(i)%info%is_sound          )   .AND. & 
                            ( ASSOCIATED ( obs(i)%surface ) ) ) THEN
-!           CALL vert_cons_check ( obs ( i ) , i , print_vert )
+            CALL vert_cons_check ( obs ( i ) , i , print_vert )
          END IF valid_ob_1
       END DO loop_all_1
    END IF

@@ -20,11 +20,10 @@ MODULE namelist
 
    TYPE nml_record_2
       CHARACTER ( LEN = 132)  :: fg_filename                      ! first-guess filename 
-      CHARACTER ( LEN = 132) , DIMENSION(max_times)             & 
-                              :: obs_filename                 , & ! observation filename 
+      CHARACTER ( LEN = 132)  :: obs_filename                 , & ! observation filename 
                                  sfc_obs_filename                 ! off-hour sfc fdda observation filename 
       LOGICAL :: trim_domain
-      INTEGER :: trim_value, grid_id
+      INTEGER :: trim_value, grid_id, remove_data_above_qc_flag
    END TYPE nml_record_2
 
    TYPE nml_record_3
@@ -181,48 +180,48 @@ SUBROUTINE check_namelist ( nml )
    !  202: Does the observation data file supplied from the NAMELIST file
    !  exist?
 
-   test_202 : DO loop_test = 1 , max_times
-      IF ( nml%record_2%obs_filename(loop_test)(1:4) .NE. 'null'     ) THEN
-         INQUIRE ( EXIST = exist , FILE = nml%record_2%obs_filename(loop_test) ) 
-         IF ( .NOT. exist ) THEN
-            error_message = ' '
-            error_number = 00013202
-            error_message(1:31) = 'check_namelist                 '
-            error_message(32:)  = ' The observation data filename supplied &
-            &in the namelist (' // TRIM ( nml%record_2%obs_filename(loop_test) ) // &
-            ') does not exist.'
-            fatal = .true.
-            listing = .false.
-            call error_handler ( error_number , error_message , fatal , listing )
-         END IF
-      ELSE IF ( nml%record_2%obs_filename(loop_test)(1:4) .EQ. 'null'     ) THEN
-         EXIT test_202
-      END IF
-   END DO test_202
+   !test_202 : DO loop_test = 1 , max_times
+   !   IF ( nml%record_2%obs_filename(loop_test)(1:4) .NE. 'null'     ) THEN
+   !      INQUIRE ( EXIST = exist , FILE = nml%record_2%obs_filename(loop_test) ) 
+   !      IF ( .NOT. exist ) THEN
+   !         error_message = ' '
+   !         error_number = 00013202
+   !         error_message(1:31) = 'check_namelist                 '
+   !         error_message(32:)  = ' The observation data filename supplied &
+   !         &in the namelist (' // TRIM ( nml%record_2%obs_filename(loop_test) ) // &
+   !         ') does not exist.'
+   !         fatal = .true.
+   !         listing = .false.
+   !         call error_handler ( error_number , error_message , fatal , listing )
+   !      END IF
+   !   ELSE IF ( nml%record_2%obs_filename(loop_test)(1:4) .EQ. 'null'     ) THEN
+   !      EXIT test_202
+   !   END IF
+   !END DO test_202
  
    !  203: Does the sfc FDDA observation data file supplied from the NAMELIST file
    !  exist?
 
-   IF ( nml%record_7%f4d ) THEN
-      test_203 : DO loop_test = 1 , max_times
-         IF ( nml%record_2%sfc_obs_filename(loop_test)(1:4) .NE. 'null'     ) THEN
-            INQUIRE ( EXIST = exist , FILE = nml%record_2%sfc_obs_filename(loop_test) ) 
-            IF ( .NOT. exist ) THEN
-               error_message = ' '
-               error_number = 00013203
-               error_message(1:31) = 'check_namelist                 '
-               error_message(32:)  = ' The sfc FDDA observation data filename supplied &
-               &in the namelist (' // TRIM ( nml%record_2%sfc_obs_filename(loop_test) ) // &
-               ') does not exist.'
-               fatal = .true.
-               listing = .false.
-               call error_handler ( error_number , error_message , fatal , listing )
-            END IF
-         ELSE IF ( nml%record_2%sfc_obs_filename(loop_test)(1:4) .EQ. 'null'     ) THEN
-            EXIT test_203
-         END IF
-      END DO test_203
-   END IF
+   !IF ( nml%record_7%f4d ) THEN
+   !   test_203 : DO loop_test = 1 , max_times
+   !      IF ( nml%record_2%sfc_obs_filename(loop_test)(1:4) .NE. 'null'     ) THEN
+   !         INQUIRE ( EXIST = exist , FILE = nml%record_2%sfc_obs_filename(loop_test) ) 
+   !         IF ( .NOT. exist ) THEN
+   !            error_message = ' '
+   !            error_number = 00013203
+   !            error_message(1:31) = 'check_namelist                 '
+   !            error_message(32:)  = ' The sfc FDDA observation data filename supplied &
+   !            &in the namelist (' // TRIM ( nml%record_2%sfc_obs_filename(loop_test) ) // &
+   !            ') does not exist.'
+   !            fatal = .true.
+   !            listing = .false.
+   !            call error_handler ( error_number , error_message , fatal , listing )
+   !         END IF
+   !      ELSE IF ( nml%record_2%sfc_obs_filename(loop_test)(1:4) .EQ. 'null'     ) THEN
+   !         EXIT test_203
+   !      END IF
+   !   END DO test_203
+   !END IF
 
    !  401:  Perform error max QC test?
 
@@ -701,6 +700,7 @@ SUBROUTINE store_namelist ( nml )
    nml%record_2%fg_filename              = fg_filename    
    nml%record_2%obs_filename             = obs_filename    
    nml%record_2%sfc_obs_filename         = sfc_obs_filename    
+   nml%record_2%remove_data_above_qc_flag = remove_data_above_qc_flag    
    nml%record_2%trim_domain              = trim_domain         
    nml%record_2%trim_value               = trim_value          
    nml%record_2%grid_id                  = grid_id             

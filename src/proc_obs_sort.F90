@@ -107,19 +107,20 @@ height , iew , jns , map_projection , date , time , fdda_loop )
    
       CALL make_date ( date , time , date_time_char )
 
-      IF ( fdda_loop .EQ. 1 ) THEN
-         IF ( print_out_files ) THEN 
-            CALL output_obs ( obs , 2 , 'useful_out_'//date_time_char , number_of_obs ,  1 , .TRUE.  )  
-            CALL output_obs ( obs , 2 , 'result_out_'//date_time_char  , number_of_obs ,  0 , .FALSE. )  
-            CALL output_obs ( obs , 2 , 'discard_out_'//date_time_char , number_of_obs , -1 , .FALSE. )  
-         END IF 
-      ELSE
-         IF ( print_out_files ) THEN 
-            CALL output_obs ( obs , 2 , 'useful_out_sfc_fdda_'//date_time_char , number_of_obs ,  1 , .TRUE.  )  
-            CALL output_obs ( obs , 2 , 'result_out_sfc_fdda_'//date_time_char  , number_of_obs ,  0 , .FALSE. )  
-            CALL output_obs ( obs , 2 , 'discard_out_sfc_fdda_'//date_time_char , number_of_obs , -1 , .FALSE. )  
-         END IF 
-      END IF
+      ! no one really wants these files - so lets just clobber them - April 2009
+      !IF ( fdda_loop .EQ. 1 ) THEN
+      !   IF ( print_out_files ) THEN 
+      !      CALL output_obs ( obs , 2 , 'useful_out_'//date_time_char , number_of_obs ,  1 , .TRUE., 100  )  
+      !      CALL output_obs ( obs , 2 , 'result_out_'//date_time_char  , number_of_obs ,  0 , .FALSE., 100 )  
+      !      CALL output_obs ( obs , 2 , 'discard_out_'//date_time_char , number_of_obs , -1 , .FALSE., 100 )  
+      !   END IF 
+      !ELSE
+      !   IF ( print_out_files ) THEN 
+      !      CALL output_obs ( obs , 2 , 'useful_out_sfc_fdda_'//date_time_char , number_of_obs ,  1 , .TRUE., 100  )  
+      !      CALL output_obs ( obs , 2 , 'result_out_sfc_fdda_'//date_time_char  , number_of_obs ,  0 , .FALSE., 100 )  
+      !      CALL output_obs ( obs , 2 , 'discard_out_sfc_fdda_'//date_time_char , number_of_obs , -1 , .FALSE., 100 )  
+      !   END IF 
+      !END IF
 
    !  We did not find any observations, this could be important.
 

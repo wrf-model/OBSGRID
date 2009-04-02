@@ -88,8 +88,10 @@ CONTAINS
          !  Do all of the obs for this variable, at this level.
 
          do_a_variable : DO loop = 1, nobs
-            READ(9,FMT=fmt)name,ipress,iobnum,idstation,value,x,y,iqc
-!           WRITE (*,FMT=fmt) name,ipress,iobnum,idstation,value,x,y,iqc
+            READ(9,FMT=fmt)name,ipress,iobnum,idstation,value,diff,x,y,iqc
+            !WRITE (*,FMT=fmt) name,ipress,iobnum,idstation,value,diff,x,y,iqc
+            !READ(9,FMT=fmt)name,ipress,iobnum,idstation,value,x,y,iqc
+            !WRITE (*,FMT=fmt) name,ipress,iobnum,idstation,value,x,y,iqc
 ! READ (9,1212) name,ipress,iobnum,idstation,value,diff,x,y,iqc
 ! WRITE(6,1212) name,ipress,iobnum,idstation,value,diff,x,y,iqc
 ! 1212  FORMAT( 3X,A8,3X,I6,3X,I5,3X,A8,3X,2(G13.6,3X),2(F7.2,3X),I7 )
