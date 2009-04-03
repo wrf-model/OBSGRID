@@ -2657,21 +2657,21 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
                 next%meas%thickness%data = missing_r
                 next%meas%thickness%qc = missing
               endif
+              IF (next%meas%pressure%data     == missing_r) next%meas%pressure%qc     = missing
+              IF (next%meas%height%data       == missing_r) next%meas%height%qc       = missing
+              IF (next%meas%temperature%data  == missing_r) next%meas%temperature%qc  = missing
+              IF (next%meas%u%data            == missing_r) next%meas%u%qc            = missing
+              IF (next%meas%v%data            == missing_r) next%meas%v%qc            = missing
+              IF (next%meas%rh%data           == missing_r) next%meas%rh%qc           = missing
+              IF (obs(i)%ground%slp%data      == missing_r) obs(i)%ground%slp%qc      = missing
+              IF (obs(i)%ground%ref_pres%data == missing_r) obs(i)%ground%ref_pres%qc = missing
+              IF (next%meas%height%data       == missing_r) next%meas%height%qc       = missing
+              IF (next%meas%temperature%data  == missing_r) next%meas%temperature%qc  = missing
+              IF (next%meas%u%data            == missing_r) next%meas%u%qc            = missing
+              IF (next%meas%v%data            == missing_r) next%meas%v%qc            = missing
+              IF (next%meas%rh%data           == missing_r) next%meas%rh%qc           = missing
+              IF (obs(i)%ground%precip%data   == missing_r) obs(i)%ground%precip%qc   = missing
               IF ( OBS_data ) THEN
-                IF (next%meas%pressure%data     == missing_r) next%meas%pressure%qc     = missing
-                IF (next%meas%height%data       == missing_r) next%meas%height%qc       = missing
-                IF (next%meas%temperature%data  == missing_r) next%meas%temperature%qc  = missing
-                IF (next%meas%u%data            == missing_r) next%meas%u%qc            = missing
-                IF (next%meas%v%data            == missing_r) next%meas%v%qc            = missing
-                IF (next%meas%rh%data           == missing_r) next%meas%rh%qc           = missing
-                IF (obs(i)%ground%slp%data      == missing_r) obs(i)%ground%slp%qc      = missing
-                IF (obs(i)%ground%ref_pres%data == missing_r) obs(i)%ground%ref_pres%qc = missing
-                IF (next%meas%height%data       == missing_r) next%meas%height%qc       = missing
-                IF (next%meas%temperature%data  == missing_r) next%meas%temperature%qc  = missing
-                IF (next%meas%u%data            == missing_r) next%meas%u%qc            = missing
-                IF (next%meas%v%data            == missing_r) next%meas%v%qc            = missing
-                IF (next%meas%rh%data           == missing_r) next%meas%rh%qc           = missing
-                IF (obs(i)%ground%precip%data   == missing_r) obs(i)%ground%precip%qc   = missing
                 IF ( is_sounding ) THEN
                   WRITE ( UNIT = unit , FMT='(1x,6(F11.3,1x,F11.3,1x))' )        &
                     next%meas%pressure%data,    real(next%meas%pressure%qc),     &

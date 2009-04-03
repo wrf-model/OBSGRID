@@ -483,15 +483,15 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          CALL make_date ( current_date_8 , current_time_6 , dt_char )
          IF ( nml%record_5%print_obs_files ) THEN
             WRITE (tmp_filename,'("filtered_obs_qc_out.d",i2.2,".")') nml%record_2%grid_id
-            CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  &
-                              1 , .TRUE., .TRUE., 200000, 100, pressure  )  
+            CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  1 , &
+                              .TRUE., .TRUE., nml%record_2%remove_data_above_qc_flag, 100, pressure  )  
          END IF
       ELSE 
          CALL make_date ( fdda_date_8 , fdda_time_6 , dt_char )
          IF ( nml%record_5%print_obs_files ) THEN
             WRITE (tmp_filename,'("filtered_obs_qc_out_sfc_fdda.d",i2.2,".")') nml%record_2%grid_id
-            CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  &
-                              1 , .TRUE., .TRUE., 200000, 100, pressure  )  
+            CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  1 , &
+                              .TRUE., .TRUE., nml%record_2%remove_data_above_qc_flag, 100, pressure  )  
          END IF
       END IF
 
