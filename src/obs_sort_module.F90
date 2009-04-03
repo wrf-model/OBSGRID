@@ -2584,8 +2584,8 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
            is_sounding = obs(i)%info%is_sound
            IF ( obs(i)%info%num_vld_fld == 1 ) THEN
              is_sounding = .FALSE.
-             true_num_obs = obs(i)%info%num_vld_fld
            ENDIF
+           IF ( .not. is_sounding ) true_num_obs = 1
            IF ( is_sounding ) THEN
              next => obs(i)%surface
              DO WHILE ( ASSOCIATED ( next ) )

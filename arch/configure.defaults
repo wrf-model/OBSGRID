@@ -10,6 +10,7 @@ CC		=	cc
 CFLAGS		=	
 CPP		=	/usr/lib/cpp 
 CPPFLAGS	=	-I. -C -P -DIBM
+LOCAL_LIBS	=	-lpng_ncl -lz_ncl
 
 ###########################################################
 #ARCH	Compaq OSF1 alpha	
