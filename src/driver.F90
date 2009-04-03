@@ -478,6 +478,23 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          !nml%record_4%buddy_weight , nml%record_1%start_date )
       END IF
 
+      IF ( ( .NOT. nml%record_7%f4d ) .OR. & 
+           ( (     nml%record_7%f4d ) .AND. ( fdda_loop .EQ. 1 ) ) ) THEN 
+         CALL make_date ( current_date_8 , current_time_6 , dt_char )
+         IF ( nml%record_5%print_obs_files ) THEN
+            WRITE (tmp_filename,'("filtered_obs_qc_out.d",i2.2,".")') nml%record_2%grid_id
+            CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  &
+                              1 , .TRUE., .TRUE., 200000, 100, pressure  )  
+         END IF
+      ELSE 
+         CALL make_date ( fdda_date_8 , fdda_time_6 , dt_char )
+         IF ( nml%record_5%print_obs_files ) THEN
+            WRITE (tmp_filename,'("filtered_obs_qc_out_sfc_fdda.d",i2.2,".")') nml%record_2%grid_id
+            CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  &
+                              1 , .TRUE., .TRUE., 200000, 100, pressure  )  
+         END IF
+      END IF
+
 
    IF ( fdda_loop.EQ.1) THEN
      obs_file_count = (icount-1)*2 + 1
