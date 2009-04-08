@@ -114,7 +114,7 @@ contains
     rpt%ptend_3 = ptend_3
     rpt%ptend_24 = ptend_24
     rpt%cloud_covr = cloud_covr
-    rpt%ceiling = cceiling
+    rpt%cceiling = cceiling
 
     date_char = trim(rpt%date_char)
     rpt%hdate = date_char(7:10)//'-'//date_char(11:12)//'-'//date_char(13:14)//&
