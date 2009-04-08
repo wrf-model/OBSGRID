@@ -27,7 +27,7 @@ module report_module
      character(len=19) :: hdate
 
      type(field) :: slp, ref_pres, ground_t, sst, psfc, precip,&
-          t_max, t_min, t_min_night, ptend_3, ptend_24, cloud_covr, ceiling
+          t_max, t_min, t_min_night, ptend_3, ptend_24, cloud_covr, cceiling
 
      type(field), dimension(200) :: pressure, height, temperature, dewpoint,&
           speed, direction, u, v, rh, thickness
@@ -56,7 +56,7 @@ contains
     type(report) :: rpt
 
     type(field) :: slp, ref_pres, ground_t, sst, psfc, precip,&
-         t_max, t_min, t_min_night, ptend_3, ptend_24, cloud_covr, ceiling
+         t_max, t_min, t_min_night, ptend_3, ptend_24, cloud_covr, cceiling
 
     type(field) :: pressure, height, temperature, dewpoint,&
          speed, direction, u, v, rh, thickness
@@ -82,7 +82,7 @@ contains
          sut, julian, date_char,&
          slp, ref_pres, &
          ground_t, sst, psfc, precip, t_max, t_min, t_min_night,&
-         ptend_3, ptend_24, cloud_covr, ceiling
+         ptend_3, ptend_24, cloud_covr, cceiling
 
     rpt%xlat = xlat
     rpt%xlon = xlon
@@ -114,7 +114,7 @@ contains
     rpt%ptend_3 = ptend_3
     rpt%ptend_24 = ptend_24
     rpt%cloud_covr = cloud_covr
-    rpt%ceiling = ceiling
+    rpt%ceiling = cceiling
 
     date_char = trim(rpt%date_char)
     rpt%hdate = date_char(7:10)//'-'//date_char(11:12)//'-'//date_char(13:14)//&
