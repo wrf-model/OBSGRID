@@ -78,7 +78,7 @@ call opngks
       WRITE ( UNIT = * , FMT = '("                                 ")' ) 
       WRITE ( UNIT = * , FMT = '("################################ ")' ) 
       WRITE ( UNIT = * , FMT = '("          WRF OBSGRID            ")' ) 
-      WRITE ( UNIT = * , FMT = '("          Version 1.0.2          ")' ) 
+      WRITE ( UNIT = * , FMT = '("          Version 1.1.0          ")' )    !! April 2009
       WRITE ( UNIT = * , FMT = '("################################ ")' ) 
       WRITE ( UNIT = * , FMT = '("                                 ")' ) 
 
