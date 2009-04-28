@@ -124,6 +124,7 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
       !  Print out so that we know the time period that we are processing.
 
       IF ( (  nml%record_7%f4d ) .AND. ( fdda_loop .GT. 1 ) ) THEN
+         IF ( fdda_loop .NE. fdda_loop_max ) &
          WRITE ( UNIT = * , FMT = '( ///,"----------------------------------------------------------------------------",/,&
          &"Time Loop Processing for SFC FDDA, date = ",A,//)' ) date_char_fdda
       ELSE
@@ -173,7 +174,7 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
          bhi , bhr , num3d , num2d , num1d , &
          t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
          latitude_x , longitude_x , latitude_d , longitude_d , &
-         slp_x , slp_C , sst , &
+         slp_x , slp_C , sst , snow , &
          iew_alloc , jns_alloc , kbu_alloc , pressure , & 
          nml%record_5%print_analysis , & 
          current_date_8 , current_time_6 , date_char , icount )
@@ -222,7 +223,7 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          IF ( nml%record_7%lagtem ) THEN
             slp_x(:jns_alloc-1,:iew_alloc-1) = slp_x(:jns_alloc-1,:iew_alloc-1) * 0.01
          ELSE
-            CALL temporal_interp ( t , u , v , uA , vA , uC , vC , h , rh , pres , slp_x , slp_C , pressure , &
+            CALL temporal_interp ( t , u , v , uA , vA , uC , vC , h , rh , pres , slp_x , slp_C , snow , pressure , &
             iew_alloc , jns_alloc , kbu_alloc ,  num3d , num2d , &
             icount_fdda , icount_1 , icount_2 )
             slp_x(:jns_alloc-1,:iew_alloc-1) = slp_x(:jns_alloc-1,:iew_alloc-1) * 0.01
@@ -232,18 +233,18 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          icount_1 = ( icount - 2 ) * ( nml%record_1%interval / nml%record_7%intf4d ) + 1  
          icount_2 = ( icount - 1 ) * ( nml%record_1%interval / nml%record_7%intf4d ) + 1  
          IF ( nml%record_7%lagtem ) THEN
-            CALL lagtem_assign ( t , u , v , uA , vA , uC , vC , h , rh , pres , slp_x , slp_C , &
+            CALL lagtem_assign ( t , u , v , uA , vA , uC , vC , h , rh , pres , slp_x , slp_C , snow , &
             iew_alloc , jns_alloc , kbu_alloc ,  num3d , num2d , &
             icount_fdda , icount_1 , icount_2 ) 
             slp_x(:jns_alloc-1,:iew_alloc-1) = slp_x(:jns_alloc-1,:iew_alloc-1) * 0.01
          ELSE
-            CALL temporal_interp ( t , u , v , uA , vA , uC , vC , h , rh , pres , slp_x , slp_C , pressure , &
+            CALL temporal_interp ( t , u , v , uA , vA , uC , vC , h , rh , pres , slp_x , slp_C , snow , pressure , &
             iew_alloc , jns_alloc , kbu_alloc ,  num3d , num2d , &
             icount_fdda , icount_1 , icount_2 ) 
             slp_x(:jns_alloc-1,:iew_alloc-1) = slp_x(:jns_alloc-1,:iew_alloc-1) * 0.01
          END IF
       END IF
-      
+
       !  This is an easy way to make sure that a "clean" name gets
       !  passed into the couple of routines that will deal with the
       !  observation file name.  
@@ -252,6 +253,8 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
                        '                                                  ' // &
                        '                                '
 
+      IF ( fdda_loop == fdda_loop_max ) GOTO 101
+      
       !  We need to pick out either the traditional obs file or the one for the FDDA.
       !  The traditional and FDDA names are separate in the namelist.input file.  
 
@@ -270,7 +273,7 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             icount_fdda = ( icount - 1 ) * ( nml%record_1%interval / nml%record_7%intf4d ) + 1 - ( fdda_loop_max - fdda_loop ) 
          END IF
          dummy_filename = &
-         TRIM ( nml%record_2%sfc_obs_filename )//":"//date_char_fdda(1:13)
+         TRIM ( nml%record_2%obs_filename )//":"//date_char_fdda(1:13)
       END IF
       INQUIRE ( EXIST = exist , FILE = dummy_filename )
       IF ( .NOT. exist ) THEN
@@ -372,20 +375,15 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          IF ( ( .NOT. nml%record_7%f4d ) .OR. & 
               ( (     nml%record_7%f4d ) .AND. ( fdda_loop .EQ. 1 ) ) ) THEN 
             CALL make_date ( current_date_8 , current_time_6 , dt_char )
-            IF ( nml%record_5%print_obs_files ) THEN
-               !  April 2009 - name changed from qc_out to raw_obs_qc_out
-               !  We also add domain info here
-               WRITE (tmp_filename,'("raw_obs_qc_out.d",i2.2,".")') nml%record_2%grid_id
-               CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  &
-                                 1 , .TRUE., .TRUE., 200000, 100  )  
-            END IF
          ELSE 
             CALL make_date ( fdda_date_8 , fdda_time_6 , dt_char )
-            IF ( nml%record_5%print_obs_files ) THEN
-               WRITE (tmp_filename,'("raw_obs_qc_out_sfc_fdda.d",i2.2,".")') nml%record_2%grid_id
-               CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  &
-                                 1 , .TRUE., .TRUE., 200000, 100  )  
-            END IF
+         END IF
+         IF ( nml%record_5%print_obs_files ) THEN
+            !  April 2009 - name changed from qc_out to raw_obs_qc_out
+            !  We also add domain info here
+            WRITE (tmp_filename,'("raw_obs_qc_out.d",i2.2,".")') nml%record_2%grid_id
+            CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  &
+                              1 , .TRUE., .TRUE., 200000, 100  )  
          END IF
       
          !  With the observations properly QC'ed and stored, and the first guess
@@ -448,10 +446,24 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
 
       IF ( ( .NOT. nml%record_7%f4d ) .OR. & 
            ( (     nml%record_7%f4d ) .AND. ( fdda_loop .EQ. 1 ) ) ) THEN 
+         CALL make_date ( current_date_8 , current_time_6 , dt_char )
+      ELSE 
+         CALL make_date ( fdda_date_8 , fdda_time_6 , dt_char )
+      END IF
+      IF ( nml%record_5%print_obs_files ) THEN
+         WRITE (tmp_filename,'("filtered_obs_qc_out.d",i2.2,".")') nml%record_2%grid_id
+         CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  1 , &
+                           .TRUE., .TRUE., nml%record_2%remove_data_above_qc_flag, kbu_alloc, pressure  )  
+      END IF
+
+ 101  CONTINUE   ! come here if end of fdda loop, so we don't repeat the analysis time
+
+      IF ( ( .NOT. nml%record_7%f4d ) .OR. & 
+           ( (     nml%record_7%f4d ) .AND. ( fdda_loop .EQ. 1 ) ) ) THEN 
          CALL proc_final_analysis ( filename , filename_out , &
          bhi , bhr , t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
          latitude_x , longitude_x , latitude_d , longitude_d , &
-         slp_x , slp_C , sst , tobbox , odis , &
+         slp_x , slp_C , sst , snow , tobbox , odis , &
          pressure , ptop , &
          iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , & 
          nml%record_5%print_header , nml%record_5%print_analysis , &
@@ -465,7 +477,7 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          CALL proc_final_analysis ( filename , filename_out , &
          bhi , bhr , t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
          latitude_x , longitude_x , latitude_d , longitude_d , &
-         slp_x , slp_C , sst , tobbox , odis , &
+         slp_x , slp_C , sst , snow , tobbox , odis , &
          pressure , ptop , &
          iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , & 
          nml%record_5%print_header , nml%record_5%print_analysis , &
@@ -476,23 +488,6 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          nml%record_4%buddy_weight , date_char , &
          nml%record_2%fg_filename )
          !nml%record_4%buddy_weight , nml%record_1%start_date )
-      END IF
-
-      IF ( ( .NOT. nml%record_7%f4d ) .OR. & 
-           ( (     nml%record_7%f4d ) .AND. ( fdda_loop .EQ. 1 ) ) ) THEN 
-         CALL make_date ( current_date_8 , current_time_6 , dt_char )
-         IF ( nml%record_5%print_obs_files ) THEN
-            WRITE (tmp_filename,'("filtered_obs_qc_out.d",i2.2,".")') nml%record_2%grid_id
-            CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  1 , &
-                              .TRUE., .TRUE., nml%record_2%remove_data_above_qc_flag, 100, pressure  )  
-         END IF
-      ELSE 
-         CALL make_date ( fdda_date_8 , fdda_time_6 , dt_char )
-         IF ( nml%record_5%print_obs_files ) THEN
-            WRITE (tmp_filename,'("filtered_obs_qc_out_sfc_fdda.d",i2.2,".")') nml%record_2%grid_id
-            CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  1 , &
-                              .TRUE., .TRUE., nml%record_2%remove_data_above_qc_flag, 100, pressure  )  
-         END IF
       END IF
 
 
@@ -519,7 +514,7 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
 
       !  If this is the time that we have observations, we can de-allocate the space.
 
-      IF ( dummy_filename(1:4) .NE. 'null' ) THEN
+      IF ( dummy_filename(1:4) .NE. 'null' .AND. fdda_loop .NE. fdda_loop_max ) THEN
 
          !  We are finished with this time period.  We can remove all of the
          !  allocated space for the observation data.

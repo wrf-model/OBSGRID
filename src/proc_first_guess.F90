@@ -3,7 +3,7 @@ SUBROUTINE proc_first_guess ( filename , &
 bhi , bhr , num3d , num2d , num1d , &
 t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
 latitude_x , longitude_x , latitude_d , longitude_d , &
-slp_x , slp_C , sst , &
+slp_x , slp_C , sst , snow , &
 iew_alloc , jns_alloc , kbu_alloc , pressure , &
 print_analysis , &
 current_date_8 , current_time_6 , date_char , icount )
@@ -50,6 +50,7 @@ current_date_8 , current_time_6 , date_char , icount )
                                                        longitude_d  , &
                                                        slp_x        , &
                                                        slp_C        , &
+                                                       snow         , &
                                                        sst
 
    LOGICAL                                          :: print_analysis
@@ -91,7 +92,7 @@ current_date_8 , current_time_6 , date_char , icount )
    bhi , bhr , num3d , num2d , num1d , &
    t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
    latitude_x , longitude_x , latitude_d , longitude_d , &
-   slp_x , slp_C , sst , pressure , &
+   slp_x , slp_C , sst , snow , pressure , &
    iew_alloc , jns_alloc , kbu_alloc , & 
    current_date_8 , current_time_6 , date_char , icount , print_analysis ) 
 

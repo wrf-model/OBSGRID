@@ -23,10 +23,11 @@ PROGRAM plot_obs
    INTEGER ::   end_year,   end_month,   end_day,   end_hour,   end_minute,   end_second
    INTEGER :: interval, idiff, n_times
    CHARACTER (LEN=19) :: start_date, end_date, rdate
-   INTEGER :: grid_id
+   CHARACTER ( LEN = 132)  :: obs_filename
+   LOGICAL :: trim_domain
+   INTEGER :: trim_value, grid_id, remove_data_above_qc_flag
    INTEGER :: met_ncid
    INTEGER :: rcode
-   CHARACTER (LEN=80) :: file_type
    LOGICAL :: use_first_guess, f4d, lagtem
    INTEGER :: intf4d
 
@@ -86,17 +87,17 @@ PROGRAM plot_obs
     namelist  /record1/ start_year, start_month, start_day, start_hour, start_minute, start_second, &
                           end_year,   end_month,   end_day,   end_hour,   end_minute,   end_second, &
                         interval
+    namelist /record2/ obs_filename, remove_data_above_qc_flag, & 
+                      trim_domain, trim_value, grid_id
+
     namelist /record7/ use_first_guess, f4d, intf4d, lagtem
 
-    namelist /plot_level/ file_type, grid_id
-  
    ! default 
    start_minute = 0
    start_second = 0
    end_minute = 0
    end_second = 0
    grid_id = 1
-   file_type = "3D"
    
    print*," "
    
@@ -107,12 +108,12 @@ PROGRAM plot_obs
    END DO
    OPEN(funit,file='namelist.oa',status='old',form='formatted')
    READ(funit,record1)
+   READ(funit,record2)
    READ(funit,record7)
-   READ(funit,plot_level)
    CLOSE(funit)
 
    ! Which interval should we use
-   IF ( trim(file_type) == "sfc_fdda") interval = intf4d
+   IF ( f4d ) interval = intf4d
    
    ! Build starting date string
    WRITE(start_date, '(i4.4,a1,i2.2,a1,i2.2,a1,i2.2,a1,i2.2,a1,i2.2)') &
@@ -146,18 +147,10 @@ PROGRAM plot_obs
 
      print*," "
      ! name the filename
-     IF ( trim(file_type) == "sfc_fdda") THEN
-        flnm="plotobs_out_sfc_fdda_"//rdate//".0000"
-     ELSE
-        flnm="plotobs_out_"//rdate//".0000"
-     ENDIF
+     WRITE(flnm,FMT='("plotobs_out.d",i2.2,".",A19,".0000")') grid_id, rdate
 
      ! Build metoa file
-     IF ( trim(file_type) == "sfc_fdda") THEN
-        WRITE(cgm_file, '("levels_sfc_fdda_",A19,".cgm")') rdate
-     ELSE
-        WRITE(cgm_file, '("levels_",A19,".cgm")') rdate
-     ENDIF
+     WRITE(cgm_file, '("levels.d",i2.2,".",A19,".cgm")') grid_id, rdate
 
      !  Initialize the NCAR Graphics stuff.
      CALL start_it(cgm_file)

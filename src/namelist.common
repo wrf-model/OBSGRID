@@ -18,7 +18,6 @@
 
    COMMON   /record2_nmlc/ fg_filename                  , &
                            obs_filename                 , &
-                           sfc_obs_filename             , &
                            remove_data_above_qc_flag    , &
                            trim_domain                  , &
                            trim_value                   , &

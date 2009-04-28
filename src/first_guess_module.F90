@@ -96,7 +96,7 @@ SUBROUTINE read_first_guess ( met_ncid , &
 bhi , bhr , num3d , num2d , num1d , &
 t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
 latitude_x , longitude_x , latitude_d , longitude_d , &
-slp_x , slp_C , sst , pressure , &
+slp_x , slp_C , sst , snow , pressure , &
 iew_alloc , jns_alloc , kbu_alloc , &
 current_date_8 , current_time_6 , date_char , icount , print_analysis ) 
 
@@ -221,7 +221,7 @@ current_date_8 , current_time_6 , date_char , icount , print_analysis )
               trim(var_name) /= "XLAT_M"   .AND. trim(var_name) /= "XLONG_M"  .AND. &
               trim(var_name) /= "XLAT_V"   .AND. trim(var_name) /= "XLONG_V"  .AND. &
               trim(var_name) /= "SKINTEMP" .AND. trim(var_name) /= "HGT_M"    .AND. &
-              trim(var_name) /= "PMSL"     ) CYCLE variable_loop
+              trim(var_name) /= "PMSL"     .AND. trim(var_name) /= "SNOW" ) CYCLE variable_loop
 
          small_header%name = trim(var_name) 
 
@@ -477,6 +477,10 @@ current_date_8 , current_time_6 , date_char , icount , print_analysis )
                sst = all_2d(loop_count,tt)%array
                sst         ( jns_alloc,:iew_alloc-1) = sst         ( jns_alloc-1,:iew_alloc-1)
                sst         (:jns_alloc,iew_alloc   ) = sst         (:jns_alloc  , iew_alloc-1)
+            ELSE IF ( all_2d(loop_count,tt)%small_header%name(1:8) .EQ. 'SNOW' ) THEN
+               snow = all_2d(loop_count,tt)%array
+               snow         ( jns_alloc,:iew_alloc-1) = snow         ( jns_alloc-1,:iew_alloc-1)
+               snow         (:jns_alloc,iew_alloc   ) = snow         (:jns_alloc  , iew_alloc-1)
             END IF
       
          END DO two_D

@@ -70,8 +70,6 @@ SUBROUTINE proc_namelist ( unit , filename , nml )
 
    obs_filename     = 'null                                            &
    &                                                                                    '
-   sfc_obs_filename = 'null                                            &
-   &                                                                                    '
 
    !  Unless explicitly requested, 
    !     we are not going down the FDDA path.
@@ -134,7 +132,6 @@ SUBROUTINE proc_namelist ( unit , filename , nml )
    WRITE ( UNIT = * , FMT = '(" &RECORD2")')
    WRITE ( UNIT = * , FMT = '(" FG_FILENAME = ",A)' ) TRIM(fg_filename)
    WRITE ( UNIT = * , FMT = '(" OBS_FILENAMES = ",A)' ) TRIM(obs_filename)
-   WRITE ( UNIT = * , FMT = '(" SFC_OBS_FILENAMES = ",A)' ) TRIM(sfc_obs_filename)
    WRITE ( UNIT = * , FMT = '(" /")' )
    WRITE ( UNIT = * , FMT = * ) 'Record 3 NAMELIST, no checks'
    WRITE ( UNIT = * , NML = record3 )

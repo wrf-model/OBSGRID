@@ -12,7 +12,6 @@
 &record2
  grid_id                     = 1
  obs_filename                = '../JAN00/obs' 
- sfc_obs_filename            = '../JAN00/surface_obs_r' 
 /
  trim_domain                 = .TRUE.
  trim_value                  = 5
@@ -78,14 +77,7 @@
 
 
 &plot_sounding
- file_type                   = 'raw_obs_qc'
+ file_type                   = 'raw'
  read_metoa                  = .TRUE.
- grid_id                     = 1
 /
-
-&plot_level
- file_type                   = '3D'
- grid_id                     = 1
-/
- file_type                   = 'sfc_fdda'
-
+ file_type                   = 'filtered'

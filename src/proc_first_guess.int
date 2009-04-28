@@ -3,7 +3,7 @@ bhi , bhr , &
 num3d , num2d , num1d , &
 t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
 latitude_x , longitude_x , latitude_d , longitude_d , &
-slp_x , slp_C , sst , &
+slp_x , slp_C , sst , snow , &
 iewd , jnsd , kbu , pressure , &
 print_analysis , &
 current_date_8 , current_time_6 , date_char , icount )
@@ -36,6 +36,7 @@ current_date_8 , current_time_6 , date_char , icount )
                                                        longitude_d  , &
                                                        slp_x        , &
                                                        slp_C        , &
+                                                       snow         , &
                                                        sst
    LOGICAL                                          :: print_analysis
    INTEGER , INTENT ( IN )          :: current_date_8 , & 

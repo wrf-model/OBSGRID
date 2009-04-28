@@ -20,8 +20,7 @@ MODULE namelist
 
    TYPE nml_record_2
       CHARACTER ( LEN = 132)  :: fg_filename                      ! first-guess filename 
-      CHARACTER ( LEN = 132)  :: obs_filename                 , & ! observation filename 
-                                 sfc_obs_filename                 ! off-hour sfc fdda observation filename 
+      CHARACTER ( LEN = 132)  :: obs_filename                     ! observation filename 
       LOGICAL :: trim_domain
       INTEGER :: trim_value, grid_id, remove_data_above_qc_flag
    END TYPE nml_record_2
@@ -699,7 +698,6 @@ SUBROUTINE store_namelist ( nml )
 
    nml%record_2%fg_filename              = fg_filename    
    nml%record_2%obs_filename             = obs_filename    
-   nml%record_2%sfc_obs_filename         = sfc_obs_filename    
    nml%record_2%remove_data_above_qc_flag = remove_data_above_qc_flag    
    nml%record_2%trim_domain              = trim_domain         
    nml%record_2%trim_value               = trim_value          

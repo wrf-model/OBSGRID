@@ -50,7 +50,7 @@ END SUBROUTINE store_fa
 
 !------------------------------------------------------------------------------
 
-SUBROUTINE temporal_interp ( t , u , v , uA , vA , uC , vC , h , rh , pres , slp_x , slp_C , pressure , & 
+SUBROUTINE temporal_interp ( t , u , v , uA , vA , uC , vC , h , rh , pres , slp_x , slp_C , snow , pressure , & 
 iew_alloc , jns_alloc , kbu_alloc , num3d , num2d , &
 icount_fdda , icount_1 , icount_2 ) 
 
@@ -66,7 +66,7 @@ icount_fdda , icount_1 , icount_2 )
 
    REAL , INTENT(OUT) , DIMENSION(jns_alloc,iew_alloc,kbu_alloc) :: t , u , v , h , rh
    REAL , INTENT(OUT) , DIMENSION(jns_alloc,iew_alloc,kbu_alloc) :: uA , vA , uC , vC , pres
-   REAL , INTENT(OUT) , DIMENSION(jns_alloc,iew_alloc)           :: slp_x , slp_C
+   REAL , INTENT(OUT) , DIMENSION(jns_alloc,iew_alloc)           :: slp_x , slp_C , snow
 
    INTEGER :: loop_count , k , kk
    INTEGER , DIMENSION(4) :: k_want = 0
@@ -175,6 +175,13 @@ print *,'pressure=',pressure
            REAL(icount_2-icount_1) 
          slp_C( jns_alloc,:iew_alloc-1) = slp_C( jns_alloc-1,:iew_alloc-1)
          slp_C(:jns_alloc, iew_alloc  ) = slp_C(:jns_alloc  , iew_alloc-1)
+      ELSE IF ( all_2d(loop_count,second_time)%small_header%name(1:8) .EQ. 'SNOW    ' ) THEN
+         snow(1:jns_alloc-1,1:iew_alloc-1) = &
+         ( REAL(icount_2-icount_fdda) * all_2d(loop_count,first_time )%array(1:jns_alloc-1,1:iew_alloc-1) + &
+           REAL(icount_fdda-icount_1) * all_2d(loop_count,second_time)%array(1:jns_alloc-1,1:iew_alloc-1) ) / &
+           REAL(icount_2-icount_1) 
+         snow( jns_alloc,:iew_alloc-1) = snow( jns_alloc-1,:iew_alloc-1)
+         snow(:jns_alloc, iew_alloc  ) = snow(:jns_alloc  , iew_alloc-1)
       END IF
    END DO the_2d_search
 
@@ -183,7 +190,7 @@ END SUBROUTINE temporal_interp
 !------------------------------------------------------------------------------
 
 SUBROUTINE lagtem_assign ( t , u , v , uA , vA , uC , vC , h , rh , pres , slp_x , slp_C , & 
-iew_alloc , jns_alloc , kbu_alloc , num3d , num2d , &
+snow , iew_alloc , jns_alloc , kbu_alloc , num3d , num2d , &
 icount_fdda , icount_1 , icount_2 ) 
 
 !  This routine assigns the previous time period's data to be this time period's
@@ -195,7 +202,7 @@ icount_fdda , icount_1 , icount_2 )
 
    REAL , INTENT(OUT) , DIMENSION(jns_alloc,iew_alloc,kbu_alloc) :: t , u , v , h , rh
    REAL , INTENT(OUT) , DIMENSION(jns_alloc,iew_alloc,kbu_alloc) :: uA , vA , uC , vC , pres
-   REAL , INTENT(OUT) , DIMENSION(jns_alloc,iew_alloc)           :: slp_x , slp_C
+   REAL , INTENT(OUT) , DIMENSION(jns_alloc,iew_alloc)           :: slp_x , slp_C , snow
 
    INTEGER :: loop_count , tt
 
@@ -258,6 +265,10 @@ icount_fdda , icount_1 , icount_2 )
             slp_C = all_2d(loop_count,first_time )%array
             slp_C( jns_alloc,:iew_alloc-1) = slp_C( jns_alloc-1,:iew_alloc-1)
             slp_C(:jns_alloc, iew_alloc  ) = slp_C(:jns_alloc  , iew_alloc-1)
+         ELSE IF ( all_2d(loop_count,first_time)%small_header%name(1:8) .EQ. 'SNOW    ' ) THEN
+            snow = all_2d(loop_count,first_time )%array
+            snow( jns_alloc,:iew_alloc-1) = snow( jns_alloc-1,:iew_alloc-1)
+            snow(:jns_alloc, iew_alloc  ) = snow(:jns_alloc  , iew_alloc-1)
          END IF
       END DO the_2d_search_a
 
@@ -317,6 +328,10 @@ icount_fdda , icount_1 , icount_2 )
             slp_C = all_2d(loop_count,second_time )%array
             slp_C( jns_alloc,:iew_alloc-1) = slp_C( jns_alloc-1,:iew_alloc-1)
             slp_C(:jns_alloc, iew_alloc  ) = slp_C(:jns_alloc  , iew_alloc-1)
+         ELSE IF ( all_2d(loop_count,second_time)%small_header%name(1:8) .EQ. 'SNOW    ' ) THEN
+            snow = all_2d(loop_count,second_time )%array
+            snow( jns_alloc,:iew_alloc-1) = snow( jns_alloc-1,:iew_alloc-1)
+            snow(:jns_alloc, iew_alloc  ) = snow(:jns_alloc  , iew_alloc-1)
          END IF
       END DO the_2d_search_b
 

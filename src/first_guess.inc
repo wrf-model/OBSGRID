@@ -18,4 +18,5 @@
                                       longitude_d  , &
                                       slp_x        , &
                                       slp_C        , &
+                                      snow         , &
                                       sst

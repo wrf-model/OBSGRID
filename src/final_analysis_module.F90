@@ -376,7 +376,7 @@ END SUBROUTINE write_analysis
 
 SUBROUTINE write_analysis_fdda ( oa_met , sfc_ncid , total_count, icount_fdda , &
 t , u , v , uA , vA , uC , vC , h , rh , pres , &
-terrain , slp_x , slp_C , tobbox , odis , pressure , &
+terrain , slp_x , slp_C , snow , tobbox , odis , pressure , &
 iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , &
 fdda_date_24 , ptop )
 
@@ -393,7 +393,7 @@ fdda_date_24 , ptop )
    INTEGER                                                :: iewd , jnsd , iew_alloc , jns_alloc , kbu_alloc
    REAL , DIMENSION ( jns_alloc , iew_alloc , kbu_alloc ) :: t , u , v , h , rh , qv
    REAL , DIMENSION ( jns_alloc , iew_alloc , kbu_alloc ) :: uA , vA , uC , vC , pertubation, pres
-   REAL , DIMENSION ( jns_alloc , iew_alloc )             :: terrain , slp_x , slp_C , tobbox , odis , psfc
+   REAL , DIMENSION ( jns_alloc , iew_alloc )             :: terrain , slp_x , slp_C , tobbox , odis , psfc , snow
    REAL , DIMENSION ( jnsd , iewd )                       :: dum2d
    REAL , DIMENSION ( kbu_alloc )                         :: pressure
 
@@ -526,7 +526,7 @@ integer :: i , j
       ENDDO loop_global_att    
 
       ! train output file for fields to come
-      DO i = 1, 21
+      DO i = 1, 23
              IF ( i == 1 ) THEN
                 rcode = nf_inq_var(oa_met, i, cval, itype, idm, ishape, natt)
                 rcode = nf_def_var(sfc_ncid, cval, itype, idm, ishape, i)
@@ -623,6 +623,14 @@ integer :: i , j
                      cval = 'ODIS_NDG_NEW'
                      units = 'km'      
                      description = 'DISTANCE TO NEAREST OBSERVATION'
+                ELSEIF ( i == 22 ) THEN
+                     cval = 'SN_NDG_OLD'
+                     units = 'kg m-2'      
+                     description = 'WATER EQUIVALENT SNOW DEPTH'    
+                ELSEIF ( i == 23 ) THEN
+                     cval = 'SN_NDG_NEW'
+                     units = 'kg m-2'      
+                     description = 'WATER EQUIVALENT SNOW DEPTH'    
                 ENDIF
                 rcode = nf_def_var(sfc_ncid, cval, NF_FLOAT, 3, ishape, i)
                    rcode = nf_put_att_int(sfc_ncid, i, 'FieldType', NF_INT, 1, 104 )
@@ -855,6 +863,25 @@ integer :: i , j
    ENDIF
    IF ( icount_fdda > 1 ) THEN
      rcode = nf_inq_varid     ( sfc_ncid, "ODIS_NDG_NEW", ivar_number )
+     rcode = nf_put_vara_real ( sfc_ncid, ivar_number, start_dims_new, end_dims, met_em_2d )
+   ENDIF
+   DEALLOCATE (met_em_2d)
+
+   !! WRITING INFO FOR SN_NDG
+   CALL unexpand2 ( snow , iew_alloc , jns_alloc , dum2d , iewd , jnsd ) 
+   CALL yx2xy ( dum2d, jnsd, iewd, met_em_dum2d )
+   ALLOCATE ( met_em_2d (iewd-1, jnsd-1) )
+   DO jmet = 1,jnsd-1
+   DO imet = 1,iewd-1
+      met_em_2d(imet,jmet) = met_em_dum2d(imet,jmet)
+   ENDDO
+   ENDDO
+   IF ( icount_fdda < total_count ) THEN
+     rcode = nf_inq_varid     ( sfc_ncid, "SN_NDG_OLD", ivar_number )
+     rcode = nf_put_vara_real ( sfc_ncid, ivar_number, start_dims, end_dims, met_em_2d )
+   ENDIF
+   IF ( icount_fdda > 1 ) THEN
+     rcode = nf_inq_varid     ( sfc_ncid, "SN_NDG_NEW", ivar_number )
      rcode = nf_put_vara_real ( sfc_ncid, ivar_number, start_dims_new, end_dims, met_em_2d )
    ENDIF
    DEALLOCATE (met_em_2d)

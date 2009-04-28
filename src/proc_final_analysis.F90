@@ -2,7 +2,7 @@
 SUBROUTINE proc_final_analysis ( filename , filename_out , &
 bhid , bhrd , t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
 latitude_x , longitude_x , latitude_d , longitude_d , &
-slp_x , slp_C , sst , tobbox , odis , &
+slp_x , slp_C , sst , snow , tobbox , odis , &
 pressure , ptop , &
 iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , & 
 print_header , print_analysis , & 
@@ -121,7 +121,7 @@ buddy_weight , date_char , root_filename )
       IF ( icount == 1 ) rcode = nf_open(filename_out, NF_NOWRITE, oa_ncid)
       CALL write_analysis_fdda ( oa_ncid , sfc_ncid , total_count, icount_fdda , &
       t , u , v , uA , vA , uC , vC , h , rh , pres , &
-      terrain , slp_x , slp_C , tobbox , odis , pressure , &
+      terrain , slp_x , slp_C , snow , tobbox , odis , pressure , &
       iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , fdda_date_24 , ptop )
       IF ( icount == 1 ) rcode = nf_close(oa_ncid)
    END IF

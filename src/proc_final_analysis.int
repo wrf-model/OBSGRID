@@ -1,7 +1,7 @@
 SUBROUTINE proc_final_analysis ( filename , filename_out , &
 bhid , bhrd , t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
 latitude_x , longitude_x , latitude_d , longitude_d , &
-slp_x , slp_C , sst , tobbox , odis , &
+slp_x , slp_C , sst , snow , tobbox , odis , &
 pressure , ptop , &
 iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , & 
 print_header , print_analysis , & 

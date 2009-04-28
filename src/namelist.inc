@@ -18,7 +18,6 @@
 
    CHARACTER ( LEN = 132 ) :: fg_filename     
    CHARACTER ( LEN = 132 ) ::  obs_filename    
-   CHARACTER ( LEN = 132 ) ::  sfc_obs_filename    
    LOGICAL :: trim_domain
    INTEGER :: trim_value, grid_id, remove_data_above_qc_flag
 

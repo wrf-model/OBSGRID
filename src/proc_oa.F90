@@ -136,22 +136,13 @@ grid_id )
    
       INQUIRE ( UNIT =74 , OPENED = connected )
       IF ( .NOT. connected ) THEN
-         IF ( fdda_loop.EQ.1) THEN
-            WRITE (tmp_filename,'("plotobs_out.d",i2.2,".")') grid_id
-            OPEN ( UNIT   =74                                      , &
-                   FILE   = trim(tmp_filename)//date_time_char , &
-                   FORM   = 'FORMATTED'                            , &
-                   ACCESS = 'SEQUENTIAL'                           , &
-                   STATUS = 'REPLACE'                                )
-         ELSE
-            WRITE (tmp_filename,'("plotobs_out_sfc_fdda.d",i2.2,".")') grid_id
-            OPEN ( UNIT   =74                                      , &
-                   FILE   = trim(tmp_filename)//date_time_char , &
-                   FORM   = 'FORMATTED'                            , &
-                   ACCESS = 'SEQUENTIAL'                           , &
-                   STATUS = 'REPLACE'                                )
-         END IF
-   
+         WRITE (tmp_filename,'("plotobs_out.d",i2.2,".")') grid_id
+         OPEN ( UNIT   =74                                      , &
+                FILE   = trim(tmp_filename)//date_time_char , &
+                FORM   = 'FORMATTED'                            , &
+                ACCESS = 'SEQUENTIAL'                           , &
+                STATUS = 'REPLACE'                                )
+  
          WRITE ( UNIT =74 , &
          FMT = '( "( 3x,a8,3x,i6,3x,i5,3x,a8,3x,2(g13.6,3x),2(f7.2,3x),i7 )" )' )
         !FMT = '( "( 3x,a8,3x,i6,3x,i5,3x,a8,3x,g13.6,3x,16x,2(f7.2,3x),i7 )" )' )

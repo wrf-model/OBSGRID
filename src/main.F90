@@ -78,7 +78,7 @@ call opngks
       WRITE ( UNIT = * , FMT = '("                                 ")' ) 
       WRITE ( UNIT = * , FMT = '("################################ ")' ) 
       WRITE ( UNIT = * , FMT = '("          WRF OBSGRID            ")' ) 
-      WRITE ( UNIT = * , FMT = '("          Version 1.1.0          ")' )    !! April 2009
+      WRITE ( UNIT = * , FMT = '("          Version 3.1.1          ")' )    !! April 2009
       WRITE ( UNIT = * , FMT = '("################################ ")' ) 
       WRITE ( UNIT = * , FMT = '("                                 ")' ) 
 
@@ -246,6 +246,7 @@ call opngks
       !  This routine is called once for each time period to be processed.  This
       !  is the main driver routine for the program.
 
+
       CALL driver ( filename , filename_out , & 
       bhi , bhr , nml , iew_alloc , jns_alloc , kbu_alloc , &
       current_date_8 , current_time_6 , current_date, icount , total_count )
@@ -263,7 +264,9 @@ call opngks
 
    END DO time_loop_2
 
-   WRITE ( UNIT = * , FMT = '("STOP 99999")' )
+   WRITE ( UNIT = * , FMT = '( ///,"----------------------------------------------------------------------------",/,&
+         &"Successful completion of obsgrid")' )
+   WRITE ( UNIT = * , FMT = '("    ")' )
 #ifdef NCARG
 call clsgks
 #endif

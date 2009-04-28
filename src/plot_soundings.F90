@@ -30,7 +30,11 @@ program plot_raobs
   INTEGER ::   end_year,   end_month,   end_day,   end_hour,   end_minute,   end_second
   INTEGER :: interval, idiff, n_times
   CHARACTER (LEN=19) :: start_date, end_date, rdate
-  INTEGER :: grid_id
+  CHARACTER ( LEN = 132)  :: obs_filename
+  LOGICAL :: trim_domain
+  INTEGER :: trim_value, grid_id, remove_data_above_qc_flag
+  LOGICAL :: use_first_guess, f4d, lagtem
+  INTEGER :: intf4d
 
   INTEGER, DIMENSION(4)                        :: iend
   INTEGER                                      :: met_ncid, iv, idims
@@ -40,14 +44,17 @@ program plot_raobs
   INTEGER                                      :: rcode, ndims, nvars, ngatts, nunlimdimid
   INTEGER, ALLOCATABLE, DIMENSION(:)           :: dim_values
   CHARACTER (LEN=31),ALLOCATABLE, DIMENSION(:) :: dim_names
+  CHARACTER (LEN=80)                           :: cval
 
   CHARACTER (LEN=80)                           :: file_type
 
   namelist  /record1/ start_year, start_month, start_day, start_hour, start_minute, start_second, &
                         end_year,   end_month,   end_day,   end_hour,   end_minute,   end_second, &
                       interval
-
-  namelist /plot_sounding/ file_type, read_metoa, grid_id
+  namelist /record2/ obs_filename, remove_data_above_qc_flag, &
+                    trim_domain, trim_value, grid_id
+  namelist /record7/ use_first_guess, f4d, intf4d, lagtem
+  namelist /plot_sounding/ file_type, read_metoa
  
   ! default
   file_type = 'useful'
@@ -66,8 +73,13 @@ program plot_raobs
   END DO
   OPEN(funit,file='namelist.oa',status='old',form='formatted')
   READ(funit,record1)
+  READ(funit,record2)
+  READ(funit,record7)
   READ(funit,plot_sounding)
   CLOSE(funit)
+
+  ! Which interval should we use
+  IF ( f4d ) interval = intf4d
 
   ! Build starting date string
   WRITE(start_date, '(i4.4,a1,i2.2,a1,i2.2,a1,i2.2,a1,i2.2,a1,i2.2)') &
@@ -105,8 +117,9 @@ program plot_raobs
         ENDDO
   
         iend = 1
-        rcode = nf_inq_varid ( met_ncid, "PRES", iv )
-        rcode = nf_inq_var(met_ncid, iv, "PRES", var_type, var_ndims, var_shape, var_natt)
+        cval = "PRES"
+        rcode = nf_inq_varid ( met_ncid, cval, iv )
+        rcode = nf_inq_var(met_ncid, iv, cval, var_type, var_ndims, var_shape, var_natt)
         DO idims=1,var_ndims-1
            iend(idims)  = dim_values(var_shape(idims))
         ENDDO
@@ -124,8 +137,7 @@ program plot_raobs
   rdate = start_date
   LOOP_TIMES : DO itimes = 1, n_times+1
 
-     WRITE(flnm, '(A,"_out.d",I2.2".")') trim(file_type), grid_id
-     flnm=trim(flnm)//rdate//".0000"
+     WRITE(flnm,FMT='(A,"_obs_qc_out.d",i2.2,".",A19,".0000")') trim(file_type), grid_id, rdate
      open(iunit, file=flnm, form='formatted', status='old', action='read',iostat=ios)
      IF ( ios == 0 ) THEN
         print*," Reading file: ", trim(flnm)
@@ -137,7 +149,7 @@ program plot_raobs
      ENDIF
 
      ! Build metoa file
-     WRITE(cgm_file, '("soundings_",A,"_",A19,".cgm")') trim(file_type), rdate
+     WRITE(cgm_file, '("soundings_",A,".d",i2.2,".",A19,".cgm")') trim(file_type), grid_id, rdate
      print *,' Plots written to: ', trim(cgm_file)
      print*," "
      call skewt_opngks(cgm_file)

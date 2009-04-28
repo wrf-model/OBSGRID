@@ -2533,7 +2533,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
    LOGICAL                                           :: OBS_data=.FALSE.
    LOGICAL                                           :: is_sounding      
    INTEGER                                           :: true_num_obs
- 
+
    end_meas%pressure%data    = end_data_r
    end_meas%height%data      = end_data_r
    end_meas%temperature%data = end_data_r
@@ -2567,6 +2567,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
      OPEN ( UNIT = unit , FILE = file_name ,  ACTION = 'write' , FORM = 'formatted' , &
             STATUS = 'unknown', POSITION = 'append' )
    ENDIF
+   OBS_data = .FALSE.
    IF ( file_name(1:10) == "OBS_DOMAIN" ) OBS_data = .TRUE.
 
    iout = 0
