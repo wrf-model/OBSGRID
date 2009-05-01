@@ -16,6 +16,7 @@
  trim_domain                 = .TRUE.
  trim_value                  = 5
  remove_data_above_qc_flag   = 32768
+ remove_unverified_data      = .TRUE.
 
 &record3
  max_number_of_obs           = 10000
@@ -80,4 +81,4 @@
  file_type                   = 'raw'
  read_metoa                  = .TRUE.
 /
- file_type                   = 'filtered'
+ file_type                   = 'used'

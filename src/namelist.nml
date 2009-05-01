@@ -15,6 +15,7 @@
    NAMELIST /record2/ fg_filename                  , &
                       obs_filename                 , &
                       remove_data_above_qc_flag    , &
+                      remove_unverified_data       , &
                       trim_domain                  , &
                       trim_value                   , &
                       grid_id

@@ -24,11 +24,11 @@ factored_difference , test_number )
    !  routines.
 
    WHERE ( ABS ( err ) .GT. factored_difference ) 
-
+      
       qc_small = mod ( qc_flag , test_number ) 
       qc_large = ( qc_flag / ( test_number * 2 ) ) * 2
       qc_flag = qc_large*test_number + qc_small + test_number
-
+      
    END WHERE
       
 END SUBROUTINE modify_qc_flag
@@ -246,23 +246,29 @@ SUBROUTINE qc_consistency ( obs , num_obs )
          qc_u = current%meas%u%qc
          qc_v = current%meas%v%qc
 
-         IF      ( ( qc_u .GE. fails_error_max   ) .AND. ( qc_v .LT. fails_error_max   ) ) THEN 
-            current%meas%v%qc         = current%meas%v%qc         + fails_error_max
-            current%meas%speed%qc     = current%meas%speed%qc     + fails_error_max
-            current%meas%direction%qc = current%meas%direction%qc + fails_error_max
-         ELSE IF ( ( qc_u .GE. fails_buddy_check ) .AND. ( qc_v .LT. fails_buddy_check ) ) THEN 
-            current%meas%v%qc         = current%meas%v%qc         + fails_buddy_check
-            current%meas%speed%qc     = current%meas%speed%qc     + fails_buddy_check
-            current%meas%direction%qc = current%meas%direction%qc + fails_buddy_check
-         ELSE IF ( ( qc_v .GE. fails_error_max   ) .AND. ( qc_u .LT. fails_error_max   ) ) THEN 
-            current%meas%u%qc         = current%meas%u%qc         + fails_error_max
-            current%meas%speed%qc     = current%meas%speed%qc     + fails_error_max
-            current%meas%direction%qc = current%meas%direction%qc + fails_error_max
-         ELSE IF ( ( qc_v .GE. fails_buddy_check ) .AND. ( qc_u .LT. fails_buddy_check ) ) THEN 
-            current%meas%u%qc         = current%meas%u%qc         + fails_buddy_check
-            current%meas%speed%qc     = current%meas%speed%qc     + fails_buddy_check
-            current%meas%direction%qc = current%meas%direction%qc + fails_buddy_check
-         END IF
+         !IF      ( ( qc_u .GE. fails_error_max   ) .AND. ( qc_v .LT. fails_error_max   ) ) THEN 
+         !   current%meas%v%qc         = current%meas%v%qc         + fails_error_max
+         !   current%meas%speed%qc     = current%meas%speed%qc     + fails_error_max
+         !   current%meas%direction%qc = current%meas%direction%qc + fails_error_max
+         !ELSE IF ( ( qc_u .GE. fails_buddy_check ) .AND. ( qc_v .LT. fails_buddy_check ) ) THEN 
+         !   current%meas%v%qc         = current%meas%v%qc         + fails_buddy_check
+         !   current%meas%speed%qc     = current%meas%speed%qc     + fails_buddy_check
+         !   current%meas%direction%qc = current%meas%direction%qc + fails_buddy_check
+         !ELSE IF ( ( qc_v .GE. fails_error_max   ) .AND. ( qc_u .LT. fails_error_max   ) ) THEN 
+         !   current%meas%u%qc         = current%meas%u%qc         + fails_error_max
+         !   current%meas%speed%qc     = current%meas%speed%qc     + fails_error_max
+         !   current%meas%direction%qc = current%meas%direction%qc + fails_error_max
+         !ELSE IF ( ( qc_v .GE. fails_buddy_check ) .AND. ( qc_u .LT. fails_buddy_check ) ) THEN 
+         !   current%meas%u%qc         = current%meas%u%qc         + fails_buddy_check
+         !   current%meas%speed%qc     = current%meas%speed%qc     + fails_buddy_check
+         !   current%meas%direction%qc = current%meas%direction%qc + fails_buddy_check
+         !END IF
+
+         IF ( qc_u .GT. qc_v ) current%meas%v%qc = qc_u
+         IF ( qc_v .GT. qc_u ) current%meas%u%qc = qc_v
+         current%meas%speed%qc     = current%meas%u%qc
+         current%meas%direction%qc = current%meas%u%qc
+
 
          !  If t is bad, that means td has to be bad.  If td is bad, that DOES NOT
          !  mean that t has to be bad.  The "badness" is measured as a value that has a 

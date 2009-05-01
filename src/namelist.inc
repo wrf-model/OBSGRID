@@ -18,7 +18,7 @@
 
    CHARACTER ( LEN = 132 ) :: fg_filename     
    CHARACTER ( LEN = 132 ) ::  obs_filename    
-   LOGICAL :: trim_domain
+   LOGICAL :: trim_domain, remove_unverified_data
    INTEGER :: trim_value, grid_id, remove_data_above_qc_flag
 
    !  Record 3 NAMELIST variables.

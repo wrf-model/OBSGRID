@@ -21,7 +21,7 @@ MODULE namelist
    TYPE nml_record_2
       CHARACTER ( LEN = 132)  :: fg_filename                      ! first-guess filename 
       CHARACTER ( LEN = 132)  :: obs_filename                     ! observation filename 
-      LOGICAL :: trim_domain
+      LOGICAL :: trim_domain, remove_unverified_data
       INTEGER :: trim_value, grid_id, remove_data_above_qc_flag
    END TYPE nml_record_2
 
@@ -699,6 +699,7 @@ SUBROUTINE store_namelist ( nml )
    nml%record_2%fg_filename              = fg_filename    
    nml%record_2%obs_filename             = obs_filename    
    nml%record_2%remove_data_above_qc_flag = remove_data_above_qc_flag    
+   nml%record_2%remove_unverified_data   = remove_unverified_data    
    nml%record_2%trim_domain              = trim_domain         
    nml%record_2%trim_value               = trim_value          
    nml%record_2%grid_id                  = grid_id             

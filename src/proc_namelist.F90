@@ -60,6 +60,7 @@ SUBROUTINE proc_namelist ( unit , filename , nml )
    grid_id = 1
 
    remove_data_above_qc_flag = 200000
+   remove_unverified_data = .FALSE.
 
    !  Initialize the array of radius of influence scans.  This permits an easy way
    !  to determine the number of requested scans without an additional input value.

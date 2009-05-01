@@ -31,7 +31,7 @@ program plot_raobs
   INTEGER :: interval, idiff, n_times
   CHARACTER (LEN=19) :: start_date, end_date, rdate
   CHARACTER ( LEN = 132)  :: obs_filename
-  LOGICAL :: trim_domain
+  LOGICAL :: trim_domain, remove_unverified_data
   INTEGER :: trim_value, grid_id, remove_data_above_qc_flag
   LOGICAL :: use_first_guess, f4d, lagtem
   INTEGER :: intf4d
@@ -52,7 +52,7 @@ program plot_raobs
                         end_year,   end_month,   end_day,   end_hour,   end_minute,   end_second, &
                       interval
   namelist /record2/ obs_filename, remove_data_above_qc_flag, &
-                    trim_domain, trim_value, grid_id
+                    trim_domain, trim_value, grid_id, remove_unverified_data
   namelist /record7/ use_first_guess, f4d, intf4d, lagtem
   namelist /plot_sounding/ file_type, read_metoa
  
@@ -137,7 +137,7 @@ program plot_raobs
   rdate = start_date
   LOOP_TIMES : DO itimes = 1, n_times+1
 
-     WRITE(flnm,FMT='(A,"_obs_qc_out.d",i2.2,".",A19,".0000")') trim(file_type), grid_id, rdate
+     WRITE(flnm,FMT='("qc_obs_",A,".d",i2.2,".",A19,".0000")') trim(file_type), grid_id, rdate
      open(iunit, file=flnm, form='formatted', status='old', action='read',iostat=ios)
      IF ( ios == 0 ) THEN
         print*," Reading file: ", trim(flnm)
