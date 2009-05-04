@@ -35,10 +35,11 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
 
    !  Observation information.
 
-   INTEGER                                        :: number_of_obs
+   INTEGER                                        :: number_of_obs, i_num, i_found_time
    INTEGER                                        :: total_dups
    INTEGER       , ALLOCATABLE , DIMENSION ( : )  :: index
    TYPE (report) , ALLOCATABLE , DIMENSION ( : )  :: obs
+   TYPE (report)                                  :: obs_sort_tmp
    CHARACTER ( LEN = 132 )                        :: dummy_filename, tmp_filename
 
    !  The NAMELIST variables, with a small amount of error checks
@@ -491,29 +492,50 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          !nml%record_4%buddy_weight , nml%record_1%start_date )
       END IF
 
+      !!! Let's make sure the output to OBS_DOMAINnxx is sorted in time.
+      IF ( dummy_filename(1:4) .NE. 'null' .AND. fdda_loop .NE. fdda_loop_max ) THEN
+        i_found_time = 0
+        loop_sort_time : DO
+        DO i_num = 1, number_of_obs-1
+     
+          IF ( obs(i_num)%valid_time%date_char > obs(i_num+1)%valid_time%date_char ) THEN
+            !print*,"FOUND one - ", i_num, " of ", number_of_obs, " (", i_found_time,")"
+            !print* ,"DATES:",obs(i_num)%valid_time%date_char ,"  -  ", obs(i_num+1)%valid_time%date_char 
+            obs_sort_tmp = obs(i_num)
+            obs(i_num) = obs(i_num+1)
+            obs(i_num+1) = obs_sort_tmp
+            i_found_time = i_found_time + 1
+          END IF
+        
+        END DO
+        if (i_found_time == 0 ) exit loop_sort_time
+        if (i_found_time  > 0 ) i_found_time = 0
+        END DO loop_sort_time
+      ENDIF
 
-   IF ( fdda_loop.EQ.1) THEN
-     obs_file_count = (icount-1)*2 + 1
-     IF ( .NOT. nml%record_7%f4d ) obs_file_count = icount
-     WRITE (obs_nudge_file,'("OBS_DOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
-     INQUIRE ( EXIST = exist , FILE = obs_nudge_file )
-     CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
-                       .TRUE., exist, nml%record_2%remove_data_above_qc_flag, &
-                       nml%record_2%remove_unverified_data, kbu_alloc, pressure  )  
-   ELSEIF ( fdda_loop.EQ.2 .AND. fdda_loop.NE.fdda_loop_max) THEN
-     obs_file_count = (icount-1)*2 
-     WRITE (obs_nudge_file,'("OBS_DOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
-     INQUIRE ( EXIST = exist , FILE = obs_nudge_file )
-     CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
-                       .TRUE., exist, nml%record_2%remove_data_above_qc_flag, &
-                       nml%record_2%remove_unverified_data, kbu_alloc, pressure  )  
-   ELSEIF ( fdda_loop.GT.2 .AND. fdda_loop.NE.fdda_loop_max) THEN
-     obs_file_count = (icount-1)*2 
-     WRITE (obs_nudge_file,'("OBS_DOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
-     CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
-                       .TRUE., .FALSE., nml%record_2%remove_data_above_qc_flag, &
-                       nml%record_2%remove_unverified_data, kbu_alloc, pressure  )  
-   ENDIF
+
+      IF ( fdda_loop.EQ.1) THEN
+        obs_file_count = (icount-1)*2 + 1
+        IF ( .NOT. nml%record_7%f4d ) obs_file_count = icount
+        WRITE (obs_nudge_file,'("OBS_DOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
+        INQUIRE ( EXIST = exist , FILE = obs_nudge_file )
+        CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
+                          .TRUE., exist, nml%record_2%remove_data_above_qc_flag, &
+                          nml%record_2%remove_unverified_data, kbu_alloc, pressure  )  
+      ELSEIF ( fdda_loop.EQ.2 .AND. fdda_loop.NE.fdda_loop_max) THEN
+        obs_file_count = (icount-1)*2 
+        WRITE (obs_nudge_file,'("OBS_DOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
+        INQUIRE ( EXIST = exist , FILE = obs_nudge_file )
+        CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
+                          .TRUE., exist, nml%record_2%remove_data_above_qc_flag, &
+                          nml%record_2%remove_unverified_data, kbu_alloc, pressure  )  
+      ELSEIF ( fdda_loop.GT.2 .AND. fdda_loop.NE.fdda_loop_max) THEN
+        obs_file_count = (icount-1)*2 
+        WRITE (obs_nudge_file,'("OBS_DOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
+        CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
+                          .TRUE., .FALSE., nml%record_2%remove_data_above_qc_flag, &
+                          nml%record_2%remove_unverified_data, kbu_alloc, pressure  )  
+      ENDIF
 
 
       !  If this is the time that we have observations, we can de-allocate the space.
