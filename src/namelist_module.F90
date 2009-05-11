@@ -568,7 +568,7 @@ SUBROUTINE check_namelist ( nml )
                    ( nml%record_9%mqd_maximum_num_obs .GT. 0        ) ) THEN
       error_message = ' '
       error_number = 00013903
-      write (error_message(111:114) , fmt = '(i4)' ) nml%record_9%mqd_maximum_num_obs
+      write (error_message(111:114) , fmt = '(i6)' ) nml%record_9%mqd_maximum_num_obs
       error_message(1:31) = 'check_namelist                 '
       error_message(32:109) = ' The maximum number of observations permitted for MQD analysis &
       &has been set to '

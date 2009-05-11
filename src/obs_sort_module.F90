@@ -2601,6 +2601,11 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
            true_num_obs = 1
          ENDIF
 
+         if ( obs(i)%ground%slp%data   >= qc_flag_keep ) then
+           obs(i)%ground%slp%data = missing_r
+           obs(i)%ground%slp%qc = missing
+         endif
+
          IF ( OBS_data ) THEN
            WRITE ( UNIT = unit , FMT='(1x,A14)' ) obs(i)%valid_time%date_char(1:14)
            WRITE ( UNIT = unit , FMT='(2x,2(F7.2,3x))' ) obs(i)%location%latitude, obs(i)%location%longitude
@@ -2690,6 +2695,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
             IF (next%meas%pressure%data     == missing_r) next%meas%pressure%qc     = missing
             IF (next%meas%height%data       == missing_r) next%meas%height%qc       = missing
             IF (next%meas%temperature%data  == missing_r) next%meas%temperature%qc  = missing
+            IF (next%meas%dew_point%data    == missing_r) next%meas%dew_point%qc    = missing
             IF (next%meas%u%data            == missing_r) next%meas%u%qc            = missing
             IF (next%meas%v%data            == missing_r) next%meas%v%qc            = missing
             IF (next%meas%rh%data           == missing_r) next%meas%rh%qc           = missing
@@ -2697,7 +2703,6 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
             IF (obs(i)%ground%ref_pres%data == missing_r) obs(i)%ground%ref_pres%qc = missing
             IF (next%meas%speed%data        == missing_r) next%meas%speed%qc        = missing
             IF (next%meas%direction%data    == missing_r) next%meas%direction%qc    = missing
-            IF (next%meas%rh%data           == missing_r) next%meas%rh%qc           = missing
             IF (obs(i)%ground%precip%data   == missing_r) obs(i)%ground%precip%qc   = missing
             IF (next%meas%thickness%data    == missing_r) next%meas%thickness%qc    = missing
 
@@ -2739,7 +2744,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
          IF ( .NOT. forinput ) &
             write(unit,*) 'End of measurements for observation ' , i
 
-      END IF
+      END IF 
 
    END DO
 
