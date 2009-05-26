@@ -254,14 +254,14 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
                        '                                                  ' // &
                        '                                '
 
-      IF ( fdda_loop == fdda_loop_max ) GOTO 101
-      
       !  We need to pick out either the traditional obs file or the one for the FDDA.
       !  The traditional and FDDA names are separate in the namelist.input file.  
 
       IF ( ( nml%record_7%f4d ) .AND. ( fdda_loop .GT. 1 ) ) THEN 
          CALL get_date ( fdda_date_8 , fdda_time_6 , date_char_fdda ) 
       END IF
+
+      IF ( fdda_loop == fdda_loop_max ) GOTO 101
 
       IF (   (  .NOT. nml%record_7%f4d ) .OR. &
            ( (        nml%record_7%f4d ) .AND. ( fdda_loop .EQ. 1 ) ) ) THEN 
