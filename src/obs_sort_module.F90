@@ -2581,6 +2581,8 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
          IF ( .NOT. forinput ) write(unit,*) '**************** Next Observation *******************'
 
          is_sounding = obs(i)%info%is_sound
+         IF ((obs(i)%info%platform(1:11) == 'FM-88 SATOB') .OR. &
+                  (obs(i)%info%platform(1:11) == 'FM-97 AIREP')) is_sounding = .TRUE.
          next => obs(i)%surface
          IF ( obs(i)%info%num_vld_fld == 1 .AND. &
             ( next%meas%height%data .eq. obs(i)%info%elevation ) ) THEN
@@ -2609,7 +2611,13 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
          IF ( OBS_data ) THEN
            WRITE ( UNIT = unit , FMT='(1x,A14)' ) obs(i)%valid_time%date_char(1:14)
            WRITE ( UNIT = unit , FMT='(2x,2(F7.2,3x))' ) obs(i)%location%latitude, obs(i)%location%longitude
-           WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' ) obs(i)%location%id, obs(i)%location%name
+           IF ( obs(i)%location%id(1:5) == "US un" ) THEN
+             WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' )    &
+                "-----                                   " , &
+                "Unknown Station                         "
+           ELSE
+             WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' ) obs(i)%location%id, obs(i)%location%name
+           ENDIF
            WRITE ( UNIT = unit , FMT='(2x,2(A16,2x),F8.0,2x,2(L4,2x),I5)' )       &
              obs(i)%info%platform, obs(i)%info%source, obs(i)%info%elevation, &
              is_sounding, obs(i)%info%bogus, true_num_obs
