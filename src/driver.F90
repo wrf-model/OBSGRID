@@ -57,6 +57,7 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
    INCLUDE 'first_guess.inc'
    INCLUDE 'map.inc'
    REAL                        , DIMENSION (jns_alloc,iew_alloc) :: tobbox, odis
+   REAL                        , DIMENSION (jns_alloc,iew_alloc) :: tobbox_ana, odis_ana
 
    INTERFACE 
       INCLUDE 'error.int'
@@ -475,7 +476,13 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          nml%record_4%max_error_z , nml%record_4%max_error_p/100. , &
          nml%record_4%buddy_weight , date_char , &
          nml%record_2%fg_filename )
+         tobbox_ana = tobbox
+         odis_ana = odis
       ELSE 
+         IF ( fdda_loop == fdda_loop_max ) THEN
+           tobbox = tobbox_ana
+           odis = odis_ana
+         ENDIF
          CALL proc_final_analysis ( filename , filename_out , &
          bhi , bhr , t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
          latitude_x , longitude_x , latitude_d , longitude_d , &
