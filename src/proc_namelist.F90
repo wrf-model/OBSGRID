@@ -78,6 +78,7 @@ SUBROUTINE proc_namelist ( unit , filename , nml )
 
    f4d = .FALSE.
    trim_domain = .FALSE.
+   oa_3D_option = 0
 
    !  Input the NAMELIST data, from either the specified
    !  input unit, or the default standard in.

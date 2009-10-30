@@ -10,7 +10,8 @@ current_date_8 , current_time_6 , fdda_loop , icount_fdda , &
 icount , total_count , interval , &
 max_error_t , max_error_uv           , &
 max_error_z , max_error_p , &
-buddy_weight , date_char , root_filename )
+buddy_weight , date_char , root_filename , oa_3D_option , &
+intf4d , lagtem , oa_type , oa_3D_type , rad_influence )
 
 !  This routine is a driver for the required utilities to output the 
 !  final analysis of this program.  The input values are the objectively 
@@ -47,6 +48,12 @@ buddy_weight , date_char , root_filename )
    INTEGER                                        :: rcode, met_ncid, oa_ncid, ilen
    INTEGER , SAVE                                 :: sfc_ncid
    CHARACTER (LEN=50)                             :: sfcfile
+
+   INTEGER                                        :: intf4d
+   LOGICAL                                        :: lagtem 
+   INTEGER                                        :: oa_3D_option
+   CHARACTER *(*)                                 :: oa_type , oa_3D_type
+   INTEGER , DIMENSION(10)                        :: rad_influence
 
    !  Temporary holding arrays for the header information.  What is in the header
    !  on input is the data from the first guess file.  To output the data, we need
@@ -114,7 +121,8 @@ buddy_weight , date_char , root_filename )
       t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
       latitude_x , longitude_x , latitude_d , longitude_d , &
       slp_x , slp_C , sst , tobbox , odis , &
-      iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
+      iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis , &
+      oa_type , oa_3D_type , oa_3D_option , rad_influence )
    ELSE
       CALL make_date ( current_date_8 , current_time_6 , fdda_date_24 )
       slp_x(:jns_alloc-1,:iew_alloc-1) = slp_x(:jns_alloc-1,:iew_alloc-1) * 100.
@@ -122,7 +130,8 @@ buddy_weight , date_char , root_filename )
       CALL write_analysis_fdda ( oa_ncid , sfc_ncid , total_count, icount_fdda , &
       t , u , v , uA , vA , uC , vC , h , rh , pres , &
       terrain , slp_x , slp_C , snow , tobbox , odis , pressure , &
-      iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , fdda_date_24 , ptop )
+      iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , fdda_date_24 , ptop , &
+      intf4d , lagtem , oa_type , rad_influence )
       IF ( icount == 1 ) rcode = nf_close(oa_ncid)
    END IF
 

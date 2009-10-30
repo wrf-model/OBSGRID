@@ -81,11 +81,12 @@
 
    !  Record 9 NAMELIST variables.
 
-   CHARACTER ( LEN = 132 ) :: oa_type    
+   CHARACTER ( LEN = 132 ) :: oa_type    , oa_3D_type
 
    INTEGER                 :: mqd_minimum_num_obs          , &
                               mqd_maximum_num_obs    
    INTEGER , DIMENSION(10) :: radius_influence    
 
    LOGICAL                 :: oa_min_switch                , &
-                              oa_max_switch    
+                              oa_max_switch                , &
+                              oa_3D_option    

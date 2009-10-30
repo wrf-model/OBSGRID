@@ -1,7 +1,7 @@
 SUBROUTINE proc_oa ( t , u , v , rh , slp_x , &
 pressure , &
 iew_alloc , jns_alloc , kbu_alloc , &
-date , time , fdda_loop , &
+date , time , fdda_loop , mqd_count , mqd_abs_min , &
 total_numobs , num_obs_found , total_dups , &
 map_projection , obs , dxd , lat_center , &
 print_oa , print_found_obs , print_obs_files , use_first_guess , & 
@@ -9,9 +9,10 @@ smooth_type              , smooth_sfc_wind          , &
 smooth_sfc_temp          , smooth_sfc_rh            , & 
 smooth_sfc_slp           , smooth_upper_wind        , & 
 smooth_upper_temp        , smooth_upper_rh          , &
-oa_type                  , mqd_minimum_num_obs      , & 
-mqd_maximum_num_obs      , oa_max_switch            , &
-radius_influence         , oa_min_switch            , & 
+oa_type                  , oa_3D_type               , &
+mqd_minimum_num_obs      , mqd_maximum_num_obs      , &
+oa_max_switch            , radius_influence         , &
+oa_min_switch            , oa_3D_option             , &
 grid_id )
 
    USE observation
@@ -31,9 +32,12 @@ grid_id )
                                                          use_first_guess    , &
                                                          oa_min_switch      , &
                                                          oa_max_switch
+   INTEGER                                            :: oa_3D_option
    INTEGER                                            :: date               , &
                                                          time               , &
                                                          fdda_loop          , &
+                                                         mqd_count          , &
+                                                         mqd_abs_min        , &
                                                          total_numobs       , & 
                                                          num_obs_found      , & 
                                                          total_dups         , & 
@@ -50,7 +54,7 @@ grid_id )
                                                          mqd_maximum_num_obs, &
                                                          grid_id
    INTEGER , DIMENSION ( 10 )                         :: radius_influence
-   CHARACTER ( LEN = 132 )                            :: oa_type
+   CHARACTER ( LEN = 132 )                            :: oa_type, oa_3D_type
    TYPE (report) , DIMENSION ( total_numobs )         :: obs
    REAL , INTENT(IN)                                  :: dxd                , &
                                                          lat_center

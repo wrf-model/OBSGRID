@@ -10,7 +10,8 @@ SUBROUTINE write_analysis ( met_ncid, oa_ncid , &
 t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
 latitude_x , longitude_x , latitude_d , longitude_d , &
 slp_x , slp_C , sst , tobbox , odis , &
-iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
+iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis , &
+oa_type , oa_3D_type , oa_3D_option , rad_influence )
 
 !  This routine assembles the correct data fields and outputs them with the
 !  appropriate small header.
@@ -36,6 +37,10 @@ iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
    REAL , ALLOCATABLE , DIMENSION(:,:,:)                  :: met_em_3d
    REAL , ALLOCATABLE , DIMENSION(:,:)                    :: met_em_2d
    CHARACTER (LEN=19)                                     :: date_char
+
+   CHARACTER *(*)                                 :: oa_type , oa_3D_type
+   INTEGER , DIMENSION(10)                        :: rad_influence
+   INTEGER                                        :: oa_3D_option
 
    INTERFACE 
       INCLUDE 'error.int'
@@ -66,6 +71,8 @@ iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
    REAL, ALLOCATABLE, DIMENSION(:,:,:)               :: d3_data1, d3_data2
    REAL, ALLOCATABLE, DIMENSION(:,:)                 :: d2_data1, d2_data2
    INTEGER, DIMENSION(4)                             :: start_dims, dims_in, dims_out
+   CHARACTER (LEN=16)                                :: rads
+   INTEGER                                           :: i_rad
 
 
    !  We need to keep track of where we are sticking the data for the FDDA option.
@@ -149,6 +156,17 @@ iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis )
             ENDIF 
           ENDIF 
    ENDDO     
+   ilen = len_trim(oa_type)
+   rcode = nf_put_att_text(oa_ncid, NF_GLOBAL, "OA_SCHEME", ilen, oa_type(1:ilen))
+   ilen = len_trim(oa_3D_type)
+   rcode = nf_put_att_text(oa_ncid, NF_GLOBAL, "OA_3D_SCHEME", ilen, oa_3D_type(1:ilen))
+   rcode = nf_put_att_int(oa_ncid, NF_GLOBAL, "OA_3D_option", 4, 1, oa_3D_option)
+   DO i_rad = 1,10
+     IF ( rad_influence(i_rad) > 0 ) THEN
+       WRITE(rads,'("RAD_INFLUENCE_",i2.2)')i_rad
+       rcode = nf_put_att_int(oa_ncid, NF_GLOBAL, rads, 4, 1, rad_influence(i_rad))
+     END IF
+   END DO
 
    ! train output file for fields to come
    DO i = 1, nvars
@@ -378,7 +396,7 @@ SUBROUTINE write_analysis_fdda ( oa_met , sfc_ncid , total_count, icount_fdda , 
 t , u , v , uA , vA , uC , vC , h , rh , pres , &
 terrain , slp_x , slp_C , snow , tobbox , odis , pressure , &
 iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , &
-fdda_date_24 , ptop )
+fdda_date_24 , ptop , intf4d , lagtem , oa_type , rad_influence )
 
 !  This routine assembles the correct data fields and outputs them with the
 !  appropriate small header in the format expected for the surface FDDA file.
@@ -431,6 +449,12 @@ fdda_date_24 , ptop )
    REAL, PARAMETER                                   :: Rd = 287.
    REAL, PARAMETER                                   :: Cp = 7.*Rd/2.
 
+   INTEGER                                           :: intf4d
+   LOGICAL                                           :: lagtem
+   CHARACTER *(*)                                    :: oa_type
+   INTEGER , DIMENSION(10)                           :: rad_influence
+   CHARACTER (LEN=16)                                :: rads
+   INTEGER                                           :: i_rad
 
    INTEGER :: unit=12
 #ifdef NCARG
@@ -524,6 +548,19 @@ integer :: i , j
                ENDIF 
              ENDIF 
       ENDDO loop_global_att    
+      ilen = len_trim(oa_type)
+      rcode = nf_put_att_text(sfc_ncid, NF_GLOBAL, "OA_SCHEME", ilen, oa_type(1:ilen))
+      DO i_rad = 1,10
+        IF ( rad_influence(i_rad) > 0 ) THEN
+          WRITE(rads,'("RAD_INFLUENCE_",i2.2)')i_rad
+          rcode = nf_put_att_int(sfc_ncid, NF_GLOBAL, rads, 4, 1, rad_influence(i_rad))
+        END IF
+      END DO
+      IF ( lagtem ) THEN
+        rcode = nf_put_att_int(sfc_ncid, NF_GLOBAL, "FLAG_LAGTEM", 4, 1, 1)
+      ELSE
+        rcode = nf_put_att_int(sfc_ncid, NF_GLOBAL, "FLAG_LAGTEM", 4, 1, 0)
+      END IF
 
       ! train output file for fields to come
       DO i = 1, 23

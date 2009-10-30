@@ -83,11 +83,12 @@
 
    !  Record 9 NAMELIST variables.
 
-   COMMON   /record9_nmlc/ oa_type    
+   COMMON   /record9_nmlc/ oa_type    , oa_3D_type
 
    COMMON   /record9_nmli/ mqd_minimum_num_obs          , &
                            mqd_maximum_num_obs          , &
                            radius_influence    
 
    COMMON   /record9_nmll/ oa_min_switch                , &
-                           oa_max_switch    
+                           oa_max_switch                , &
+                           oa_3D_option    

@@ -90,11 +90,13 @@ MODULE namelist
 
    TYPE nml_record_9
       CHARACTER ( LEN = 132 ) :: oa_type                          ! MQD or Cressman
+      CHARACTER ( LEN = 132 ) :: oa_3D_type                       ! MQD or Cressman
       INTEGER                 :: mqd_minimum_num_obs          , & ! minimum number of obs to use MQD, revert to Cressman
                                  mqd_maximum_num_obs              ! maximum number of obs to use MQD, revert to Cressman
       INTEGER , DIMENSION(10) :: radius_influence                 ! radius of influence in grid point units for Cressman
       LOGICAL                 :: oa_min_switch                , & ! if MQD has less than number of obs, T/F use Cressman
                                  oa_max_switch                    ! if MQD has more than number of obs, T/F use Cressman
+      INTEGER                 :: oa_3D_option  
    END TYPE nml_record_9
 
    TYPE all_nml
@@ -537,13 +539,7 @@ SUBROUTINE check_namelist ( nml )
 
    test_901 : IF ( ( nml%record_9%oa_type           .NE. 'MQD'      ) .AND. &
                    ( nml%record_9%oa_type           .NE. 'Cressman' ) ) THEN
-      error_message = ' '
-      error_number = 00013901
-      error_message(1:31) = 'check_namelist                 '
-      error_message(32:)  = ' The available objective analysis techniques are MQD and Cressman.'
-      fatal = .true.
-      listing = .false.
-      call error_handler ( error_number , error_message , fatal , listing )
+      nml%record_9%oa_type = 'Cressman' 
    END IF test_901
 
    !  902:  What is the minimum number of observations required to still do MQD?
@@ -572,11 +568,45 @@ SUBROUTINE check_namelist ( nml )
       error_message(1:31) = 'check_namelist                 '
       error_message(32:109) = ' The maximum number of observations permitted for MQD analysis &
       &has been set to '
-      error_message(115:) = '.'
+      error_message(117:) = '.'
       fatal = .false.
       listing = .false.
       call error_handler ( error_number , error_message , fatal , listing )
    END IF test_903
+
+   !        Are we doing Cressman for the upper-air?
+
+   IF ( ( nml%record_9%oa_3D_type        .NE. 'Cressman' ) ) THEN
+          nml%record_9%oa_3D_type = nml%record_9%oa_type            
+   END IF
+   IF ( ( nml%record_9%oa_type           .EQ. 'MQD'      ) .AND. &
+                   ( nml%record_9%oa_3D_type        .EQ. 'Cressman' ) ) THEN
+      error_message = ' '
+      error_message(32:109) = ' Switching to Cressman for the upper-air analysis'
+      fatal = .false.
+      listing = .false.
+      call error_handler ( error_number , error_message , fatal , listing )
+   END IF 
+        IF ( ( nml%record_9%oa_3D_type .EQ. 'MQD' ) .AND. (nml%record_9%oa_3D_option == 0) ) THEN
+      error_message = ' '
+      error_message(32:112) = ' The code will stop if we do not have enough data to perform MQD on upper levels.'
+      fatal = .false.
+      listing = .false.
+      call error_handler ( error_number , error_message , fatal , listing )
+   ELSE IF ( ( nml%record_9%oa_3D_type .EQ. 'MQD' ) .AND. (nml%record_9%oa_3D_option == 1) ) THEN
+      error_message = ' '
+      error_message(32:110) = ' Revert to Cressman for each time which lack enough data to perform MQD scheme.'
+      fatal = .false.
+      listing = .false.
+      call error_handler ( error_number , error_message , fatal , listing )
+   ELSE IF ( ( nml%record_9%oa_3D_type .EQ. 'MQD' ) .AND. (nml%record_9%oa_3D_option == 2) ) THEN
+      error_message = ' '
+      error_message(32:111) = ' Revert to Cressman for each level which lack enough data to perform MQD scheme.'
+      fatal = .false.
+      listing = .false.
+      call error_handler ( error_number , error_message , fatal , listing )
+   END IF
+
 
    !  903:  Requested radius of influence for the Cressman scheme.
 
@@ -590,9 +620,9 @@ SUBROUTINE check_namelist ( nml )
          fatal = .true.
          listing = .false.
          call error_handler ( error_number , error_message , fatal , listing )
-      ELSE IF ( ( nml%record_9%radius_influence(loop_test) .LE. 0          ) .AND. &
-                ( nml%record_9%oa_type                     .EQ. 'Cressman' ) ) THEN
-         nml%record_9%radius_influence(loop_test) = -1
+      !ELSE IF ( ( nml%record_9%radius_influence(loop_test) .LE. 0          ) .AND. &
+      !          ( nml%record_9%oa_type                     .EQ. 'Cressman' ) ) THEN
+      !   nml%record_9%radius_influence(loop_test) = -1
       END IF
    END DO test_904
 
@@ -766,11 +796,13 @@ SUBROUTINE store_namelist ( nml )
    !  Record 9 NAMELIST values:
 
    nml%record_9%oa_type                  = oa_type    
+   nml%record_9%oa_3D_type               = oa_3D_type    
    nml%record_9%mqd_minimum_num_obs      = mqd_minimum_num_obs    
    nml%record_9%mqd_maximum_num_obs      = mqd_maximum_num_obs    
    nml%record_9%radius_influence         = radius_influence    
    nml%record_9%oa_min_switch            = oa_min_switch    
    nml%record_9%oa_max_switch            = oa_max_switch    
+   nml%record_9%oa_3D_option             = oa_3D_option    
 
 END SUBROUTINE store_namelist
 

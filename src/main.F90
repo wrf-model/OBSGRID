@@ -32,7 +32,8 @@ PROGRAM main
 
       SUBROUTINE driver ( filename , filename_out , &
       bhi , bhr , nml , iew_alloc , jns_alloc, kbu_alloc , &
-      current_date_8 , current_time_6 , date_char , icount , total_count )
+      current_date_8 , current_time_6 , date_char , icount , total_count , &
+      mqd_count , mqd_abs_min )
          USE namelist
          INCLUDE 'big_header.inc'
          CHARACTER ( LEN = 132 ) ,    INTENT ( IN )    :: filename
@@ -45,6 +46,7 @@ PROGRAM main
                                                           current_time_6 , &
                                                           icount , total_count
          CHARACTER (LEN=19) , INTENT(IN)               :: date_char
+         INTEGER                                       :: mqd_count , mqd_abs_min
       END SUBROUTINE driver
 
       INCLUDE 'error.int'
@@ -71,6 +73,7 @@ PROGRAM main
                                              interval, ilen
    LOGICAL                                :: is_used
    LOGICAL                                :: does_exist
+   INTEGER                                :: mqd_count = 0, mqd_abs_min = 100
 #ifdef NCARG
 call opngks
 #endif
@@ -78,7 +81,9 @@ call opngks
       WRITE ( UNIT = * , FMT = '("                                 ")' ) 
       WRITE ( UNIT = * , FMT = '("################################ ")' ) 
       WRITE ( UNIT = * , FMT = '("          WRF OBSGRID            ")' ) 
-      WRITE ( UNIT = * , FMT = '("          Version 3.1.1          ")' )    !! April 2009
+      WRITE ( UNIT = * , FMT = '("          Version 3.2.0          ")' )   
+      WRITE ( UNIT = * , FMT = '("          March 2009             ")' )  
+      WRITE ( UNIT = * , FMT = '("     pre-release - 10/30/09      ")' )  
       WRITE ( UNIT = * , FMT = '("################################ ")' ) 
       WRITE ( UNIT = * , FMT = '("                                 ")' ) 
 
@@ -249,7 +254,8 @@ call opngks
 
       CALL driver ( filename , filename_out , & 
       bhi , bhr , nml , iew_alloc , jns_alloc , kbu_alloc , &
-      current_date_8 , current_time_6 , current_date, icount , total_count )
+      current_date_8 , current_time_6 , current_date, icount , total_count , &
+      mqd_count , mqd_abs_min )
 
       !  Increment to the next time and check if we should try to process the
       !  data at that time.  The only way to not process the data is if we have
@@ -264,9 +270,26 @@ call opngks
 
    END DO time_loop_2
 
-   WRITE ( UNIT = * , FMT = '( ///,"----------------------------------------------------------------------------",/,&
+   IF ( mqd_count > 0 ) THEN
+        mqd_count = mqd_count + 1
+        WRITE ( UNIT = * , FMT = '( /,"----------------------------------------------------------------------------",/ )' )
+        WRITE(*, '( "  ########################################################################" )' )
+        WRITE(*, '( "  NOTE: MQD was requested for all upper-levels.                           " )' )
+        WRITE(*, '( "  But due to lack of data, CRESSMAN scheme was performed on some levels.  " )' )
+        WRITE(*, '( "  To switch all upper levels to Cressman scheme, set either :             " )' )
+        WRITE(*, '( "     oa_3D_switch = .TRUE. , or                                           " )' )
+        WRITE(*, '( "     mqd_minimum_num_obs = " ,  i3, " and oa_3D_option = 1 or 2           " )' ) mqd_count
+        WRITE(*, '( "                                                                          " )' ) 
+        WRITE(*, '( "  You could descrease the value of mqd_minimum_num_obs, to perform        " )' )
+        WRITE(*, '( "     MQD on all upper-levels, but this may result in a bad analysis.      " )' )
+        WRITE(*, '( "     For this run you would need to set this parameter to " , i3            )' ) mqd_abs_min
+        WRITE(*, '( "  ########################################################################" )' )
+   END IF
+
+   WRITE ( UNIT = * , FMT = '( /,"----------------------------------------------------------------------------",/,&
          &"Successful completion of obsgrid")' )
    WRITE ( UNIT = * , FMT = '("    ")' )
+
 #ifdef NCARG
 call clsgks
 #endif

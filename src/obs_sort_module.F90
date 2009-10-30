@@ -2596,6 +2596,8 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
                 IF ( next%meas%height%data .eq. obs(i)%info%elevation ) keep_data = .TRUE.
                 IF ( is_sounding .AND. next%meas%pressure%qc .gt. 0 )  keep_data = .TRUE.
                 IF ( keep_data ) true_num_obs = true_num_obs + 1
+              ELSE
+                true_num_obs = true_num_obs + 1
               ENDIF
               next => next%next
            END DO
@@ -2610,7 +2612,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
 
          IF ( OBS_data ) THEN
            WRITE ( UNIT = unit , FMT='(1x,A14)' ) obs(i)%valid_time%date_char(1:14)
-           WRITE ( UNIT = unit , FMT='(2x,2(F7.2,3x))' ) obs(i)%location%latitude, obs(i)%location%longitude
+           WRITE ( UNIT = unit , FMT='(2x,2(F9.4,1x))' ) obs(i)%location%latitude, obs(i)%location%longitude
            IF ( obs(i)%location%id(1:5) == "US un" ) THEN
              WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' )    &
                 "-----                                   " , &
@@ -2714,33 +2716,31 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
             IF (obs(i)%ground%precip%data   == missing_r) obs(i)%ground%precip%qc   = missing
             IF (next%meas%thickness%data    == missing_r) next%meas%thickness%qc    = missing
 
-            IF ( keep_data .AND. remove_unverified ) THEN
-            IF ( OBS_data ) THEN
-              IF ( is_sounding ) THEN
-                WRITE ( UNIT = unit , FMT='(1x,6(F11.3,1x,F11.3,1x))' )        &
-                  next%meas%pressure%data,    real(next%meas%pressure%qc),     &
-                  next%meas%height%data,      real(next%meas%height%qc),       &
-                  next%meas%temperature%data, real(next%meas%temperature%qc),  &
-                  next%meas%u%data,           real(next%meas%u%qc),            &
-                  next%meas%v%data,           real(next%meas%v%qc),            &
-                  next%meas%rh%data,          real(next%meas%rh%qc)
+            IF ( (keep_data .AND. remove_unverified) .OR. (.NOT. remove_unverified) ) THEN
+              IF ( OBS_data ) THEN
+                IF ( is_sounding ) THEN
+                  WRITE ( UNIT = unit , FMT='(1x,6(F11.3,1x,F11.3,1x))' )        &
+                    next%meas%pressure%data,    real(next%meas%pressure%qc),     &
+                    next%meas%height%data,      real(next%meas%height%qc),       &
+                    next%meas%temperature%data, real(next%meas%temperature%qc),  &
+                    next%meas%u%data,           real(next%meas%u%qc),            &
+                    next%meas%v%data,           real(next%meas%v%qc),            &
+                    next%meas%rh%data,          real(next%meas%rh%qc)
+                ELSE
+                  WRITE ( UNIT = unit , FMT='(1x,9(F11.3,1x,F11.3,1x))' )        &
+                    obs(i)%ground%slp%data,      real(obs(i)%ground%slp%qc),     &
+                    obs(i)%ground%ref_pres%data, real(obs(i)%ground%ref_pres%qc),&
+                    next%meas%height%data,       real(next%meas%height%qc),      &
+                    next%meas%temperature%data,  real(next%meas%temperature%qc), &
+                    next%meas%u%data,            real(next%meas%u%qc),           &
+                    next%meas%v%data,            real(next%meas%v%qc),           &
+                    next%meas%rh%data,           real(next%meas%rh%qc),          &
+                    next%meas%pressure%data,     real(next%meas%pressure%qc),    &
+                    obs(i)%ground%precip%data,   real(obs(i)%ground%precip%qc)
+                ENDIF
               ELSE
-                WRITE ( UNIT = unit , FMT='(1x,9(F11.3,1x,F11.3,1x))' )        &
-                  obs(i)%ground%slp%data,      real(obs(i)%ground%slp%qc),     &
-                  obs(i)%ground%ref_pres%data, real(obs(i)%ground%ref_pres%qc),&
-                  next%meas%height%data,       real(next%meas%height%qc),      &
-                  next%meas%temperature%data,  real(next%meas%temperature%qc), &
-                  next%meas%u%data,            real(next%meas%u%qc),           &
-                  next%meas%v%data,            real(next%meas%v%qc),           &
-                  next%meas%rh%data,           real(next%meas%rh%qc),          &
-                  next%meas%pressure%data,     real(next%meas%pressure%qc),    &
-                  obs(i)%ground%precip%data,   real(obs(i)%ground%precip%qc)
+                WRITE ( UNIT = unit , FMT = meas_format )  next%meas
               ENDIF
-            ELSE
-              WRITE ( UNIT = unit , FMT = meas_format )  next%meas
-            ENDIF
-            ELSEIF ( .NOT. remove_unverified ) THEN
-              WRITE ( UNIT = unit , FMT = meas_format )  next%meas
             ENDIF
             next => next%next
          END DO
@@ -3188,7 +3188,7 @@ height , pressure , iew , jns , levels , map_projection )
          !  happens to the best of us.
 
          IF ( io_error .LT. 0 ) THEN
-            PRINT *, 'Have reached end of observations file. '
+            !!!PRINT *, 'Have reached end of observations file. '
             CLOSE ( file_num ) 
             EXIT read_obs
          END IF 
@@ -3197,7 +3197,7 @@ height , pressure , iew , jns , levels , map_projection )
 
          !  No errors.  This is the intended way to find the end of data mark.
 
-         PRINT *, 'Have reached end of observations file. '
+         !!!PRINT *, 'Have reached end of observations file. '
          CLOSE ( file_num ) 
          EXIT read_obs
 

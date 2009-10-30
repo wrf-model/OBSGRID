@@ -9,7 +9,8 @@ current_date_8 , current_time_6 , fdda_loop , icount_fdda , &
 icount , total_count , interval , &
 max_error_t , max_error_uv           , &
 max_error_z , max_error_p , &
-buddy_weight , date_char , root_filename )
+buddy_weight , date_char , root_filename , oa_3D_option , &
+intf4d , lagtem , oa_type , oa_3D_type , rad_influence )
 
    CHARACTER *(*)         , INTENT ( IN    )      :: filename
    CHARACTER *(*)         , INTENT ( INOUT )      :: filename_out
@@ -32,5 +33,12 @@ buddy_weight , date_char , root_filename )
                                                      buddy_weight
    CHARACTER(LEN=19)                              :: date_char
    REAL , DIMENSION(jns_alloc,iew_alloc)          :: tobbox , odis
+
+   INTEGER                                        :: intf4d
+   LOGICAL                                        :: lagtem
+   INTEGER                                        :: oa_3D_option
+   CHARACTER *(*)                                 :: oa_type , oa_3D_type
+   INTEGER , DIMENSION(10)                        :: rad_influence
+
    INCLUDE 'proc_get_info_header.inc'
 END SUBROUTINE proc_final_analysis

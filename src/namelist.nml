@@ -82,4 +82,6 @@
                       mqd_maximum_num_obs          , &
                       radius_influence             , &
                       oa_min_switch                , &
-                      oa_max_switch    
+                      oa_max_switch                , &
+                      oa_3D_option                 , &
+                      oa_3D_type           

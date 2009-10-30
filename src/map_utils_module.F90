@@ -440,6 +440,7 @@ CONTAINS
     proj%polei = 1. - proj%rsw * COS(alo1)
     proj%polej = 1. - proj%hemi * proj%rsw * SIN(alo1)
     PRINT '(A,2F10.1)', 'Computed (I,J) of pole point: ',proj%polei,proj%polej
+    PRINT*,'  '
     RETURN
   END SUBROUTINE set_ps
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -583,6 +584,7 @@ CONTAINS
     proj%polei = 1. - proj%hemi * proj%rsw * SIN(arg)
     proj%polej = 1. + proj%rsw * COS(arg)  
     PRINT '(A,2F10.3)', 'Computed pole (x,y) = ', proj%polei, proj%polej
+    PRINT*,'  '
     RETURN
   END SUBROUTINE set_lc                             
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

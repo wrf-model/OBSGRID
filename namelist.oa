@@ -7,20 +7,22 @@
  end_month                   =    01
  end_day                     =    25
  end_hour                    =    12
- interval                    = 21600/
+ interval                    = 21600
+/
 
 &record2
  grid_id                     = 1
- obs_filename                = '../JAN00/obs' 
+ obs_filename                = '../JAN00/obs'
 /
+ remove_unverified_data      = .TRUE.
+ remove_data_above_qc_flag   = 32768
  trim_domain                 = .TRUE.
  trim_value                  = 5
- remove_data_above_qc_flag   = 32768
- remove_unverified_data      = .TRUE.
 
 &record3
  max_number_of_obs           = 10000
- fatal_if_exceed_max_obs     = .TRUE./
+ fatal_if_exceed_max_obs     = .TRUE.
+/
 
 &record4
  qc_test_error_max           = .TRUE.
@@ -39,7 +41,8 @@
  max_buddy_p                 = 800
  buddy_weight                = 1.0
  max_p_extend_t              = 1300
- max_p_extend_w              = 1300/
+ max_p_extend_w              = 1300
+/
 
 &record5
  print_obs_files             = .TRUE.
@@ -50,13 +53,15 @@
  print_qc_dry                = .FALSE.
  print_error_max             = .FALSE.
  print_buddy                 = .FALSE.
- print_oa                    = .FALSE./
+ print_oa                    = .FALSE.
+/
 
 &record7
  use_first_guess             = .TRUE.
  f4d                         = .TRUE.
  intf4d                      =  10800
- lagtem                      = .FALSE. /
+ lagtem                      = .FALSE. 
+/
 
 &record8
  smooth_type                 =  1
@@ -66,15 +71,21 @@
  smooth_sfc_slp              =  0
  smooth_upper_wind           =  0
  smooth_upper_temp           =  0
- smooth_upper_rh             =  0/
+ smooth_upper_rh             =  0
+/
 
 &record9
  oa_type                     = 'Cressman'
+ radius_influence            = 0,
  mqd_minimum_num_obs         = 30
  mqd_maximum_num_obs         = 1000
- radius_influence            = 5,4,3,2,
  oa_min_switch               = .TRUE.
- oa_max_switch               = .TRUE./
+ oa_max_switch               = .TRUE.
+/
+ oa_type                     = 'MQD'
+ oa_3D_option                = 1
+ oa_3D_type                  = 'Cressman'
+ radius_influence            = 5,4,3,2,
 
 
 &plot_sounding

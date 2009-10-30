@@ -1,7 +1,8 @@
 !------------------------------------------------------------------------------
 SUBROUTINE driver ( filename , filename_out , &
 bhi , bhr , nml , iew_alloc , jns_alloc , kbu_alloc , & 
-current_date_8 , current_time_6 , date_char , icount , total_count )
+current_date_8 , current_time_6 , date_char , icount , total_count , &
+mqd_count , mqd_abs_min )
 
 !  This subroutine is called from the main analysis program, it is called
 !  only once per time period.  This subroutine calls all of the routines and 
@@ -45,11 +46,13 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
    !  The NAMELIST variables, with a small amount of error checks
    !  from the main program.
 
-   TYPE ( all_nml ) , INTENT ( IN ) :: nml      ! all namelist information from 
+   TYPE ( all_nml )                 :: nml      ! all namelist information from 
                                                 ! all namelist records
 
    INTEGER                                         :: iew_map , jns_map
    INTEGER                                         :: final_fdda_count
+   INTEGER                                         :: i_rad,max_rad, max_rad_used
+
 
    INCLUDE 'error.inc'
    INCLUDE 'proc_get_info_header.inc'
@@ -81,6 +84,7 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
    CHARACTER (LEN=19) :: date_char_fdda
 
    INTEGER :: obs_file_count
+   INTEGER :: mqd_count , mqd_abs_min
 
    !  If we are doing sfc FDDA, the first time in we do the traditional analysis AND the surface
    !  FDDA fields for that time (fdda_loop_max=2).  All of the subsequent times, we process the 
@@ -156,6 +160,47 @@ current_date_8 , current_time_6 , date_char , icount , total_count )
          iewd , jnsd , kbu_alloc , grid_id , map_projection , expanded , iewe , jnse , &
          dxc , lat_center , lon_center , cone_factor , true_lat1 , true_lat2 , pole , &
          dxd , ptop )
+
+         IF ( icount .EQ. 1 ) THEN
+         IF ( nml%record_9%radius_influence(1) .LE. 0 ) THEN
+            max_rad_used = 0
+            max_rad = ABS (nml%record_9%radius_influence(1) )
+            IF ( nml%record_9%radius_influence(1) == 0 ) max_rad = 4
+            ! ASSUME AVG. SPACING OF UPPER AIR STATIONS IS 325 KM
+            nml%record_9%radius_influence(1) = MAX (nint( 325 * ( 1.6 / (dxd/1000.) ) + .45 ) , 5 )
+            print*," #########################################################################"
+            print*," Setting radius of influence for Cressman scheme"
+            write(*,'("    The radius of influence of each scan is set to:")')
+            write(*,'("     ",i3,",",$)') nml%record_9%radius_influence(1)
+            DO i_rad = 2, max_rad
+              nml%record_9%radius_influence(i_rad) = nint ( nml%record_9%radius_influence(i_rad-1) * 0.7 + .45 )
+              IF ( nml%record_9%radius_influence(i_rad) == nml%record_9%radius_influence(i_rad-1) ) &
+                   nml%record_9%radius_influence(i_rad) =  nml%record_9%radius_influence(i_rad-1) - 1
+              IF (nml%record_9%radius_influence(i_rad) .LT. 2 ) THEN
+                  nml%record_9%radius_influence(i_rad) = -1
+              ELSE
+                write(*,'(i3,",",$)') nml%record_9%radius_influence(i_rad)
+                max_rad_used = max_rad_used + 1
+              END IF
+            END DO
+            write(*,'("  ")') 
+            IF (max_rad_used > 5) print*,"  WARNING: Not recommended to use more than 5 scans" 
+            print*," #########################################################################"
+            print*,"   "
+         ELSE
+            print*," #########################################################################"
+            print*," Settings for the radius of influence for Cressman scheme"
+            write(*,'("     ",i3,",",$)') nml%record_9%radius_influence(1)
+            DO i_rad = 2, 10
+              IF (nml%record_9%radius_influence(i_rad) .NE. -1 ) THEN
+                write(*,'(i3,",",$)') nml%record_9%radius_influence(i_rad)
+              END IF
+            END DO
+            write(*,'("  ")') 
+            print*," #########################################################################"
+            print*,"   "
+         ENDIF
+         ENDIF
 
          !  All of the following routines assume distances to be in km, and the pressures
          !  are assumed to be in hPa.
@@ -255,14 +300,12 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
                        '                                                  ' // &
                        '                                '
 
-      !  We need to pick out either the traditional obs file or the one for the FDDA.
-      !  The traditional and FDDA names are separate in the namelist.input file.  
-
+      !  If fdda time, we need an updated date for the time we are processing.
       IF ( ( nml%record_7%f4d ) .AND. ( fdda_loop .GT. 1 ) ) THEN 
          CALL get_date ( fdda_date_8 , fdda_time_6 , date_char_fdda ) 
       END IF
 
-      IF ( fdda_loop == fdda_loop_max ) GOTO 101
+      IF ( nml%record_7%f4d  .AND. (fdda_loop == fdda_loop_max) ) GOTO 101
 
       IF (   (  .NOT. nml%record_7%f4d ) .OR. &
            ( (        nml%record_7%f4d ) .AND. ( fdda_loop .EQ. 1 ) ) ) THEN 
@@ -394,10 +437,9 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
       
          IF ( ( .NOT. nml%record_7%f4d ) .OR. & 
               ( (     nml%record_7%f4d ) .AND. ( fdda_loop .EQ. 1 ) ) ) THEN 
-            CALL proc_oa ( t , u , v , rh , slp_x , &
-            pressure , &
+            CALL proc_oa ( t , u , v , rh , slp_x , pressure , &
             iew_alloc , jns_alloc , kbu_alloc , &
-            current_date_8 , current_time_6 , fdda_loop , &
+            current_date_8 , current_time_6 , fdda_loop , mqd_count , mqd_abs_min , &
             nml%record_3%max_number_of_obs , number_of_obs , total_dups , &
             map_projection , obs , dxd , lat_center , &
             nml%record_5%print_oa                 , nml%record_5%print_found_obs          , &
@@ -407,9 +449,10 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             nml%record_8%smooth_sfc_temp          , nml%record_8%smooth_sfc_rh            , & 
             nml%record_8%smooth_sfc_slp           , nml%record_8%smooth_upper_wind        , & 
             nml%record_8%smooth_upper_temp        , nml%record_8%smooth_upper_rh          , &
-            nml%record_9%oa_type                  , nml%record_9%mqd_minimum_num_obs      , &
-            nml%record_9%mqd_maximum_num_obs      , nml%record_9%oa_max_switch            , &
-            nml%record_9%radius_influence         , nml%record_9%oa_min_switch            , &
+            nml%record_9%oa_type                  , nml%record_9%oa_3D_type               , &
+            nml%record_9%mqd_minimum_num_obs      , nml%record_9%mqd_maximum_num_obs      , &
+            nml%record_9%oa_max_switch            , nml%record_9%radius_influence         , &
+            nml%record_9%oa_min_switch            , nml%record_9%oa_3D_option             , &
             nml%record_2%grid_id )
 
             !  Store the final analysis back into the all_3d and all_2d arrays if we are doing
@@ -420,10 +463,9 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
                CALL store_fa (  t , u , v , rh , slp_x , iew_alloc , jns_alloc , kbu_alloc , num3d , num2d , icount )
             END IF
          ELSE
-            CALL proc_oa ( t , u , v , rh , slp_x , &
-            pressure , &
+            CALL proc_oa ( t , u , v , rh , slp_x , pressure , &
             iew_alloc , jns_alloc , kbu_alloc , &
-            fdda_date_8 , fdda_time_6 , fdda_loop , &
+            fdda_date_8 , fdda_time_6 , fdda_loop , mqd_count , mqd_abs_min , &
             nml%record_3%max_number_of_obs , number_of_obs , total_dups , &
             map_projection , obs , dxd , lat_center , &
             nml%record_5%print_oa                 , nml%record_5%print_found_obs          , &
@@ -433,9 +475,10 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             nml%record_8%smooth_sfc_temp          , nml%record_8%smooth_sfc_rh            , & 
             nml%record_8%smooth_sfc_slp           , nml%record_8%smooth_upper_wind        , & 
             nml%record_8%smooth_upper_temp        , nml%record_8%smooth_upper_rh          , &
-            nml%record_9%oa_type                  , nml%record_9%mqd_minimum_num_obs      , &
-            nml%record_9%mqd_maximum_num_obs      , nml%record_9%oa_max_switch            , &
-            nml%record_9%radius_influence         , nml%record_9%oa_min_switch            , &
+            nml%record_9%oa_type                  , nml%record_9%oa_3D_type               , &
+            nml%record_9%mqd_minimum_num_obs      , nml%record_9%mqd_maximum_num_obs      , &
+            nml%record_9%oa_max_switch            , nml%record_9%radius_influence         , &
+            nml%record_9%oa_min_switch            , nml%record_9%oa_3D_option             , &
             nml%record_2%grid_id )
          END IF
 
@@ -475,7 +518,9 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          nml%record_4%max_error_t , nml%record_4%max_error_uv           , &
          nml%record_4%max_error_z , nml%record_4%max_error_p/100. , &
          nml%record_4%buddy_weight , date_char , &
-         nml%record_2%fg_filename )
+         nml%record_2%fg_filename , nml%record_9%oa_3D_option , &
+         nml%record_7%intf4d , nml%record_7%lagtem , &
+         nml%record_9%oa_type , nml%record_9%oa_3D_type , nml%record_9%radius_influence )
          tobbox_ana = tobbox
          odis_ana = odis
       ELSE 
@@ -495,7 +540,9 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          nml%record_4%max_error_t , nml%record_4%max_error_uv           , &
          nml%record_4%max_error_z , nml%record_4%max_error_p/100. , &
          nml%record_4%buddy_weight , date_char , &
-         nml%record_2%fg_filename )
+         nml%record_2%fg_filename , nml%record_9%oa_3D_option , &
+         nml%record_7%intf4d , nml%record_7%lagtem , &
+         nml%record_9%oa_type , nml%record_9%oa_3D_type , nml%record_9%radius_influence )
          !nml%record_4%buddy_weight , nml%record_1%start_date )
       END IF
 
