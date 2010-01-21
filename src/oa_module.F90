@@ -109,10 +109,10 @@ use_first_guess )
       !  some points inside this window the observation will have zero 
       !  influence, but this allows a direct method rather than a search.
 
-      iew_min = MAX ( NINT ( (xob(n)-REAL(crsdot)/2.) ) - 2*radius_influence -1 ,            1 )
-      jns_min = MAX ( NINT ( (yob(n)-REAL(crsdot)/2.) ) - 2*radius_influence -1 ,            1 )
-      iew_max = MIN ( NINT ( (xob(n)-REAL(crsdot)/2.) ) + 2*radius_influence +1 , iew - crsdot ) 
-      jns_max = MIN ( NINT ( (yob(n)-REAL(crsdot)/2.) ) + 2*radius_influence +1 , jns - crsdot )
+      iew_min = MAX ( NINT ( (xob(n)-REAL(crsdot)/2.) ) - 4*radius_influence -1 ,            1 )
+      jns_min = MAX ( NINT ( (yob(n)-REAL(crsdot)/2.) ) - 4*radius_influence -1 ,            1 )
+      iew_max = MIN ( NINT ( (xob(n)-REAL(crsdot)/2.) ) + 4*radius_influence +1 , iew - crsdot ) 
+      jns_max = MIN ( NINT ( (yob(n)-REAL(crsdot)/2.) ) + 4*radius_influence +1 , jns - crsdot )
 
       !  For the grid points in the window, compute this observation's
       !  influence.
