@@ -2533,6 +2533,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
    LOGICAL                                           :: OBS_data=.FALSE.
    LOGICAL                                           :: is_sounding      
    INTEGER                                           :: true_num_obs
+   INTEGER                                           :: track_surface_data
 
    end_meas%pressure%data    = end_data_r
    end_meas%height%data      = end_data_r
@@ -2627,6 +2628,8 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
            WRITE ( UNIT = unit , FMT = rpt_format ) &
               obs(i)%location , obs(i)%info , obs(i)%valid_time , obs(i)%ground
          ENDIF
+    
+         track_surface_data = 0
 
          next => obs(i)%surface
          DO WHILE ( ASSOCIATED ( next ) )
@@ -2634,6 +2637,10 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
             keep_data = any ( ( pres_hPA .eq. next%meas%pressure%data ) )
             IF ( next%meas%height%data .eq. obs(i)%info%elevation ) keep_data = .TRUE.
             IF ( is_sounding .AND. next%meas%pressure%qc .gt. 0 )  keep_data = .TRUE.
+
+            !!! Make sure no surface ob has more than one entry
+            track_surface_data = track_surface_data + 1
+            IF ( .not. is_sounding .AND. track_surface_data .gt. 1 ) exit
 
             IF ( .NOT. keep_data .AND. next%meas%pressure%qc == 0 ) THEN
               next%meas%pressure%qc     = missing
