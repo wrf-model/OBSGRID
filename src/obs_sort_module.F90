@@ -2595,7 +2595,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
               IF ( remove_unverified ) THEN
                 keep_data = any ( ( pres_hPA .eq. next%meas%pressure%data ) )
                 IF ( next%meas%height%data .eq. obs(i)%info%elevation ) keep_data = .TRUE.
-                IF ( is_sounding .AND. next%meas%pressure%qc .gt. 0 )  keep_data = .TRUE.
+                IF ( is_sounding .AND. next%meas%pressure%qc .gt. 4 )  keep_data = .TRUE.
                 IF ( keep_data ) true_num_obs = true_num_obs + 1
               ELSE
                 true_num_obs = true_num_obs + 1
@@ -2636,7 +2636,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
             if ( obs(i)%info%discard ) exit 
             keep_data = any ( ( pres_hPA .eq. next%meas%pressure%data ) )
             IF ( next%meas%height%data .eq. obs(i)%info%elevation ) keep_data = .TRUE.
-            IF ( is_sounding .AND. next%meas%pressure%qc .gt. 0 )  keep_data = .TRUE.
+            IF ( is_sounding .AND. next%meas%pressure%qc .gt. 4 )  keep_data = .TRUE.
 
             !!! Make sure no surface ob has more than one entry
             track_surface_data = track_surface_data + 1

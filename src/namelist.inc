@@ -88,5 +88,5 @@
    INTEGER , DIMENSION(10) :: radius_influence    
 
    LOGICAL                 :: oa_min_switch                , &
-                              oa_max_switch                , &
-                              oa_3D_option    
+                              oa_max_switch
+   INTEGER                 :: oa_3D_option    

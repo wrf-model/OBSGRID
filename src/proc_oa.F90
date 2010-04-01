@@ -585,8 +585,12 @@ grid_id )
       IF (kp .eq. kbu_alloc+1 ) print*," Doing Cressman for all upper level data"
    END IF
    print*,"  "
-   IF (kp .eq. kbu_alloc+1 ) WRITE(*, '( "  MIN number of observation on any upper level for this time period is : ", i3, " observations per variable" )' ) min_mqd
-   IF (kp .eq. kbu_alloc+1 ) WRITE(*, '( "  MAX number of observation on any upper level for this time period is : ", i3, " observations per variable" )' ) max_mqd
+   IF (kp .eq. kbu_alloc+1 ) WRITE(*, '( A, i3, A )' ) &
+     "  MIN number of observation on any upper level for this time period is : ", &
+     min_mqd, " observations per variable"
+   IF (kp .eq. kbu_alloc+1 ) WRITE(*, '( A, i3, A)' ) &
+     "  MAX number of observation on any upper level for this time period is : ", &
+     max_mqd, " observations per variable"
 
   
    !  We need to close our sample print-out file.
