@@ -187,16 +187,16 @@ grid_id )
              WRITE(*,'("            the following variables/levels will revert to Cressman scheme: ")' )
            END IF
            IF ( first_time ) THEN
-             WRITE(*,'("   ",A,":   ",$)' ), trim(name(ivar))
+             WRITE(*,'("   ",A,":   ")',ADVANCE="NO") trim(name(ivar))
              first_time = .FALSE.
            END IF
            skip_to_cressman = .TRUE.
-           WRITE(*,'(f5.0,",",$)' ) pressure(kp)
+           WRITE(*,'(f5.0,",")',ADVANCE="NO") pressure(kp)
            test_count = test_count + 1
            IF ( test_count == 15 ) THEN
              test_count = 0
              WRITE(*,*)
-             WRITE(*,'("         ",$)' )
+             WRITE(*,'("         ")',ADVANCE="NO")
            END IF
          END IF
        END DO 
