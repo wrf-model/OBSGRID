@@ -14,8 +14,8 @@
  grid_id                     = 1
  obs_filename                = '../JAN00/obs'
  remove_data_above_qc_flag   = 32768
-/
  remove_unverified_data      = .TRUE.
+/
  trim_domain                 = .TRUE.
  trim_value                  = 5
 

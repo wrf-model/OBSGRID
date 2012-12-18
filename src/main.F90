@@ -81,8 +81,8 @@ call opngks
       WRITE ( UNIT = * , FMT = '("                                 ")' ) 
       WRITE ( UNIT = * , FMT = '("################################ ")' ) 
       WRITE ( UNIT = * , FMT = '("          WRF OBSGRID            ")' ) 
-      WRITE ( UNIT = * , FMT = '("          Version 3.2.0          ")' )   
-      WRITE ( UNIT = * , FMT = '("          March 2010             ")' )  
+      WRITE ( UNIT = * , FMT = '("          Version 3.3.0          ")' )   
+      WRITE ( UNIT = * , FMT = '("          December 2012          ")' )  
       !!WRITE ( UNIT = * , FMT = '("     pre-release - 02/-9/10      ")' )  
       WRITE ( UNIT = * , FMT = '("################################ ")' ) 
       WRITE ( UNIT = * , FMT = '("                                 ")' ) 
@@ -221,7 +221,13 @@ call opngks
       IF ( nml%record_7%f4d ) THEN
          IF       ( icount      .EQ. 1      ) THEN
             first_time  = 1
-            second_time = 2
+            !BPR BEGIN
+            !If we are at the first time there is no second time
+            !If we set second_time=2 it will try to use this in interpolation
+            !even though it does not yet exist
+            !second_time = 2
+            second_time = 1
+            !BPR END
             initial_time = .TRUE.
          ELSE IF  ( icount      .EQ. 2      ) THEN
             first_time  = 1
@@ -295,3 +301,4 @@ call clsgks
 #endif
 
 END PROGRAM main 
+

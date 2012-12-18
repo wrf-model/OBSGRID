@@ -273,17 +273,24 @@ value , qc )
       END SELECT slp_vs_others
 
    ELSE right_time
-      obs%info%discard = .TRUE.
+      !obs%info%discard = .TRUE.                          !!! 2012-12-17 - cB - to allow data - not qc'ed to enter OBS_DOMAIN101 file
+      obs%surface%meas%pressure%qc =  no_qc_possible
+      obs%surface%meas%height%qc =  no_qc_possible
+      obs%surface%meas%temperature%qc =  no_qc_possible
+      obs%surface%meas%u%qc =  no_qc_possible
+      obs%surface%meas%v%qc =  no_qc_possible
+      obs%surface%meas%rh%qc =  no_qc_possible
       error_number = 00351001
       error_message(1:31) = 'query_ob                       '
       error_message(32:)  = ' Wrong time for observation ' // &
       TRIM ( obs%location%id ) // ', at time = ' // obs%valid_time%date_char(1:12) // &
-      ' (ccyymmddhhmm).'
+      ' (ccyymmddhhmm).'  
       fatal = .false.
       listing = .false.
 ! foo
-!     CALL error_handler ( error_number , error_message ,  &
-!     fatal , listing )
+!    CALL error_handler ( error_number , error_message ,  &
+!    fatal , listing )
+!    print*,obs%surface%meas%temperature%data, obs%surface%meas%temperature%qc
    END IF right_time
    
 END SUBROUTINE query_ob

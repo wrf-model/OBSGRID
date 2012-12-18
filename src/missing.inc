@@ -34,8 +34,10 @@
    INTEGER,  PARAMETER                            ::  t_fail_supa_inver              = 2 ** 11
    INTEGER,  PARAMETER                            ::  wrong_wind_data                = 2 ** 12
    INTEGER,  PARAMETER                            ::  convective_adjustment          = 2 ** 13
-
    INTEGER , PARAMETER                            ::  no_buddies                     = 2 ** 14
-   INTEGER , PARAMETER                            ::  fails_error_max                = 2 ** 15
-   INTEGER , PARAMETER                            ::  fails_buddy_check              = 2 ** 16
-   INTEGER , PARAMETER                            ::  outside_of_domain              = 2 ** 17
+
+   INTEGER , PARAMETER                            ::  no_qc_possible                 = 2 ** 15
+
+   INTEGER , PARAMETER                            ::  fails_error_max                = 2 ** 16
+   INTEGER , PARAMETER                            ::  fails_buddy_check              = 2 ** 17
+   INTEGER , PARAMETER                            ::  outside_of_domain              = 2 ** 18

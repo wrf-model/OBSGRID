@@ -263,8 +263,21 @@ current_date_8 , current_time_6 , date_char , icount , print_analysis )
 
                uC = all_3d(loop3,tt)%array
                uA = uC
-               uA(1:jns_alloc-1,1:iew_alloc-1,:) = ( uC(:,1:iew_alloc-1,:)+ &
-                                                     uC(:,2:iew_alloc  ,:) ) *.5
+               !BPR BEGIN
+               !Appears that uA and uC are both dimensioned as the maximum number
+               !of gridpoints in the x and y direction for any of T, U, or V:
+               ! (max_x_mass_grid+1,max_y_mass_grid+1)
+               !uC is presumably u on the WRF-native C-grid
+               ! This should be dimensioned (max_x_mass_grid+1,max_y_mass_grid)
+               !uA is presumably u on an unstaggered grid (presumably the WRF mass grid)
+               ! This should be dimensioned (max_x_mass_grid,max_y_mass_grid)
+               !We need to add "jns_alloc-1" to uC so that there are the same
+               !number of grid points on both sides of the equation
+               !uA(1:jns_alloc-1,1:iew_alloc-1,:) = ( uC(:,1:iew_alloc-1,:)+ &
+               !                                      uC(:,2:iew_alloc  ,:) ) *.5
+               uA(1:jns_alloc-1,1:iew_alloc-1,:) = ( uC(1:jns_alloc-1,1:iew_alloc-1,:)+ &
+                                                     uC(1:jns_alloc-1,2:iew_alloc  ,:) ) *.5
+               !BPR END
                small_header%name = 'UA'
                loop3=loop3+1
                ALLOCATE ( all_3d(loop3,tt)%array(jns_alloc,iew_alloc,kbu_alloc) ) 
@@ -284,8 +297,13 @@ current_date_8 , current_time_6 , date_char , icount , print_analysis )
 
                vC = all_3d(loop3,tt)%array
                vA = vC
-               vA(1:jns_alloc-1,1:iew_alloc-1,:) = ( vC(1:jns_alloc-1,:,:)+ &
-                                                     vC(2:jns_alloc  ,:,:) ) *.5
+               !BPR BEGIN
+               !See note on similar modification to uA/uC above
+               !vA(1:jns_alloc-1,1:iew_alloc-1,:) = ( vC(1:jns_alloc-1,:,:)+ &
+               !                                      vC(2:jns_alloc  ,:,:) ) *.5
+               vA(1:jns_alloc-1,1:iew_alloc-1,:) = ( vC(1:jns_alloc-1,1:iew_alloc-1,:)+ &
+                                                     vC(2:jns_alloc  ,1:iew_alloc-1,:) ) *.5
+               !BPR END
 
                small_header%name = 'VA'
                loop3=loop3+1
@@ -318,14 +336,28 @@ current_date_8 , current_time_6 , date_char , icount , print_analysis )
 
                 IF ( trim(var_name) == "XLAT_V" ) THEN
                    small_header%name = 'XLAT_D'
-                   met_em_dum2(2:iend(1)-1,:,1) = ( met_em_dum1(1:iend(1)-1,:,1) + met_em_dum1(2:iend(1),:,1) ) *.5
+                   !BPR BEGIN
+                   !Appears to be converting from latitude on V points to
+                   !latitude on dot points which is presumably exactly in the
+                   !center of 4 mass points?
+                   !Appears that xlat_d grid point 1,1 is at u=1,v=1
+                   !Except for the furthest west and furthest east dot points,
+                   !do an average of the v-point latitudes in the west-east
+                   !direction
+                   !met_em_dum2(2:iend(1)-1,:,1) = ( met_em_dum1(1:iend(1)-1,:,1) + met_em_dum1(2:iend(1),:,1) ) *.5
+                   met_em_dum2(2:iend(1),:,1) = ( met_em_dum1(1:iend(1)-1,:,1) + met_em_dum1(2:iend(1),:,1) ) *.5
+                   !BPR END
                    deallocate (met_em_dum1)
                    allocate ( met_em_dum1(iew_alloc, jns_alloc-1,1) )
                    rcode = nf_inq_varid ( met_ncid, "XLAT_U", i )
                    rcode = nf_get_var_real ( met_ncid, i, met_em_dum1 )
+                   !Now for the furthest west and furthest east dot points, do
+                   !an average of the u-point latitudes in the south-north
+                   !direction
                    met_em_dum2(1:iew_alloc:iew_alloc,2:jns_alloc-1,1) = ( met_em_dum1(1:iew_alloc:iew_alloc,1:jns_alloc-2,1) &
                                                                         + met_em_dum1(1:iew_alloc:iew_alloc,2:jns_alloc-1,1) &
                                                                         ) *.5
+                   !This leaves the corners unfilled, so fill them
                    rcode = nf_get_att_real (met_ncid, nf_global, "corner_lats", rval) 
                    met_em_dum2(1,1,1)                 = rval(13)
                    met_em_dum2(iew_alloc,1,1)         = rval(14)
@@ -333,7 +365,10 @@ current_date_8 , current_time_6 , date_char , icount , print_analysis )
                    met_em_dum2(1,jns_alloc,1)         = rval(16)
             ELSEIF ( trim(var_name) == "XLONG_V" ) THEN
                    small_header%name = 'XLONG_D'
-                   met_em_dum2(2:iend(1)-1,:,1) = ( met_em_dum1(1:iend(1)-1,:,1) + met_em_dum1(2:iend(1),:,1) ) *.5
+                   !BPR BEGIN
+                   !met_em_dum2(2:iend(1)-1,:,1) = ( met_em_dum1(1:iend(1)-1,:,1) + met_em_dum1(2:iend(1),:,1) ) *.5
+                   met_em_dum2(2:iend(1),:,1) = ( met_em_dum1(1:iend(1)-1,:,1) + met_em_dum1(2:iend(1),:,1) ) *.5
+                   !BPR END
                    deallocate (met_em_dum1)
                    allocate ( met_em_dum1(iew_alloc, jns_alloc-1,1) )
                    rcode = nf_inq_varid ( met_ncid, "XLONG_U", i )
@@ -508,3 +543,4 @@ END SUBROUTINE read_first_guess
 !------------------------------------------------------------------------------
 
 END MODULE first_guess
+
