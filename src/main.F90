@@ -286,7 +286,7 @@ call opngks
         WRITE(*, '( "     oa_3D_switch = .TRUE. , or                                           " )' )
         WRITE(*, '( "     mqd_minimum_num_obs = " ,  i3, " and oa_3D_option = 1 or 2           " )' ) mqd_count
         WRITE(*, '( "                                                                          " )' ) 
-        WRITE(*, '( "  You could descrease the value of mqd_minimum_num_obs, to perform        " )' )
+        WRITE(*, '( "  You could decrease the value of mqd_minimum_num_obs, to perform         " )' )
         WRITE(*, '( "     MQD on all upper-levels, but this may result in a bad analysis.      " )' )
         WRITE(*, '( "     For this run you would need to set this parameter to " , i3            )' ) mqd_abs_min
         WRITE(*, '( "  ########################################################################" )' )

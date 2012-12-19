@@ -1,9 +1,6 @@
 PROGRAM plot_obs
 
-!  PROGRAM to plot the obs that were used in little_r for the
-!  REAL time run. JFB 7/28/98, adapted from Dave Gill's PROGRAM.
-
-!  Well, JFB, I re-re-adapted it back to f90, so there.
+!  PROGRAM to plot the obs that were used in obsgrid
 
    USE header1
    USE map_stuff
@@ -31,8 +28,6 @@ PROGRAM plot_obs
    LOGICAL :: use_first_guess, f4d, lagtem
    INTEGER :: intf4d
 
-
-   !  Joe parameter statements.
 
    REAL    , PARAMETER :: pi = 3.14159265, rpd = pi/180.
    INTEGER , PARAMETER :: nsta = 3000
@@ -68,14 +63,12 @@ PROGRAM plot_obs
    INTEGER :: num
 
    !  Some things for the set call.
-   REAL :: vl,vr,vb,vt,wl,wr,wb,wt
    REAL :: px1,px2,py1,py2,xx1,xx2,yy1,yy2
-   INTEGER :: ls
    INTEGER :: lll
 
    !  Label sizes.
-   REAL :: size , size2 , size3 , size4 , size5 , sizew
-   INTEGER :: isz , jsz , m1 , m2 , ma
+   REAL :: size , size5
+   INTEGER :: isz , m1 , m2 , ma
 
    INTEGER :: i
 
@@ -188,7 +181,7 @@ PROGRAM plot_obs
         !  With the big header info, generate the map background.  Make the
         !  line width the minimum possible.
   
-        CALL plotmap ( met_ncid )
+        CALL plotmap ( met_ncid, grid_id )
         CALL setusv('LW',1000)
   
         !  Scale the label size based on the pressure level - more surface obs, so
@@ -200,28 +193,13 @@ PROGRAM plot_obs
            isz = 8
         END IF
   
-        !  I'm certain that there is a good reason to always be flushing buffers, but how
-        !  do you document something that appears to be a belt + suspenders ideology.
-  
         CALL sflush
   
-        !  Now we issue two getset commands, getting the same info into two
-        !  sets of variables.  But hey, we can cope.
-  
-        CALL getset (vl,vr,vb,vt,wl,wr,wb,wt,ls)
         CALL pcsetc('FC - FUNCTION CODE CHARACTER', '|')
         CALL getset(px1,px2,py1,py2,xx1,xx2,yy1,yy2,lll)
   
-        !  Through some complicated experiments, these back-of-the envelope derived
-        !  sizes that are both pleasing to the eye and yet viewable after zillions
-        !  of graphics conversions.
-  
         size=MAX( (px2-px1),(py2-py1) ) / 35.
-        size2=size*.5
-        size3=size*.333333
-        size4=size*.25
         size5=size*.2
-        sizew=max( abs(xx2-xx1),abs(yy2-yy1) ) / 25.
   
         !  For this level, loop over each of the observations.
   
@@ -240,14 +218,6 @@ PROGRAM plot_obs
               WRITE(lab,fmt='(a5)') sid(i)
            END IF
 
-           !  Yet more tweaking on the size of labels.  Is there no end to the madness.
-  
-           jsz = .8 * isz
-  
-           !  For this observation, we know the (x,y) location and the station ID name.
-  
-  !        CALL wtstr(xc(i)+m2,yc(i)-m1,lab,jsz,0,0)
-  
            !  Station ID in black, print out the station ID.
   
            CALL setcl (0,sid(i))

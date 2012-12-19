@@ -3133,6 +3133,7 @@ height , pressure , iew , jns , levels , map_projection )
    INTEGER                              :: obs_num
    INTEGER                              :: error_ret  ! type of error         
 
+   integer  :: iid
    INTEGER                              :: num_empty , num_outside , bad_count
    LOGICAL                              :: outside_window
    TYPE(meas_data)                      :: dummy_middle
@@ -3196,6 +3197,18 @@ height , pressure , iew , jns , levels , map_projection )
              obs(obs_num)%info , &
              obs(obs_num)%valid_time , &
              obs(obs_num)%ground 
+
+!          The station name for buoys, metars, ships are in a weird place in the
+!          NCAR files, so reset the id.
+             iid = index(obs(obs_num)%location%name,'ICAO ')
+             if (iid .ne. 0) then
+               obs(obs_num)%location%id = obs(obs_num)%location%name(iid+5:iid+9)
+             else
+               iid = index(obs(obs_num)%location%name,' >>>')
+               if (iid .ne. 0) then
+                 obs(obs_num)%location%id = obs(obs_num)%location%name(iid+5:iid+9)
+               endif
+             endif
 
       !  If there are troubles with the "once only" type of data, we keep trying
       !  until we either come to the end of this report (and cycle) or we come
@@ -3408,6 +3421,30 @@ height , pressure , iew , jns , levels , map_projection )
                '  *** NO SFC OR UPPER AIR DATA ***'
             END IF 
             num_empty = num_empty + 1
+            CYCLE read_obs
+         END IF
+
+! We need to skip over obs types that obsgrid doesn't understand. These data
+! are present in the NCAR data files that are used by OBSPROC and WRF-VAR.
+
+         IF ( ( obs(obs_num)%info%platform(1:12) .EQ. 'FM-116 GPSRF' ) .OR. &
+              ( obs(obs_num)%info%platform(1:11) .EQ. 'FM-86 SATEM' ) .OR. &
+              ( obs(obs_num)%info%platform(1:12) .EQ. 'FM-111 GPSPW' ) ) THEN
+            READ ( file_num , IOSTAT = io_error , FMT = end_format ) &
+            obs(obs_num)%info%num_vld_fld , &
+            obs(obs_num)%info%num_error , &
+            obs(obs_num)%info%num_warning
+            IF ( ASSOCIATED ( obs(obs_num)%surface ) ) THEN
+               !  dealloc entire linked list if it exists
+               CALL dealloc_meas ( obs(obs_num)%surface)
+            END IF
+            IF ( print_out_found_obs ) THEN
+               WRITE ( UNIT = * , FMT = '(A,A,A,A,2F9.3,A)' ) 'Found Name and ID = ' , &
+               TRIM ( obs(obs_num)%location%id ) , ' ' , &
+               TRIM ( obs(obs_num)%location%name ) , &
+               obs(obs_num)%location%latitude , obs(obs_num)%location%longitude , &
+               '  *** INVALID OBSERVATION TYPE ***'
+            END IF
             CYCLE read_obs
          END IF
 

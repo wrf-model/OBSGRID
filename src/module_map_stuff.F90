@@ -3,14 +3,13 @@ MODULE map_stuff
 CONTAINS
 
 !-------------------------------------------
-   SUBROUTINE plotmap ( met_ncid )
+   SUBROUTINE plotmap ( met_ncid, grid_id )
 
       INCLUDE 'netcdf.inc'
 
       REAL :: rdummy
-      INTEGER :: idummy
-      INTEGER :: met_ncid
-      INTEGER :: rcode
+      INTEGER :: idummy, rcode
+      INTEGER :: met_ncid, grid_id
       INTEGER :: ndims, nvars, ngatts, nunlimdimid
       INTEGER :: wedim, sndim, map_proj
       INTEGER :: dim_val
@@ -24,6 +23,8 @@ CONTAINS
       REAL :: xleft , xright
       REAL :: vl , vr , vb , vt , wl , wr , wb , wt
       INTEGER :: ixmoad , jxmoad , kproj , ix , jx , jlts , jgrid , idot , iusout , ier , ls
+      integer :: nf_tstart2(3), nf_tcount2(3)
+      real, allocatable, dimension(:,:) :: scr2d
 
       rcode = nf_inq(met_ncid, ndims, nvars, ngatts, nunlimdimid)
       dims_loop : DO i = 1, ndims
@@ -32,8 +33,6 @@ CONTAINS
          IF ( dim_name == 'south_north_stag'  ) sndim  = dim_val
       ENDDO dims_loop
 
-
-      !  What projection are we using?
       rcode = NF_GET_ATT_INT(met_ncid, nf_global, "MAP_PROJ", idummy )
       project = nproj(idummy)
       map_proj = idummy
@@ -55,17 +54,32 @@ CONTAINS
       rcode = NF_GET_ATT_INT(met_ncid, nf_global, "i_parent_start", idummy )
       xwest = real(idummy)
 
-      !! For now - domain 1 and no expansion
-      !!IF ((bhi(8).EQ.0) .and. (bhi(13).EQ.1)) THEN 
-         !!xsouth = bhr(10)
-         !!xwest = bhr(11)
-      !!ELSEIF (bhi(13) .GT. 1) THEN
-         !!xsouth = bhr(10)
-         !!xwest = bhr(11)
-      !!ELSE
-         !!xsouth = bhr(10) - bhi(11)
-         !!xwest = bhr(11) - bhi(12)
-      !!END IF
+      if (grid_id .gt. 1) then
+      allocate (scr2d(wedim-1,sndim-1))
+      rcode = nf_inq_varid (met_ncid, 'XLAT', idummy)
+      if (rcode .ne. 0) then 
+        rcode = nf_inq_varid (met_ncid, 'XLAT_M', idummy)
+      write(0,*) 'error = ',nf_strerror(rcode)
+      endif
+      nf_tstart2(1)=1
+      nf_tstart2(2)=1
+      nf_tstart2(3)=1
+      nf_tcount2(1)=wedim-1
+      nf_tcount2(2)=sndim-1
+      nf_tcount2(3)=1
+      rcode = nf_get_vara_real (met_ncid, idummy, nf_tstart2,nf_tcount2, scr2d)
+      write(0,*) 'error = ',nf_strerror(rcode)
+      pl1 = scr2d(1,1)
+      pl3 = scr2d(wedim-1,sndim-1)
+      rcode = nf_inq_varid (met_ncid, 'XLONG', idummy)
+      if (rcode .ne. 0) then 
+        rcode = nf_inq_varid (met_ncid, 'XLONG_M', idummy)
+      write(0,*) 'error = ',nf_strerror(rcode)
+      endif 
+      rcode = nf_get_vara_real (met_ncid, idummy, nf_tstart2,nf_tcount2, scr2d)
+      pl2 = scr2d(1,1)
+      pl4 = scr2d(wedim-1,sndim-1)
+      endif
 
       !  The ratio of the grid distance of the mother domain to the grid distance
       !  from this domain.
@@ -78,27 +92,26 @@ CONTAINS
 
       !  Get the lat/lon of the lower left hand corner.
 
-      !CALL xytoll(1.,1.,pl1,pl2,project,ds,phic,xlonc,ixmoad,jxmoad,xsouth,xwest,xratio,truelat1,truelat2)
-      CALL ij_to_ll( map_proj, truelat1, truelat2, stdlon, phic, xlonc, 0.0, 0.0,  &
-                     wedim/2.0, sndim/2.0, dx, dx, 0.0, 0.0, 1.0, 1.0, pl1, pl2 )
-
-
-      !  Is there some sort of expanded domain with which to concern ourselves?
+      write(0,*) 'ds = ',ds,' phic = ',phic,' xlonc = ',xlonc
+      write(0,*) 'truelat1 = ',truelat1,' truelat2 = ',truelat2
       ix = sndim
       jx = wedim
-      !!IF ((bhi(8) .EQ. 1) .and. (bhi(13) .EQ. 1)) THEN
-         !!ix = bhi(9)
-         !!jx = bhi(10)
-      !!ELSE
-         !!ix = bhi(16)
-         !!jx = bhi(17)
-      !!END IF
+      if (grid_id .eq. 1) then
+      ! CALL xytoll(1.,1.,pl1,pl2,project,ds,phic,xlonc,ixmoad,jxmoad,xsouth,xwest,xratio,truelat1,truelat2)
+        CALL ij_to_ll( map_proj, truelat1, truelat2, stdlon, phic, xlonc, 0.0, 0.0,  &
+                     wedim/2.0, sndim/2.0, dx, dx, 0.0, 0.0, 1.0, 1.0, pl1, pl2 )
 
       !  Get the lat/lon of the upper right corner point.
 
-      !CALL xytoll(REAL(jx),REAL(ix),pl3,pl4,project,ds,phic,xlonc,ixmoad,jxmoad,xsouth,xwest,xratio,truelat1,truelat2)
-      CALL ij_to_ll( map_proj, truelat1, truelat2, stdlon, phic, xlonc, 0.0, 0.0,  &
+      ! CALL xytoll(REAL(jx),REAL(ix),pl3,pl4,project,ds,phic,xlonc,ixmoad,jxmoad,xsouth,xwest,xratio,truelat1,truelat2)
+        CALL ij_to_ll( map_proj, truelat1, truelat2, stdlon, phic, xlonc, 0.0, 0.0,  &
                      wedim/2.0, sndim/2.0, dx, dx, 0.0, 0.0, real(wedim), real(sndim), pl3, pl4 )
+      endif
+
+      write(0,*) 'pl1 = ',pl1,' pl2 = ',pl2
+      write(0,*) 'xratio = ',xratio,' xsouth = ',xsouth,' xwest = ',xwest
+      write(0,*) 'ixmoad = ',ixmoad,' jxmoad = ',jxmoad
+      write(0,*) 'jx = ',jx,' ix = ',ix,' project = ',project
       
       ! kproj:  1 = stereographic, 3 = lambert conformal, 9 = mercator
       !  polat, lat of pole?
@@ -164,6 +177,10 @@ CONTAINS
       CALL mappos(.1,.9,.1,.9)
 
       !  This is the "generate a map" call.
+
+      write(0,*) 'kproj = ',kproj,' polat = ',polat,' xlonc = ',xlonc
+      write(0,*) 'rot = ',rot,' pl1 = ',pl1,' pl2 = ',pl2,' pl3 = ',pl3,' pl4 = ',pl4
+      write(0,*) 'jlts = ',jlts,' jgrid = ',jgrid
 
       CALL supmap(kproj,polat,stdlon,rot,pl1,pl2,pl3,pl4,jlts,jgrid,iusout,idot,ier)
 
