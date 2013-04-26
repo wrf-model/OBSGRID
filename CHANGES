@@ -1,0 +1,18 @@
+-----------------------------------------------------
+Update: April, 2013  V3.4.0
+ - Add support for NCAR/MMM observation files which contain unusable
+ data that must be ignored (e.g. GPSPW, SATEM, etc.).
+ - Allow obs plotting on nested domains.
+ - Clean up typos and comments.
+-----------------------------------------------------
+Update: December, 2012 V3.3.0
+ - Add some significant changes to the way the OBS_DOMAINdxx files are written.
+ - Add a new qc flag or data that could not be qc-ed due to the fact that the 
+   data is off analysis times. The non-qc-ed data can be output if needed.
+ - Add some fixes from Brian Reed.
+-----------------------------------------------------
+Update: April, 2010 V3.2.0
+ - Increase search area around each observation, ensuring the banana scheme
+   has enough space.
+ - minor bug fixes
+-----------------------------------------------------
