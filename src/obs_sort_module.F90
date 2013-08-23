@@ -2621,7 +2621,8 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
               ENDIF
               IF ( remove_unverified ) THEN
                 keep_data = any ( ( pres_hPA .eq. next%meas%pressure%data ) )
-                IF ( (obs(i)%info%elevation .ne. missing) .AND. (next%meas%height%data .eq. obs(i)%info%elevation) ) keep_data = .TRUE.
+                IF ( (obs(i)%info%elevation .ne. missing) .AND. & 
+                      (next%meas%height%data .eq. obs(i)%info%elevation) ) keep_data = .TRUE.
                 !!IF ( is_sounding .AND. next%meas%pressure%qc .gt. 4 )  keep_data = .TRUE.
                 IF ( keep_data ) true_num_obs = true_num_obs + 1
               ELSE
@@ -2635,7 +2636,8 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
 
         !! 2012-12-17 cB - If surface and we don't want data above a set qc value - discard
         !!                 Also discard soundings with no data
-        if ( .NOT. is_sounding .and. (obs(i)%surface%meas%pressure%qc >= qc_flag_keep) ) obs(i)%info%discard = .TRUE.
+        if ( .NOT. is_sounding .and. (obs(i)%surface%meas%pressure%qc >= qc_flag_keep) ) & 
+                      obs(i)%info%discard = .TRUE.
         if (       is_sounding .and. true_num_obs.eq.0) obs(i)%info%discard = .TRUE.
 
          if ( obs(i)%ground%slp%data   >= qc_flag_keep ) then

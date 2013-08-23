@@ -39,6 +39,19 @@ CPP		=	/lib/cpp
 CPPFLAGS	=	-I. -C -P -DDEC -traditional
 
 ###########################################################
+#ARCH	PC Linux i486 i586 i686 x86_64, gfortran compiler	
+#
+FC		=	gfortran
+FFLAGS		=	-ffree-form -O -fconvert=big-endian -frecord-marker=4
+F77FLAGS	=	-ffixed-form -O -fconvert=big-endian -frecord-marker=4
+FNGFLAGS	=	$(FFLAGS)
+LDFLAGS		=	
+CC		=	gcc
+CFLAGS		=	
+CPP		=	/usr/bin/cpp -C -P -traditional
+CPPFLAGS	=	
+
+###########################################################
 #ARCH	PC Linux ia64, PGI compiler	
 #
 FC		=	pgf90
