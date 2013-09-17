@@ -2584,6 +2584,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
          IF ( .NOT. forinput ) write(unit,*) '**************** Next Observation *******************'
 
          next => obs(i)%surface
+         is_sounding = obs(i)%info%is_sound
          IF ( is_sounding ) THEN
            DO WHILE ( ASSOCIATED ( next ) )
             IF ( next%meas%pressure%qc .eq. no_qc_possible ) no_qc_done = .TRUE.
@@ -2593,14 +2594,14 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
            true_num_obs = 1
          ENDIF
 
-         is_sounding = obs(i)%info%is_sound
          next => obs(i)%surface
          IF ((obs(i)%info%platform(1:11) == 'FM-88 SATOB') .OR. &
                   (obs(i)%info%platform(1:11) == 'FM-97 AIREP')) THEN
            is_sounding = .TRUE.
            obs(i)%info%is_sound = .TRUE.
          ENDIF
-         IF ( obs(i)%info%num_vld_fld == 1 .AND. (obs(i)%info%elevation .ne. missing) .AND. &
+         !!!!IF ( obs(i)%info%num_vld_fld == 1 .AND. (obs(i)%info%elevation .ne. missing) .AND. &
+         IF ( obs(i)%info%num_vld_fld == 1  .AND. &
             ( next%meas%height%data .eq. obs(i)%info%elevation ) ) THEN
            is_sounding = .FALSE.
            obs(i)%info%is_sound = .FALSE.
