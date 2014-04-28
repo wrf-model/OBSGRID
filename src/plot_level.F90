@@ -142,7 +142,7 @@ PROGRAM plot_obs
      ! name the filename
      WRITE(flnm,FMT='("plotobs_out.d",i2.2,".",A19,".0000")') grid_id, rdate
 
-     ! Build metoa file
+     ! Build graphics output file
      WRITE(cgm_file, '("levels.d",i2.2,".",A19,".cgm")') grid_id, rdate
 
      !  Initialize the NCAR Graphics stuff.

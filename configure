@@ -117,9 +117,14 @@ fi
 
 if [ -n "$NETCDF" ] ; then
   echo "Will use NETCDF in dir: $NETCDF"
+  NETCDFF=" "
+  if [ -f "$NETCDF/lib/libnetcdff.a" ] ; then
+    NETCDFF="-lnetcdff"
+  fi
 else
   echo "Will configure for use without NetCDF"
 fi
+echo $NETCDFF
 
   # if the uname command exists, give it a shot and see if
   # we can narrow the choices; otherwise, spam 'em
@@ -141,4 +146,4 @@ if [ $? -eq 0 ] ; then
 fi
 
 # Found perl, so proceed with configuration
-perl arch/Config.pl -perl=$PERL -netcdf=$NETCDF -os=$os -mach=$mach 
+perl arch/Config.pl -perl=$PERL -netcdf=$NETCDF -netcdff=$NETCDFF -os=$os -mach=$mach 

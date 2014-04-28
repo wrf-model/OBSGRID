@@ -107,7 +107,7 @@ END SUBROUTINE ob_density
         IF( tobbox(j,i) > 0.5 ) THEN
           distance(j,i) = 0.0
         ELSE
-          dijmin = MAXVAL( distance )
+          dijmin = MAXVAL( distance/dx )
           DO ii = 1, iew
           DO jj = 1, jns
             IF( tobbox(jj,ii) > 0.5 ) THEN

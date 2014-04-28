@@ -24,7 +24,7 @@ PERL		=	perl
 
 RANLIB		=	echo
 
-NETCDF_LIBS	=	-L${NETCDF}/lib -lnetcdf 
+NETCDF_LIBS	=	-L${NETCDF}/lib -lnetcdf CONFIGURE_NETCDFF_LIB
 
 NETCDF_INC	=	-I${NETCDF}/include
 

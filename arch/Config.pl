@@ -7,6 +7,7 @@
 
 $sw_perl_path = perl ;
 $sw_netcdf_path = "" ;
+$sw_netcdff_lib = "" ;
 $sw_ldflags=""; 
 $sw_compileflags=""; 
 $sw_os = "ARCH" ;           # ARCH will match any
@@ -21,6 +22,10 @@ while ( substr( $ARGV[0], 0, 1 ) eq "-" )
   if ( substr( $ARGV[0], 1, 7 ) eq "netcdf=" )
   {
     $sw_netcdf_path = substr( $ARGV[0], 8 ) ;
+  }
+  if ( substr( $ARGV[0], 1, 8 ) eq "netcdff=" )
+  {
+    $sw_netcdff_lib = substr( $ARGV[0], 9 ) ;
   }
   if ( substr( $ARGV[0], 1, 3 ) eq "os=" )
   {
@@ -89,6 +94,23 @@ printf "------------------------------------------------------------------------
 
 $optchoice = $response ;
 
+
+open CONFIGURE_OA, "> configure.oa" || die "cannot Open for writing... configure.oa: \n";
+    open ARCH_PREAMBLE, "< arch/preamble" || die "cannot Open for reading... arch/preamble: \n";
+    my @preamble;
+    # apply substitutions to the preamble...
+    while (<ARCH_PREAMBLE>)
+    {
+          $_ =~ s:CONFIGURE_NETCDFF_LIB:$sw_netcdff_lib:g;
+          @preamble = ( @preamble, $_ ) ;
+    }
+    close ARCH_PREAMBLE;
+    
+    print CONFIGURE_OA @preamble;
+close CONFIGURE_WPS;
+
+#printf "------------------------------------------------------------------------\n" ;
+
 open CONFIGURE_DEFAULTS, "< ./arch/configure.defaults" 
       or die "Cannot open ./arch/configure.defaults for reading" ;
 $latchon = 0 ;
@@ -146,14 +168,6 @@ close CONFIGURE_DEFAULTS ;
 #printf "\n" ;
 
 open CONFIGURE_WRF, "> configure.oa" or die "cannot append configure.oa" ;
-open ARCH_PREAMBLE, "< arch/preamble" or die "cannot open arch/preamble" ;
-my @preamble;
-# apply substitutions to the preamble...
-while ( <ARCH_PREAMBLE> )
-  {
-  @preamble = ( @preamble, $_ ) ;
-  }
-close ARCH_PREAMBLE ;
 print CONFIGURE_WRF @preamble  ;
 close ARCH_PREAMBLE ;
 printf CONFIGURE_WRF "# Settings for %s", $optstr[$optchoice] ;

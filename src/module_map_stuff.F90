@@ -23,7 +23,7 @@ CONTAINS
       REAL :: xleft , xright
       REAL :: vl , vr , vb , vt , wl , wr , wb , wt
       INTEGER :: ixmoad , jxmoad , kproj , ix , jx , jlts , jgrid , idot , iusout , ier , ls
-      integer :: nf_tstart2(3), nf_tcount2(3)
+      integer :: nf_tstart2(3), nf_tcount2(3), i
       real, allocatable, dimension(:,:) :: scr2d
 
       rcode = nf_inq(met_ncid, ndims, nvars, ngatts, nunlimdimid)
@@ -819,6 +819,7 @@ CONTAINS
         REAL rlat, rlon, olat, olon, lat1n, lon1n
         REAL phi_np, lam_np, lam_0, dlam
         REAL sinphi, cosphi, coslam, sinlam
+        REAL gi2, arccos
 
 
 !!!     lat1     ! SW latitude (1,1) in degrees (-90->90N)

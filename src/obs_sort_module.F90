@@ -2501,7 +2501,8 @@ END SUBROUTINE merge_sort
 ! -------------------------------------------------------------------------
 
 SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
-                        new_file, qc_flag_keep, remove_unverified, num_klvls, pressure )
+                        new_file, qc_flag_keep, remove_unverified, num_klvls, pressure, &
+                        met_file)
 
 !  Take the array of observations and write them including measurements
 !  at all levels.  The two options (out_opt and forinput) are described
@@ -2513,7 +2514,10 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
    
    !  If ( forinput is true ) output can be pipe back for input.
 
+
    IMPLICIT NONE
+
+   INCLUDE 'netcdf.inc'
 
    TYPE ( report ) , INTENT (INOUT), DIMENSION ( : ) :: obs
    INTEGER , INTENT ( IN )                           :: num_obs
@@ -2535,6 +2539,23 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
    LOGICAL                                           :: no_qc_done      
    INTEGER                                           :: true_num_obs
    INTEGER                                           :: track_surface_data
+
+   INTEGER                                           :: ncid, dimid, varid, vardims
+   INTEGER, DIMENSION(2)                             :: ishape, start, count
+   INTEGER                                           :: ilev
+   CHARACTER (LEN=132)                               :: nfile
+   REAL, ALLOCATABLE, DIMENSION(:)                   :: press_nc, z_nc, temp_nc, td_nc
+   REAL, ALLOCATABLE, DIMENSION(:)                   :: spd_nc, dir_nc, u_nc, v_nc, rh_nc 
+
+   INTEGER, ALLOCATABLE, DIMENSION(:)                :: press_qc_nc, z_qc_nc, temp_qc_nc, td_qc_nc
+   INTEGER, ALLOCATABLE, DIMENSION(:)                :: spd_qc_nc, dir_qc_nc, u_qc_nc, v_qc_nc, rh_qc_nc             
+   INTEGER                                           :: int_sounding, int_bogus, int_discard, iout_nc
+
+   CHARACTER ( LEN = 132 )                           :: met_file
+   INTEGER                                           :: met_ncid
+   INTEGER                                           :: idummy
+   REAL                                              :: rdummy
+   
 
    end_meas%pressure%data    = end_data_r
    end_meas%height%data      = end_data_r
@@ -2570,7 +2591,221 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
    OBS_data = .FALSE.
    IF ( file_name(1:10) == "OBS_DOMAIN" ) OBS_data = .TRUE.
 
+   IF ( .not. OBS_data ) THEN
+     nfile = trim(adjustl(file_name))//".nc"
+     CALL check(nf_create(nfile, NF_CLOBBER, ncid))
+     dimid = 1
+     CALL check (nf_def_dim(ncid, "report", NF_UNLIMITED, dimid))
+     dimid = 2
+     CALL check(nf_def_dim(ncid, "lev", 300, dimid))
+     dimid = 3
+     CALL check(nf_def_dim(ncid, "date_len", 14, dimid))
+     dimid = 4
+     CALL check(nf_def_dim(ncid, "char_len", 40, dimid))
+
+     vardims = 2
+     ishape(1)=3
+     ishape(2)=1
+     varid = 1
+     CALL check(nf_def_var(ncid, "date" , NF_CHAR, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",33,"Observation Date - YYYYMMDDHHmmss"))
+     ishape(1)=4
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "stationID" , NF_CHAR, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",13,"ID of Station"))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "stationNAME" , NF_CHAR, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",15,"Name of Station"))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "platform" , NF_CHAR, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",33,"Description of Measurement Device"))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "source" , NF_CHAR, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",21,"Source of Observation"))
+
+     vardims = 1
+     ishape(1)=1
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "lon" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",36,"Station Longitude - east is positive"))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "lat" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",36,"Station Latitude - north is positive"))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "elevation" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",17,"Station Elevation"))
+       CALL check(nf_put_att_text(ncid,varid,"units",1,"m"))
+       CALL check(nf_put_att_real(ncid,varid,"_FillValue",NF_REAL,1,-888888.00))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "slp" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",18,"Sea Level Pressure"))
+       CALL check(nf_put_att_text(ncid,varid,"units",2,"Pa"))
+       CALL check(nf_put_att_real(ncid,varid,"_FillValue",NF_REAL,1,-888888.00))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "slp_QC" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",27,"Sea Level Pressure QC Flag"))
+       CALL check(nf_put_att_int(ncid,varid,"_FillValue",NF_INT,1,-888888))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "ref_pressure" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",24,"Reference Pressure Level"))
+       CALL check(nf_put_att_text(ncid,varid,"units",2,"Pa"))
+       CALL check(nf_put_att_real(ncid,varid,"_FillValue",NF_REAL,1,-888888.00))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "ref_pressure_QC" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",32,"Reference Pressure Level QC Flag"))
+       CALL check(nf_put_att_int(ncid,varid,"_FillValue",NF_INT,1,-888888))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "levels" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",36,"Number of Valid Levels in the Report"))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "sounding" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",55,"1/0 Multiple Level Sounding or Single Level Observation"))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "bogus" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",33,"1/0 Bogus Report or Normal Report"))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "discard" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",31,"1/0 Keep or Discard Observation"))
+
+     vardims = 2
+     ishape(1)=2
+     ishape(2)=1
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "pressure" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",8,"Pressure"))
+       CALL check(nf_put_att_text(ncid,varid,"units",2,"Pa"))
+       CALL check(nf_put_att_real(ncid,varid,"_FillValue",NF_REAL,1,-888888.00))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "pressure_QC" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",16,"Pressure QC Flag"))
+       CALL check(nf_put_att_int(ncid,varid,"_FillValue",NF_INT,1,-888888))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "height" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",12,"Height (MSL)"))
+       CALL check(nf_put_att_text(ncid,varid,"units",1,"m"))
+       CALL check(nf_put_att_real(ncid,varid,"_FillValue",NF_REAL,1,-888888.00))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "height_QC" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",14,"Height QC Flag"))
+       CALL check(nf_put_att_int(ncid,varid,"_FillValue",NF_INT,1,-888888))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "temperature" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",11,"Temperature"))
+       CALL check(nf_put_att_text(ncid,varid,"units",1,"K"))
+       CALL check(nf_put_att_real(ncid,varid,"_FillValue",NF_REAL,1,-888888.00))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "temperature_QC" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",19,"Temperature QC Flag"))
+       CALL check(nf_put_att_int(ncid,varid,"_FillValue",NF_INT,1,-888888))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "dew_point" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",20,"Dewpoint Temperature"))
+       CALL check(nf_put_att_text(ncid,varid,"units",1,"K"))
+       CALL check(nf_put_att_real(ncid,varid,"_FillValue",NF_REAL,1,-888888.00))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "dew_point_QC" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",28,"Dewpoint Temperature QC Flag"))
+       CALL check(nf_put_att_int(ncid,varid,"_FillValue",NF_INT,1,-888888))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "speed" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",10,"Wind Speed"))
+       CALL check(nf_put_att_text(ncid,varid,"units",3,"m/s"))
+       CALL check(nf_put_att_real(ncid,varid,"_FillValue",NF_REAL,1,-888888.00))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "speed_QC" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",18,"Wind Speed QC Flag"))
+       CALL check(nf_put_att_int(ncid,varid,"_FillValue",NF_INT,1,-888888))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "direction" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",14,"Wind Direction"))
+       CALL check(nf_put_att_text(ncid,varid,"units",7,"degrees"))
+       CALL check(nf_put_att_real(ncid,varid,"_FillValue",NF_REAL,1,-888888.00))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "direction_QC" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",22,"Wind Direction QC Flag"))
+       CALL check(nf_put_att_int(ncid,varid,"_FillValue",NF_INT,1,-888888))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "u" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",19,"U Component of Wind"))
+       CALL check(nf_put_att_text(ncid,varid,"units",3,"m/s"))
+       CALL check(nf_put_att_real(ncid,varid,"_FillValue",NF_REAL,1,-888888.00))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "u_QC" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",27,"U Component of Wind QC Flag"))
+       CALL check(nf_put_att_int(ncid,varid,"_FillValue",NF_INT,1,-888888))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "v" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",19,"V Component of Wind"))
+       CALL check(nf_put_att_text(ncid,varid,"units",3,"m/s"))
+       CALL check(nf_put_att_real(ncid,varid,"_FillValue",NF_REAL,1,-888888.00))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "v_QC" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",27,"V Component of Wind QC Flag"))
+       CALL check(nf_put_att_int(ncid,varid,"_FillValue",NF_INT,1,-888888))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "rh" , NF_FLOAT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",17,"Relative Humidity"))
+       CALL check(nf_put_att_text(ncid,varid,"units",1,"%"))
+       CALL check(nf_put_att_real(ncid,varid,"_FillValue",NF_REAL,1,-888888.00))
+     varid = varid + 1
+     CALL check(nf_def_var(ncid, "rh_QC" , NF_INT, vardims, ishape, varid))
+       CALL check(nf_put_att_text(ncid,varid,"description",25,"Relative Humidity QC Flag"))
+       CALL check(nf_put_att_int(ncid,varid,"_FillValue",NF_INT,1,-888888))
+
+     IF ( file_name(1:10) == "qc_obs_raw" ) &
+       CALL check(nf_put_att_text(ncid,NF_GLOBAL,"TITLE",24,"Observational Data - raw"))
+     IF ( file_name(1:10) == "qc_obs_use" ) &
+       CALL check(nf_put_att_text(ncid,NF_GLOBAL,"TITLE",25,"Observational Data - used"))
+
+     CALL check(nf_open(met_file, NF_NOCLOBBER, met_ncid))
+     CALL check(nf_get_att_int(met_ncid, NF_GLOBAL, "WEST-EAST_GRID_DIMENSION", idummy))
+       CALL check(nf_put_att_int(ncid, NF_GLOBAL, "WEST-EAST_GRID_DIMENSION", NF_INT,1,idummy))
+     CALL check(nf_get_att_int(met_ncid, NF_GLOBAL, "SOUTH-NORTH_GRID_DIMENSION", idummy))
+       CALL check(nf_put_att_int(ncid, NF_GLOBAL, "SOUTH-NORTH_GRID_DIMENSION", NF_INT,1,idummy))
+     CALL check(nf_get_att_real(met_ncid, NF_GLOBAL, "DX", rdummy))
+       CALL check(nf_put_att_real(ncid, NF_GLOBAL, "DX", NF_REAL,1,rdummy))
+     CALL check(nf_get_att_real(met_ncid, NF_GLOBAL, "DY", rdummy))
+       CALL check(nf_put_att_real(ncid, NF_GLOBAL, "DY", NF_REAL,1,rdummy))
+     CALL check(nf_get_att_real(met_ncid, NF_GLOBAL, "CEN_LAT", rdummy))
+       CALL check(nf_put_att_real(ncid, NF_GLOBAL, "CEN_LAT", NF_REAL,1,rdummy))
+     CALL check(nf_get_att_real(met_ncid, NF_GLOBAL, "CEN_LON", rdummy))
+       CALL check(nf_put_att_real(ncid, NF_GLOBAL, "CEN_LON", NF_REAL,1,rdummy))
+     CALL check(nf_get_att_real(met_ncid, NF_GLOBAL, "TRUELAT1", rdummy))
+       CALL check(nf_put_att_real(ncid, NF_GLOBAL, "TRUELAT1", NF_REAL,1,rdummy))
+     CALL check(nf_get_att_real(met_ncid, NF_GLOBAL, "TRUELAT2", rdummy))
+       CALL check(nf_put_att_real(ncid, NF_GLOBAL, "TRUELAT2", NF_REAL,1,rdummy))
+     CALL check(nf_get_att_real(met_ncid, NF_GLOBAL, "MOAD_CEN_LAT", rdummy))
+       CALL check(nf_put_att_real(ncid, NF_GLOBAL, "MOAD_CEN_LAT", NF_REAL,1,rdummy))
+     CALL check(nf_get_att_real(met_ncid, NF_GLOBAL, "STAND_LON", rdummy))
+       CALL check(nf_put_att_real(ncid, NF_GLOBAL, "STAND_LON", NF_REAL,1,rdummy))
+     CALL check(nf_get_att_real(met_ncid, NF_GLOBAL, "POLE_LAT", rdummy))
+       CALL check(nf_put_att_real(ncid, NF_GLOBAL, "POLE_LAT", NF_REAL,1,rdummy))
+     CALL check(nf_get_att_real(met_ncid, NF_GLOBAL, "POLE_LON", rdummy))
+       CALL check(nf_put_att_real(ncid, NF_GLOBAL, "POLE_LON", NF_REAL,1,rdummy))
+     CALL check(nf_get_att_int(met_ncid, NF_GLOBAL, "MAP_PROJ", idummy))
+       CALL check(nf_put_att_int(ncid, NF_GLOBAL, "MAP_PROJ", NF_INT,1,idummy))
+     CALL check(nf_get_att_int(met_ncid, NF_GLOBAL, "grid_id", idummy))
+       CALL check(nf_put_att_int(ncid, NF_GLOBAL, "grid_id", NF_INT,1,idummy))
+     CALL check(nf_get_att_int(met_ncid, NF_GLOBAL, "parent_id", idummy))
+       CALL check(nf_put_att_int(ncid, NF_GLOBAL, "parent_id", NF_INT,1,idummy))
+     CALL check(nf_get_att_int(met_ncid, NF_GLOBAL, "i_parent_start", idummy))
+       CALL check(nf_put_att_int(ncid, NF_GLOBAL, "i_parent_start", NF_INT,1,idummy))
+     CALL check(nf_get_att_int(met_ncid, NF_GLOBAL, "j_parent_start", idummy))
+       CALL check(nf_put_att_int(ncid, NF_GLOBAL, "j_parent_start", NF_INT,1,idummy))
+     CALL check(nf_get_att_int(met_ncid, NF_GLOBAL, "i_parent_end", idummy))
+       CALL check(nf_put_att_int(ncid, NF_GLOBAL, "i_parent_end", NF_INT,1,idummy))
+     CALL check(nf_get_att_int(met_ncid, NF_GLOBAL, "j_parent_end", idummy))
+       CALL check(nf_put_att_int(ncid, NF_GLOBAL, "j_parent_end", NF_INT,1,idummy))
+     CALL check(nf_get_att_int(met_ncid, NF_GLOBAL, "parent_grid_ratio", idummy))
+       CALL check(nf_put_att_int(ncid, NF_GLOBAL, "parent_grid_ratio", NF_INT,1,idummy))
+
+     CALL check(nf_close(met_ncid))
+
+     CALL check(nf_enddef(ncid))
+   ENDIF
+
    iout = 0
+   iout_nc = 0
 
    DO i = 1 , num_obs
       true_num_obs = 0
@@ -2641,34 +2876,99 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
                       obs(i)%info%discard = .TRUE.
         if (       is_sounding .and. true_num_obs.eq.0) obs(i)%info%discard = .TRUE.
 
-         if ( obs(i)%ground%slp%data   >= qc_flag_keep ) then
+         if ( obs(i)%ground%slp%qc   >= qc_flag_keep ) then
            obs(i)%ground%slp%data = missing_r
+           obs(i)%ground%slp%qc = missing
+         endif
+         if ( obs(i)%ground%slp%data   == missing_r ) then
            obs(i)%ground%slp%qc = missing
          endif
 
          IF ( OBS_data ) THEN
-         IF ( .NOT. obs(i)%info%discard ) THEN
-           WRITE ( UNIT = unit , FMT='(1x,A14)' ) obs(i)%valid_time%date_char(1:14)
-           WRITE ( UNIT = unit , FMT='(2x,2(F9.4,1x))' ) obs(i)%location%latitude, obs(i)%location%longitude
-           IF ( obs(i)%location%id(1:5) == "US un" ) THEN
-             WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' )    &
-                "-----                                   " , &
-                "Unknown Station                         "
-           ELSE
-             WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' ) obs(i)%location%id, obs(i)%location%name
+           IF ( .NOT. obs(i)%info%discard ) THEN
+             WRITE ( UNIT = unit , FMT='(1x,A14)' ) obs(i)%valid_time%date_char(1:14)
+             WRITE ( UNIT = unit , FMT='(2x,2(F9.4,1x))' ) obs(i)%location%latitude, obs(i)%location%longitude
+             IF ( obs(i)%location%id(1:5) == "US un" ) THEN
+               WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' )    &
+                  "-----                                   " , &
+                  "Unknown Station                         "
+             ELSE
+               WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' ) obs(i)%location%id, obs(i)%location%name
+             ENDIF
+             WRITE ( UNIT = unit , FMT='(2x,2(A16,2x),F8.0,2x,2(L4,2x),I5)' )       &
+               obs(i)%info%platform, obs(i)%info%source, obs(i)%info%elevation, &
+               is_sounding, obs(i)%info%bogus, true_num_obs
            ENDIF
-           WRITE ( UNIT = unit , FMT='(2x,2(A16,2x),F8.0,2x,2(L4,2x),I5)' )       &
-             obs(i)%info%platform, obs(i)%info%source, obs(i)%info%elevation, &
-             is_sounding, obs(i)%info%bogus, true_num_obs
-         ENDIF
          ELSE
-           WRITE ( UNIT = unit , FMT = rpt_format ) &
-              obs(i)%location , obs(i)%info , obs(i)%valid_time , obs(i)%ground
+           IF ( .NOT. obs(i)%info%discard ) THEN
+             WRITE ( UNIT = unit , FMT = rpt_format ) &
+                obs(i)%location , obs(i)%info , obs(i)%valid_time , obs(i)%ground
+           ENDIF
          ENDIF
     
          track_surface_data = 0
 
          next => obs(i)%surface
+
+       IF ( .not. OBS_data ) THEN
+         ilev = 0
+         if(allocated(press_nc)) deallocate(press_nc)
+         allocate(press_nc(true_num_obs))
+         if(allocated(press_qc_nc)) deallocate(press_qc_nc)
+         allocate(press_qc_nc(true_num_obs))
+         if(allocated(z_nc)) deallocate(z_nc)
+         allocate(z_nc(true_num_obs))
+         if(allocated(z_qc_nc)) deallocate(z_qc_nc)
+         allocate(z_qc_nc(true_num_obs))
+         if(allocated(temp_nc)) deallocate(temp_nc)
+         allocate(temp_nc(true_num_obs))
+         if(allocated(temp_qc_nc)) deallocate(temp_qc_nc)
+         allocate(temp_qc_nc(true_num_obs))
+         if(allocated(td_nc)) deallocate(td_nc)
+         allocate(td_nc(true_num_obs))
+         if(allocated(td_qc_nc)) deallocate(td_qc_nc)
+         allocate(td_qc_nc(true_num_obs))
+         if(allocated(spd_nc)) deallocate(spd_nc)
+         allocate(spd_nc(true_num_obs))
+         if(allocated(spd_qc_nc)) deallocate(spd_qc_nc)
+         allocate(spd_qc_nc(true_num_obs))
+         if(allocated(dir_nc)) deallocate(dir_nc)
+         allocate(dir_nc(true_num_obs))
+         if(allocated(dir_qc_nc)) deallocate(dir_qc_nc)
+         allocate(dir_qc_nc(true_num_obs))
+         if(allocated(u_nc)) deallocate(u_nc)
+         allocate(u_nc(true_num_obs))
+         if(allocated(u_qc_nc)) deallocate(u_qc_nc)
+         allocate(u_qc_nc(true_num_obs))
+         if(allocated(v_nc)) deallocate(v_nc)
+         allocate(v_nc(true_num_obs))
+         if(allocated(v_qc_nc)) deallocate(v_qc_nc)
+         allocate(v_qc_nc(true_num_obs))
+         if(allocated(rh_nc)) deallocate(rh_nc)
+         allocate(rh_nc(true_num_obs))
+         if(allocated(rh_qc_nc)) deallocate(rh_qc_nc)
+         allocate(rh_qc_nc(true_num_obs))
+
+         press_nc    = missing_r
+         press_qc_nc = missing
+         z_nc        = missing_r
+         z_qc_nc     = missing
+         temp_nc     = missing_r
+         temp_qc_nc  = missing
+         td_nc       = missing_r
+         td_qc_nc    = missing
+         spd_nc      = missing_r
+         spd_qc_nc   = missing
+         dir_nc      = missing_r
+         dir_qc_nc   = missing
+         u_nc        = missing_r
+         u_qc_nc     = missing
+         v_nc        = missing_r
+         v_qc_nc     = missing
+         rh_nc       = missing_r
+         rh_qc_nc    = missing
+       ENDIF  
+
          DO WHILE ( ASSOCIATED ( next ) )
             if ( obs(i)%info%discard ) exit 
             keep_data = any ( ( pres_hPA .eq. next%meas%pressure%data ) )
@@ -2773,26 +3073,152 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
                 ELSE
                   WRITE ( UNIT = unit , FMT = meas_format )  next%meas
                 ENDIF
+                IF ( file_name(1:10) == "qc_obs_use" ) THEN
+                  ilev = ilev + 1
+                  press_nc(ilev)    = next%meas%pressure%data
+                  press_qc_nc(ilev) = next%meas%pressure%qc
+                  z_nc(ilev)        = next%meas%height%data
+                  z_qc_nc(ilev)     = next%meas%height%qc
+                  temp_nc(ilev)     = next%meas%temperature%data
+                  temp_qc_nc(ilev)  = next%meas%temperature%qc
+                  td_nc(ilev)       = next%meas%dew_point%data
+                  td_qc_nc(ilev)    = next%meas%dew_point%qc
+                  spd_nc(ilev)      = next%meas%speed%data
+                  spd_qc_nc(ilev)   = next%meas%speed%qc
+                  dir_nc(ilev)      = next%meas%direction%data
+                  dir_qc_nc(ilev)   = next%meas%direction%qc
+                  u_nc(ilev)        = next%meas%u%data
+                  u_qc_nc(ilev)     = next%meas%u%qc
+                  v_nc(ilev)        = next%meas%v%data
+                  v_qc_nc(ilev)     = next%meas%v%qc
+                  rh_nc(ilev)       = next%meas%rh%data
+                  rh_qc_nc(ilev)    = next%meas%rh%qc
+                ENDIF
               ENDIF
             ELSE
-              IF ( OBS_data ) THEN
-                WRITE ( UNIT = unit , FMT='(1x,9(F11.3,1x,F11.3,1x))' )        &
-                  obs(i)%ground%slp%data,      real(obs(i)%ground%slp%qc),     &
-                  obs(i)%ground%ref_pres%data, real(obs(i)%ground%ref_pres%qc),&
-                  next%meas%height%data,       real(next%meas%height%qc),      &
-                  next%meas%temperature%data,  real(next%meas%temperature%qc), &
-                  next%meas%u%data,            real(next%meas%u%qc),           &
-                  next%meas%v%data,            real(next%meas%v%qc),           &
-                  next%meas%rh%data,           real(next%meas%rh%qc),          &
-                  next%meas%pressure%data,     real(next%meas%pressure%qc),    &
-                  obs(i)%ground%precip%data,   real(obs(i)%ground%precip%qc)
-              ELSE
-                WRITE ( UNIT = unit , FMT = meas_format )  next%meas
+              IF ( (keep_data .AND. remove_unverified) .OR. (.NOT. remove_unverified) ) THEN
+                IF ( OBS_data ) THEN
+                  WRITE ( UNIT = unit , FMT='(1x,9(F11.3,1x,F11.3,1x))' )        &
+                    obs(i)%ground%slp%data,      real(obs(i)%ground%slp%qc),     &
+                    obs(i)%ground%ref_pres%data, real(obs(i)%ground%ref_pres%qc),&
+                    next%meas%height%data,       real(next%meas%height%qc),      &
+                    next%meas%temperature%data,  real(next%meas%temperature%qc), &
+                    next%meas%u%data,            real(next%meas%u%qc),           &
+                    next%meas%v%data,            real(next%meas%v%qc),           &
+                    next%meas%rh%data,           real(next%meas%rh%qc),          &
+                    next%meas%pressure%data,     real(next%meas%pressure%qc),    &
+                    obs(i)%ground%precip%data,   real(obs(i)%ground%precip%qc)
+                ELSE
+                  WRITE ( UNIT = unit , FMT = meas_format )  next%meas
+                ENDIF
+                IF ( file_name(1:10) == "qc_obs_use" ) THEN
+                  ilev = ilev + 1
+                  press_nc(ilev)    = next%meas%pressure%data
+                  press_qc_nc(ilev) = next%meas%pressure%qc
+                  z_nc(ilev)        = next%meas%height%data
+                  z_qc_nc(ilev)     = next%meas%height%qc
+                  temp_nc(ilev)     = next%meas%temperature%data
+                  temp_qc_nc(ilev)  = next%meas%temperature%qc
+                  td_nc(ilev)       = next%meas%dew_point%data
+                  td_qc_nc(ilev)    = next%meas%dew_point%qc
+                  spd_nc(ilev)      = next%meas%speed%data
+                  spd_qc_nc(ilev)   = next%meas%speed%qc
+                  dir_nc(ilev)      = next%meas%direction%data
+                  dir_qc_nc(ilev)   = next%meas%direction%qc
+                  u_nc(ilev)        = next%meas%u%data
+                  u_qc_nc(ilev)     = next%meas%u%qc
+                  v_nc(ilev)        = next%meas%v%data
+                  v_qc_nc(ilev)     = next%meas%v%qc
+                  rh_nc(ilev)       = next%meas%rh%data
+                  rh_qc_nc(ilev)    = next%meas%rh%qc
+                ENDIF
               ENDIF
+            ENDIF
+
+            
+            IF ( file_name(1:10) == "qc_obs_raw" ) THEN
+              ilev = ilev + 1
+              press_nc(ilev)    = next%meas%pressure%data
+              press_qc_nc(ilev) = next%meas%pressure%qc
+              z_nc(ilev)        = next%meas%height%data
+              z_qc_nc(ilev)     = next%meas%height%qc
+              temp_nc(ilev)     = next%meas%temperature%data
+              temp_qc_nc(ilev)  = next%meas%temperature%qc
+              td_nc(ilev)       = next%meas%dew_point%data
+              td_qc_nc(ilev)    = next%meas%dew_point%qc
+              spd_nc(ilev)      = next%meas%speed%data
+              spd_qc_nc(ilev)   = next%meas%speed%qc
+              dir_nc(ilev)      = next%meas%direction%data
+              dir_qc_nc(ilev)   = next%meas%direction%qc
+              u_nc(ilev)        = next%meas%u%data
+              u_qc_nc(ilev)     = next%meas%u%qc
+              v_nc(ilev)        = next%meas%v%data
+              v_qc_nc(ilev)     = next%meas%v%qc
+              rh_nc(ilev)       = next%meas%rh%data
+              rh_qc_nc(ilev)    = next%meas%rh%qc
             ENDIF
             next => next%next
          END DO
-         IF ( .not. OBS_data ) THEN
+
+         IF ( .not. OBS_data .and. .not. obs(i)%info%discard ) THEN
+
+           iout_nc = iout_nc + 1
+           int_sounding = 0
+           IF (is_sounding) int_sounding = 1
+           int_bogus = 0
+           IF (obs(i)%info%bogus) int_bogus = 1
+           int_discard = 0
+           IF (obs(i)%info%discard) int_discard = 1
+
+           start = 1
+           count = 1
+           start(2) = iout_nc
+           count(1) = 14
+           CALL check (nf_put_vara_text(ncid, 1,start,count,obs(i)%valid_time%date_char(1:14)))
+           count(1) = 40
+           CALL check (nf_put_vara_text(ncid, 2,start,count,obs(i)%location%id))
+           CALL check (nf_put_vara_text(ncid, 3,start,count,obs(i)%location%name))
+           CALL check (nf_put_vara_text(ncid, 4,start,count,obs(i)%info%platform))
+           CALL check (nf_put_vara_text(ncid, 5,start,count,obs(i)%info%source))
+
+           start = 1
+           count = 1
+           start(1) = iout_nc
+           CALL check (nf_put_vara_real(ncid, 6,start,count,obs(i)%location%longitude))
+           CALL check (nf_put_vara_real(ncid, 7,start,count,obs(i)%location%latitude))
+           CALL check (nf_put_vara_real(ncid, 8,start,count,obs(i)%info%elevation))
+           CALL check (nf_put_vara_real(ncid, 9,start,count,obs(i)%ground%slp%data))
+           CALL check (nf_put_vara_int(ncid,10,start,count,obs(i)%ground%slp%qc))
+           CALL check (nf_put_vara_real(ncid,11,start,count,obs(i)%ground%ref_pres%data))
+           CALL check (nf_put_vara_int(ncid,12,start,count,obs(i)%ground%ref_pres%qc))
+           CALL check (nf_put_vara_int(ncid,13,start,count,true_num_obs))
+           CALL check (nf_put_vara_int(ncid, 14,start,count,int_sounding))
+           CALL check (nf_put_vara_int(ncid, 15,start,count,int_bogus))
+           CALL check (nf_put_vara_int(ncid, 16,start,count,int_discard))
+
+           start = 1
+           count = 1
+           start(2) = iout_nc
+           count(1) = true_num_obs
+           CALL check (nf_put_vara_real(ncid,17,start,count,press_nc))
+           CALL check (nf_put_vara_int(ncid,18,start,count,press_qc_nc))
+           CALL check (nf_put_vara_real(ncid,19,start,count,z_nc))
+           CALL check (nf_put_vara_int(ncid,20,start,count,z_qc_nc))
+           CALL check (nf_put_vara_real(ncid,21,start,count,temp_nc))
+           CALL check (nf_put_vara_int(ncid,22,start,count,temp_qc_nc))
+           CALL check (nf_put_vara_real(ncid,23,start,count,td_nc))
+           CALL check (nf_put_vara_int(ncid,24,start,count,td_qc_nc))
+           CALL check (nf_put_vara_real(ncid,25,start,count,spd_nc))
+           CALL check (nf_put_vara_int(ncid,26,start,count,spd_qc_nc))
+           CALL check (nf_put_vara_real(ncid,27,start,count,dir_nc))
+           CALL check (nf_put_vara_int(ncid,28,start,count,dir_qc_nc))
+           CALL check (nf_put_vara_real(ncid,29,start,count,u_nc))
+           CALL check (nf_put_vara_int(ncid,30,start,count,u_qc_nc))
+           CALL check (nf_put_vara_real(ncid,31,start,count,v_nc))
+           CALL check (nf_put_vara_int(ncid,32,start,count,v_qc_nc))
+           CALL check (nf_put_vara_real(ncid,33,start,count,rh_nc))
+           CALL check (nf_put_vara_int(ncid,34,start,count,rh_qc_nc))
+
            WRITE ( UNIT = unit , FMT = meas_format ) end_meas
            WRITE ( UNIT = unit , FMT = end_format ) obs(i)%info%num_vld_fld, &
               obs(i)%info%num_error, obs(i)%info%num_warning
@@ -2800,7 +3226,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
          IF ( .NOT. forinput ) &
             write(unit,*) 'End of measurements for observation ' , i
 
-      END IF 
+         END IF 
 
    END DO
 
@@ -2813,6 +3239,9 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
    !  up the file so everything is handled cleanly.
 
    CLOSE ( unit )
+   IF ( .not. OBS_data ) THEN
+     CALL check(nf_close(ncid))
+   ENDIF
 
 END SUBROUTINE output_obs
 
@@ -3659,5 +4088,15 @@ END SUBROUTINE temp_to_pres
 
 !
 ! ----------------------------------------------------------------------------
+  subroutine check(status)
+
+   INCLUDE 'netcdf.inc'
+   integer, intent ( in) :: status
+
+    if(status /= nf_noerr) then
+      print *, trim(nf_strerror(status))
+      stop "Stopped"
+    end if
+  end subroutine check
 
 END MODULE observation

@@ -106,6 +106,9 @@ grid_id )
                                                          mqd_count , mqd_abs_min , &
                                                          test_count
 
+
+    skip_to_cressman = .TRUE.
+
     num_mqd_uu = 0
     num_mqd_vv= 0
     num_mqd_tt = 0
