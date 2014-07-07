@@ -1,16 +1,18 @@
 #!/bin/csh
 
-## This is only for use on NCAR super computers. 
-## This fuction will get all data for the periods needed and create a single file "rda_obs" which 
-## can then be sorted into time periods by the program get_rda_data.f
+### This is ONLY for the NCAR super computer. 
+### This script will get all the data needed for OBSGRID and place it in one 
+### big file called 'rda_obs'. After this step, run the get_rda_data.f Fortran 
+### code to re-order the data into 3hourly input files
+ 
 
 set start_YY = 2010
 set start_MM = 3
-set start_DD = 5
+set start_DD = 6
 set start_HH = 0
 set end_YY = 2010
 set end_MM = 3
-set end_DD = 8
+set end_DD = 7
 set end_HH = 0
 
 set YY=`printf %04d $end_YY`

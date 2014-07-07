@@ -2,8 +2,16 @@
 !! Must compile manually
 !! ifort -FR get_rda_data.f -o get_rda_data.exe
 
-!! First run the script get_rda_data.csh to generate a single rda_obs file 
-!! containing all the data that needs to be sorted into input file
+!! This program reads data in little_r format and write data in little_r format,
+!! BUT with a different interval in the data files.
+!! This be because the files on the archive system is in 6 hourly intervals, 
+!! which is not typically an interval time we use.
+
+!! This program will read the OBSGRID namelist.oa file to find the start and end
+!! time needed for your run.
+!! Output is currently hardcoded to be in 3hourly intervals. 
+
+
 
 program get_rda_data
 
