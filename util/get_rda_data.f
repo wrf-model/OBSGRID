@@ -1,4 +1,3 @@
-!! Only work for NCAR super computer
 !! Must compile manually
 !! ifort -FR get_rda_data.f -o get_rda_data.exe
 
