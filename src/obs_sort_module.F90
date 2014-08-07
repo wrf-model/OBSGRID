@@ -2886,6 +2886,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
 
          IF ( OBS_data ) THEN
            IF ( .NOT. obs(i)%info%discard ) THEN
+           IF ( is_sounding ) THEN
              WRITE ( UNIT = unit , FMT='(1x,A14)' ) obs(i)%valid_time%date_char(1:14)
              WRITE ( UNIT = unit , FMT='(2x,2(F9.4,1x))' ) obs(i)%location%latitude, obs(i)%location%longitude
              IF ( obs(i)%location%id(1:5) == "US un" ) THEN
@@ -2898,6 +2899,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
              WRITE ( UNIT = unit , FMT='(2x,2(A16,2x),F8.0,2x,2(L4,2x),I5)' )       &
                obs(i)%info%platform, obs(i)%info%source, obs(i)%info%elevation, &
                is_sounding, obs(i)%info%bogus, true_num_obs
+           ENDIF
            ENDIF
          ELSE
            IF ( .NOT. obs(i)%info%discard ) THEN
@@ -3098,6 +3100,18 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
             ELSE
               IF ( (keep_data .AND. remove_unverified) .OR. (.NOT. remove_unverified) ) THEN
                 IF ( OBS_data ) THEN
+                  WRITE ( UNIT = unit , FMT='(1x,A14)' ) obs(i)%valid_time%date_char(1:14)
+                  WRITE ( UNIT = unit , FMT='(2x,2(F9.4,1x))' ) obs(i)%location%latitude, obs(i)%location%longitude
+                  IF ( obs(i)%location%id(1:5) == "US un" ) THEN
+                    WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' )    &
+                       "-----                                   " , &
+                       "Unknown Station                         "
+                  ELSE
+                    WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' ) obs(i)%location%id, obs(i)%location%name
+                  ENDIF
+                  WRITE ( UNIT = unit , FMT='(2x,2(A16,2x),F8.0,2x,2(L4,2x),I5)' )       &
+                    obs(i)%info%platform, obs(i)%info%source, obs(i)%info%elevation, &
+                    is_sounding, obs(i)%info%bogus, true_num_obs
                   WRITE ( UNIT = unit , FMT='(1x,9(F11.3,1x,F11.3,1x))' )        &
                     obs(i)%ground%slp%data,      real(obs(i)%ground%slp%qc),     &
                     obs(i)%ground%ref_pres%data, real(obs(i)%ground%ref_pres%qc),&
