@@ -11,7 +11,10 @@ t , u , v , uA , vA , uC , vC , h , rh , pres , terrain , &
 latitude_x , longitude_x , latitude_d , longitude_d , &
 slp_x , slp_C , sst , tobbox , odis , &
 iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis , &
-oa_type , oa_3D_type , oa_3D_option , rad_influence )
+!BPR BEGIN
+!oa_type , oa_3D_type , oa_3D_option , rad_influence )
+oa_type , oa_3D_type , oa_3D_option , rad_influence , oa_psfc )
+!BPR END
 
 !  This routine assembles the correct data fields and outputs them with the
 !  appropriate small header.
@@ -41,6 +44,9 @@ oa_type , oa_3D_type , oa_3D_option , rad_influence )
    CHARACTER *(*)                                 :: oa_type , oa_3D_type
    INTEGER , DIMENSION(10)                        :: rad_influence
    INTEGER                                        :: oa_3D_option
+   !BPR BEGIN
+   LOGICAL                                        :: oa_psfc
+   !BPR END
 
    INTERFACE 
       INCLUDE 'error.int'
@@ -349,13 +355,24 @@ oa_type , oa_3D_type , oa_3D_option , rad_influence )
    
    ALLOCATE ( d3_data1 (jns_alloc, iew_alloc, kbu_alloc) )
    d3_data1 = pres
-   DO imet = 1,iew_alloc
-   DO jmet = 1,jns_alloc
+   !BPR BEGIN
+   !The surface level of the pressure field can be adjusted based on changes
+   !made to the sea level pressure by the objective analysis.
+   !However, only do this if you did not create a surface pressure objective
+   !analysis.
+   IF(.NOT.oa_psfc) THEN
+   !BPR END
+    DO imet = 1,iew_alloc
+    DO jmet = 1,jns_alloc
       d3_data1(jmet,imet,1) =    pres(jmet,imet,1) + &
                                ( pres(jmet,imet,1)/slp_C(jmet,imet) ) * &
                                ( slp_x(jmet,imet)-slp_C(jmet,imet) )   
-   ENDDO
-   ENDDO
+    ENDDO
+    ENDDO
+   !BPR BEGIN
+   ENDIF
+   !BPR END
+
    ALLOCATE ( met_em_3d (iewd-1, jnsd-1, kbu_alloc) )
    ALLOCATE ( met_em_2d (iewd-1, jnsd-1 ) )
    CALL unexpand3 ( d3_data1, iew_alloc, jns_alloc, kbu_alloc, dum3d, iewd, jnsd ) 
@@ -462,6 +479,10 @@ real,dimension(iewd,jnsd)::ddd
 integer :: i , j
 #endif
 
+!BPR BEGIN
+integer :: varid
+!BPR END
+
    !  We need to keep track of where we are sticking the data for the FDDA option.
 
    IF ( initial_time ) THEN
@@ -566,7 +587,19 @@ integer :: i , j
       DO i = 1, 23
              IF ( i == 1 ) THEN
                 rcode = nf_inq_var(oa_met, i, cval, itype, idm, ishape, natt)
-                rcode = nf_def_var(sfc_ncid, cval, itype, idm, ishape, i)
+                !BPR BEGIN
+                if(rcode.ne.0) then
+                 PRINT *, 'ERROR: Attempt to read variable from metoa file failed: ',NF_STRERROR(rcode)
+                end if
+                !The last argument of nf_def_var is an OUTPUT of nf_def_var
+                !If this variable is our loop variable than this call can change the
+                !value of our loop value
+                !rcode = nf_def_var(sfc_ncid, cval, itype, idm, ishape, i)
+                rcode = nf_def_var(sfc_ncid, cval, itype, idm, ishape, varid)
+                if(rcode.ne.0) then
+                 PRINT *, 'ERROR: Attempt to define a variable in the surface analysis nudging file failed: ',NF_STRERROR(rcode)
+                end if
+                !BPR END
              ELSE
                 ishape(1) = iwe
                 ishape(2) = isn
@@ -669,14 +702,29 @@ integer :: i , j
                      units = 'kg m-2'      
                      description = 'WATER EQUIVALENT SNOW DEPTH'    
                 ENDIF
-                rcode = nf_def_var(sfc_ncid, cval, NF_FLOAT, 3, ishape, i)
-                   rcode = nf_put_att_int(sfc_ncid, i, 'FieldType', NF_INT, 1, 104 )
-                   rcode = nf_put_att_text(sfc_ncid, i, 'MemoryOrder', 3, 'XY ' )
+                !BPR BEGIN
+                !The final argument to nf_dev_var is an OUTPUT and gives the variable id of the
+                !variable you are inquiring about
+                !If this is your loop variable you can redefine your loop variable and get stuck
+                !in an infinite loop!
+                !Therefore, instead of using the loop variable "i", we now use "varid"
+                !rcode = nf_def_var(sfc_ncid, cval, NF_FLOAT, 3, ishape, i)
+                !   rcode = nf_put_att_int(sfc_ncid, i, 'FieldType', NF_INT, 1, 104 )
+                !   rcode = nf_put_att_text(sfc_ncid, i, 'MemoryOrder', 3, 'XY ' )
+                !      ilen = len_trim(units)
+                !   rcode = nf_put_att_text(sfc_ncid, i, 'units', ilen, trim(units) )
+                !      ilen = len_trim(description)
+                !   rcode = nf_put_att_text(sfc_ncid, i, 'description', ilen, trim(description) )
+                !   rcode = nf_put_att_text(sfc_ncid, i, 'stagger', 1, stagger )
+                rcode = nf_def_var(sfc_ncid, cval, NF_FLOAT, 3, ishape, varid)
+                   rcode = nf_put_att_int(sfc_ncid, varid, 'FieldType', NF_INT, 1, 104 )
+                   rcode = nf_put_att_text(sfc_ncid, varid, 'MemoryOrder', 3, 'XY ' )
                       ilen = len_trim(units)
-                   rcode = nf_put_att_text(sfc_ncid, i, 'units', ilen, trim(units) )
+                   rcode = nf_put_att_text(sfc_ncid, varid, 'units', ilen, trim(units) )
                       ilen = len_trim(description)
-                   rcode = nf_put_att_text(sfc_ncid, i, 'description', ilen, trim(description) )
-                   rcode = nf_put_att_text(sfc_ncid, i, 'stagger', 1, stagger )
+                   rcode = nf_put_att_text(sfc_ncid, varid, 'description', ilen, trim(description) )
+                   rcode = nf_put_att_text(sfc_ncid, varid, 'stagger', 1, stagger )
+                !BPR END
              ENDIF
       ENDDO
       rcode = nf_enddef(sfc_ncid)

@@ -7,6 +7,9 @@ CONTAINS
 !------------------------------------------------------------------------------
 
 SUBROUTINE error_max ( station_id , obs , ship_report , xob , yob ,  &
+!BPR BEGIN
+station_elevation , &
+!BPR END
 index , qc_flag , numobs , &
 gridded,  iew , jns ,  &
 name , max_difference , pressure , local_time , print_error_max )
@@ -33,6 +36,9 @@ name , max_difference , pressure , local_time , print_error_max )
    INTEGER                                        :: numobs
    CHARACTER ( LEN =   8 ) , DIMENSION ( : )      :: station_id
    REAL                    , DIMENSION ( : )      :: obs, xob, yob
+   !BPR BEGIN
+   REAL                    , DIMENSION ( : )      :: station_elevation
+   !BPR END
    LOGICAL                 , DIMENSION ( : )      :: ship_report
    INTEGER                 , DIMENSION ( : )      :: index
    INTEGER                 , DIMENSION ( : )      :: qc_flag
@@ -55,11 +61,17 @@ name , max_difference , pressure , local_time , print_error_max )
                                                  factored_difference , &
                                                  aob
    REAL                                       :: plevel
-   CHARACTER ( LEN = 100 )                    :: message
+   !BPR BEGIN
+   !CHARACTER ( LEN = 100 )                    :: message
+   CHARACTER ( LEN = 125 )                    :: message
+   !BPR END
    REAL                                       :: scale
 
    CHARACTER ( LEN =   8 ) , DIMENSION ( numobs ) :: station_id_small
    REAL                    , DIMENSION ( numobs ) :: obs_small , xob_small , yob_small
+   !BPR BEGIN
+   REAL                    , DIMENSION ( numobs ) :: station_elevation_small
+   !BPR END
    LOGICAL                 , DIMENSION ( numobs ) :: ship_report_small
    INTEGER                 , DIMENSION ( numobs ) :: index_small
    INTEGER                 , DIMENSION ( numobs ) :: qc_flag_small
@@ -79,6 +91,9 @@ name , max_difference , pressure , local_time , print_error_max )
    obs_small(:numobs)         = obs(:numobs)
    xob_small(:numobs)         = xob(:numobs)
    yob_small(:numobs)         = yob(:numobs)
+   !BPR BEGIN
+   station_elevation_small(:numobs) = station_elevation(:numobs)
+   !BPR END
    ship_report_small(:numobs) = ship_report(:numobs)
    index_small(:numobs)       = index(:numobs)
    qc_flag_small(:numobs)     = qc_flag(:numobs)
@@ -122,6 +137,36 @@ name , max_difference , pressure , local_time , print_error_max )
 
 !!!!!!!  WHERE ( shipreport_small ) factor = 0.75
 
+!BPR BEGIN
+      CASE ('PMSLPSFC') error_factor_by_field
+        !  Loop through each of the station locations (numobs).  
+        station_loop_0a : DO num = 1, numobs
+         !Increase the maximum allowed error in sea level pressure derived from
+         !surface pressure as station elevation increases.  Since assumptions must
+         !be made in this calculation above regarding the atmosphere below ground,
+         !the thicker the layer through which these assumptions are made the
+         !larger the potential error caused by the assumptions
+         factor(num)=1.0+(ABS(station_elevation(num))/2000.0)
+        END DO station_loop_0a
+
+      CASE ( 'DEWPOINT' ) error_factor_by_field
+        !  Loop through each of the station locations (numobs).  
+        !  Make the tolerance larger for lower dewpoints since the same dewpoint
+        !  difference represents less moisture difference at low dewpoints
+        station_loop_0b : DO num = 1, numobs
+         IF((obs_small(num).lt.255.0).and.(obs_small(num).ge.235.0)) THEN
+          factor(num)=1.25
+         ELSEIF((obs_small(num).lt.235.0).and.(obs_small(num).ge.215.0)) THEN
+          factor(num)=1.50
+         ELSEIF(obs_small(num).lt.215.0) THEN
+          factor(num)=1.75
+         ELSE
+          factor(num)=1.00
+         END IF
+         
+        END DO station_loop_0b
+
+!BPR END
       CASE ( 'RH      ' , 'PMSL    ' ) error_factor_by_field
 
    END SELECT error_factor_by_field
@@ -182,7 +227,10 @@ name , max_difference , pressure , local_time , print_error_max )
 
          factored_difference  = max ( factor * max_difference , 0.15 * aob )
 
-      CASE ( 'TT      ' , 'RH      ' , 'PMSL    ' ) 
+!BPR BEGIN
+!     CASE ( 'TT      ' , 'RH      ' , 'PMSL    ' ) 
+      CASE ( 'TT      ' , 'RH      ' , 'PMSL    ', 'PMSLPSFC', 'DEWPOINT' ) 
+!BPR END
 
          !  The maximum difference is scaled by the factor for the 
          !  temperature, sea level pressure and the relative
@@ -205,7 +253,10 @@ name , max_difference , pressure , local_time , print_error_max )
 
    IF ( print_error_max ) THEN
       station_loop_2 : DO num = 1 , numobs
-         IF ( name(1:8) .EQ. 'PMSL    ' ) THEN
+         !BPR BEGIN
+         !IF ( name(1:8) .EQ. 'PMSL    ' ) THEN
+         IF ( ( name(1:8) .EQ. 'PMSL    ' ) .OR. ( name(1:8) .EQ. 'PMSLPSFC' ) )  THEN
+         !BPR END 
             scale = 100.
          ELSE
             scale = 1.
@@ -216,11 +267,21 @@ name , max_difference , pressure , local_time , print_error_max )
                   &  ",NAME="  ,a8, &
                   &  ",ERRMX="     ,f5.1,&
                   &  ",LOC=(" ,f6.1,",",f6.1,")",&
+                  !BPR BEGIN
+                  &  ",PLEVEL=" ,f6.1,&
+                  !BPR END
                   &  ",OBS="       ,f6.0,&
                   &  ",1ST GUESS=" ,f6.0,&
                   &  ",DIFF="      ,f5.0)' ) &
                  station_id(num),name,factored_difference(num)/scale, &
-                 xob(num),yob(num),obs(num)/scale,aob(num)/scale,err(num)/scale
+                 !BPR BEGIN
+                 !Also add pressure level being examined (plevel) -- note that this is not
+                 !necessarily the pressure of the ob, but it is the pressure level for which we
+                 !were doing QC when we found this ob so it must be at least close to this
+                 !pressure
+                 !xob(num),yob(num),obs(num)/scale,aob(num)/scale,err(num)/scale
+                 xob(num),yob(num),plevel,obs(num)/scale,aob(num)/scale,err(num)/scale
+                 !BPR END
             error_number = 00361001
             error_message(1:31) = 'error_max                      '
             error_message(32:)  = message

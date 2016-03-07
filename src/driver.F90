@@ -43,6 +43,16 @@ mqd_count , mqd_abs_min )
    TYPE (report)                                  :: obs_sort_tmp
    CHARACTER ( LEN = 132 )                        :: dummy_filename, tmp_filename
 
+   ! BPR BEGIN
+   TYPE (report) , ALLOCATABLE , DIMENSION ( : )  :: obs_before_sort
+   INTEGER       , PARAMETER                      :: INT_14DIGITS = selected_int_kind ( 14 )
+   INTEGER (kind=INT_14DIGITS) , ALLOCATABLE , DIMENSION ( : )  :: date_int
+   INTEGER       , ALLOCATABLE , DIMENSION ( : )  :: obs_order_index
+   INTEGER                                        :: obs_order_sort_tmp
+   INTEGER (kind=INT_14DIGITS)                    :: date_int_sort_tmp
+   INTEGER                                        :: sort_type
+   ! BPR END
+
    !  The NAMELIST variables, with a small amount of error checks
    !  from the main program.
 
@@ -85,6 +95,9 @@ mqd_count , mqd_abs_min )
 
    INTEGER :: obs_file_count
    INTEGER :: mqd_count , mqd_abs_min
+   !BPR BEGIN
+   LOGICAL :: use_grid_relative_winds
+   !BPR END
 
    !  If we are doing sfc FDDA, the first time in we do the traditional analysis AND the surface
    !  FDDA fields for that time (fdda_loop_max=2).  All of the subsequent times, we process the 
@@ -225,6 +238,7 @@ mqd_count , mqd_abs_min )
          iew_alloc , jns_alloc , kbu_alloc , pressure , & 
          nml%record_5%print_analysis , & 
          current_date_8 , current_time_6 , date_char , icount )
+
 #ifdef PRESSURE
 pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
 #endif
@@ -250,6 +264,25 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             END IF
             dxd = dxd * 0.001
          END IF
+
+         ! BPR BEGIN
+         ! If the user chose to implement pressure tolerances for single-level
+         ! above-surface obs AND the tolerance is really a tolerance (i.e. > 1
+         ! Pa) then print out the effective pressure coverage given the
+         ! tolerances and the pressures on which the first guess field exists
+         ! Only do this once per Obsgrid run.  This assumes that the vertical
+         ! levels in the first-guess field are the same for each time in a given
+         ! Obsgrid run.
+         IF ( icount .EQ. 1 ) THEN
+          IF( nml%record_4%use_p_tolerance_one_lev .AND. &
+              ( ( nml%record_4%max_p_tolerance_one_lev_qc .GT. 1 ) .OR. &
+                ( nml%record_9%max_p_tolerance_one_lev_oa .GT. 1 ) ) ) THEN
+           CALL one_lev_coverage_check ( kbu_alloc , pressure , &
+            nml%record_4%max_p_tolerance_one_lev_qc , nml%record_9%max_p_tolerance_one_lev_oa )
+          END IF
+         END IF
+
+         ! BPR END
 
          !  All of the following routines assume this pressure to be in hPa.
 
@@ -347,6 +380,14 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
       
          ALLOCATE ( obs   ( nml%record_3%max_number_of_obs ) )
          ALLOCATE ( index ( nml%record_3%max_number_of_obs ) )
+
+         !BPR BEGIN
+         !Mark all time/date stamps with an obviously impossible time
+         !If this is done, array entries that are not filled will have
+         !nonsense that is not necessarily an integer which can cause problems
+         !when the array is read into an integer array
+         obs(:)%valid_time%date_char = '-9999999999999'
+         !BPR END
        
          !  The observation data can now be ingested, sorted, duplicates
          !  removed.  On return, we have all of the sorted observations 
@@ -361,7 +402,10 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             CALL proc_obs_sort ( dummy_filename  , unit+10 , &
             obs , number_of_obs , nml%record_3%max_number_of_obs , nml%record_3%fatal_if_exceed_max_obs , total_dups , &
             index , nml%record_5%print_found_obs , nml%record_5%print_obs_files , &
-            kbu_alloc , pressure , & 
+            !BPR BEGIN
+            !kbu_alloc , pressure , & 
+            kbu_alloc , pressure , slp_x , t , nml%record_4%use_p_tolerance_one_lev , & 
+            !BPR END
             nml%record_4%max_p_extend_t           , nml%record_4%max_p_extend_w , &
             h , iew_alloc , jns_alloc , map_projection , current_date_8 , current_time_6 , fdda_loop )  
          ELSE
@@ -369,7 +413,10 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             CALL proc_obs_sort ( dummy_filename  , unit+10 , &
             obs , number_of_obs , nml%record_3%max_number_of_obs , nml%record_3%fatal_if_exceed_max_obs , total_dups , &
             index , nml%record_5%print_found_obs , nml%record_5%print_obs_files , &
-            kbu_alloc , pressure , & 
+            !BPR BEGIN
+            !kbu_alloc , pressure , & 
+            kbu_alloc , pressure , slp_x , t , nml%record_4%use_p_tolerance_one_lev , & 
+            !BPR END
             nml%record_4%max_p_extend_t           , nml%record_4%max_p_extend_w , &
             h , iew_alloc , jns_alloc , map_projection , fdda_date_8 , fdda_time_6 , fdda_loop )  
          END IF
@@ -382,15 +429,32 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             total_dups , map_projection , &
             nml%record_4%qc_test_error_max        , nml%record_4%qc_test_buddy          , &
             nml%record_4%qc_test_vert_consistency , nml%record_4%qc_test_convective_adj , &
+            !BPR BEGIN
+            nml%record_4%qc_psfc                                                        , &      
+            !BPR END
             nml%record_4%max_error_t              , nml%record_4%max_error_uv           , &
             nml%record_4%max_error_z              , nml%record_4%max_error_rh           , &
+            !BPR BEGIN
+            nml%record_4%max_error_dewpoint       ,                                       &
+            !BPR END
             nml%record_4%max_error_p              , nml%record_5%print_error_max        , &
             nml%record_4%max_buddy_t              , nml%record_4%max_buddy_uv           , &
             nml%record_4%max_buddy_z              , nml%record_4%max_buddy_rh           , &
-            nml%record_4%max_buddy_p              , nml%record_5%print_buddy            , &
+            !BPR BEGIN
+            nml%record_4%max_buddy_dewpoint       ,                                       &
+            !BPR END
+            !BPR BEGIN
+            !nml%record_4%max_buddy_p              , nml%record_5%print_buddy            , &
+            nml%record_4%max_buddy_p              ,                                       &
+            nml%record_4%use_p_tolerance_one_lev  , nml%record_4%max_p_tolerance_one_lev_qc , &
+            nml%record_5%print_buddy              ,                                       &
+            !BPR END
             nml%record_5%print_found_obs                                                , &
             nml%record_5%print_qc_vert            , nml%record_5%print_qc_dry           , &
-            pressure , current_date_8 , current_time_6 , dxd , 1. , &
+            !BPR BEGIN
+            !pressure , current_date_8 , current_time_6 , dxd , 1. , &
+            pressure , pres , current_date_8 , current_time_6 , dxd , 1. , &
+            !BPR END
             obs , index , nml%record_3%max_number_of_obs , &
             t , u , v , h , rh , slp_x , sst , tobbox , odis )
          ELSE
@@ -398,15 +462,32 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             total_dups , map_projection , &
             nml%record_4%qc_test_error_max        , nml%record_4%qc_test_buddy          , &
             nml%record_4%qc_test_vert_consistency , nml%record_4%qc_test_convective_adj , &
+            !BPR BEGIN
+            nml%record_4%qc_psfc                                                        , &      
+            !BPR END
             nml%record_4%max_error_t              , nml%record_4%max_error_uv           , &
             nml%record_4%max_error_z              , nml%record_4%max_error_rh           , &
+            !BPR BEGIN
+            nml%record_4%max_error_dewpoint       ,                                       &
+            !BPR END
             nml%record_4%max_error_p              , nml%record_5%print_error_max        , &
             nml%record_4%max_buddy_t              , nml%record_4%max_buddy_uv           , &
             nml%record_4%max_buddy_z              , nml%record_4%max_buddy_rh           , &
-            nml%record_4%max_buddy_p              , nml%record_5%print_buddy            , &
+            !BPR BEGIN
+            nml%record_4%max_buddy_dewpoint       ,                                       &
+            !BPR END
+            !BPR BEGIN
+            !nml%record_4%max_buddy_p              , nml%record_5%print_buddy            , &
+            nml%record_4%max_buddy_p              ,                                       &
+            nml%record_4%use_p_tolerance_one_lev  , nml%record_4%max_p_tolerance_one_lev_qc , &
+            nml%record_5%print_buddy              ,                                       &
+            !BPR END
             nml%record_5%print_found_obs                                                , &
             nml%record_5%print_qc_vert            , nml%record_5%print_qc_dry           , &
-            pressure , fdda_date_8 , fdda_time_6 , dxd , 1. , &
+            !BPR BEGIN
+            !pressure , fdda_date_8 , fdda_time_6 , dxd , 1. , &
+            pressure , pres , fdda_date_8 , fdda_time_6 , dxd , 1. , &
+            !BPR END
             obs , index , nml%record_3%max_number_of_obs , &
             t , u , v , h , rh , slp_x , sst , tobbox , odis )
          END IF
@@ -427,22 +508,34 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             !  April 2009 - name changed from qc_out to qc_obs_raw
             !  We also add domain info here
             WRITE (tmp_filename,'("qc_obs_raw.d",i2.2,".")') nml%record_2%grid_id
-            CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,   &
-                              1 , .TRUE., .TRUE., 200000, .FALSE., kbu_alloc, pressure, &
-                              filename )
+            !BPR BEGIN
+            use_grid_relative_winds = .TRUE.
+            CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  &
+                              1 , .TRUE., .TRUE., 200000, .FALSE., kbu_alloc, pressure , &
+                              filename, use_grid_relative_winds )
+            !                 filename )
+            !BPR END
          END IF
       
          !  With the observations properly QC'ed and stored, and the first guess
          !  background field already ingested, we can proceed with the objective
          !  analysis.
-      
          IF ( ( .NOT. nml%record_7%f4d ) .OR. & 
               ( (     nml%record_7%f4d ) .AND. ( fdda_loop .EQ. 1 ) ) ) THEN 
-            CALL proc_oa ( t , u , v , rh , slp_x , pressure , &
+            !BPR BEGIN
+            !Note that pressure is 2D pressure and just has 1001 for surface
+            !pressure whereas pres is 3D pressure and so has the full surface
+            !pressure field
+            !CALL proc_oa ( t , u , v , rh , slp_x , pressure , &
+            CALL proc_oa ( t , u , v , rh , slp_x , pressure , pres , &
+            !BPR END
             iew_alloc , jns_alloc , kbu_alloc , &
             current_date_8 , current_time_6 , fdda_loop , mqd_count , mqd_abs_min , &
             nml%record_3%max_number_of_obs , number_of_obs , total_dups , &
             map_projection , obs , dxd , lat_center , &
+            !BPR BEGIN
+            nml%record_4%use_p_tolerance_one_lev                                          , &
+            !BPR END
             nml%record_5%print_oa                 , nml%record_5%print_found_obs          , &
             nml%record_5%print_obs_files                                                  , &
             nml%record_7%use_first_guess                                                  , &
@@ -454,7 +547,12 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             nml%record_9%mqd_minimum_num_obs      , nml%record_9%mqd_maximum_num_obs      , &
             nml%record_9%oa_max_switch            , nml%record_9%radius_influence         , &
             nml%record_9%oa_min_switch            , nml%record_9%oa_3D_option             , &
-            nml%record_2%grid_id )
+            !BPR BEGIN
+            !nml%record_2%grid_id )
+            nml%record_2%grid_id , terrain, h, nml%record_9%scale_cressman_rh_decreases   , &
+            nml%record_9%radius_influence_sfc_mult, nml%record_9%oa_psfc                  , &
+            nml%record_9%max_p_tolerance_one_lev_oa )
+            !BPR END
 
             !  Store the final analysis back into the all_3d and all_2d arrays if we are doing
             !  SFC FDDA.  Why?  So that when we do the LAGTEM or temporal interpolation, we are
@@ -464,11 +562,20 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
                CALL store_fa (  t , u , v , rh , slp_x , iew_alloc , jns_alloc , kbu_alloc , num3d , num2d , icount )
             END IF
          ELSE
-            CALL proc_oa ( t , u , v , rh , slp_x , pressure , &
+            !BPR BEGIN
+            !Note that pressure is 2D pressure and just has 1001 for surface
+            !pressure whereas pres is 3D pressure and so has the full surface
+            !pressure field
+            !CALL proc_oa ( t , u , v , rh , slp_x , pressure , &
+            CALL proc_oa ( t , u , v , rh , slp_x , pressure , pres , &
+            !BPR END
             iew_alloc , jns_alloc , kbu_alloc , &
             fdda_date_8 , fdda_time_6 , fdda_loop , mqd_count , mqd_abs_min , &
             nml%record_3%max_number_of_obs , number_of_obs , total_dups , &
             map_projection , obs , dxd , lat_center , &
+            !BPR BEGIN
+            nml%record_4%use_p_tolerance_one_lev                                          , &
+            !BPR END
             nml%record_5%print_oa                 , nml%record_5%print_found_obs          , &
             nml%record_5%print_obs_files                                                  , &
             nml%record_7%use_first_guess                                                  , &
@@ -480,7 +587,12 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
             nml%record_9%mqd_minimum_num_obs      , nml%record_9%mqd_maximum_num_obs      , &
             nml%record_9%oa_max_switch            , nml%record_9%radius_influence         , &
             nml%record_9%oa_min_switch            , nml%record_9%oa_3D_option             , &
-            nml%record_2%grid_id )
+            !BPR BEGIN
+            !nml%record_2%grid_id )
+            nml%record_2%grid_id , terrain, h, nml%record_9%scale_cressman_rh_decreases   , &
+            nml%record_9%radius_influence_sfc_mult, nml%record_9%oa_psfc                  , &
+            nml%record_9%max_p_tolerance_one_lev_oa )
+            !BPR END
          END IF
 
       END IF
@@ -497,14 +609,33 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          CALL make_date ( fdda_date_8 , fdda_time_6 , dt_char )
       END IF
       IF ( nml%record_5%print_obs_files ) THEN
+         !BPR BEGIN
+
+         !Since grid-relative speed/direction was just calculated it is now
+         !trustworthy, unlike in the standard version of OBSGRID
+         !BPR END
+
          WRITE (tmp_filename,'("qc_obs_used.d",i2.2,".")') nml%record_2%grid_id
+         !BPR BEGIN
+         use_grid_relative_winds = .TRUE.
          CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  1 , &
                            .TRUE., .TRUE., nml%record_2%remove_data_above_qc_flag,      &
-                           nml%record_2%remove_unverified_data, kbu_alloc, pressure,    &
-                           filename )  
+                           nml%record_2%remove_unverified_data, kbu_alloc, pressure , &
+                           filename, use_grid_relative_winds )
+         !                 filename )
+         !Write LITTLE_R file that is identical to qc_obs_used but with winds
+         !earth-relative.  This is needed tor ingestion by the MET software.
+         WRITE (tmp_filename,'("qc_obs_used_earth_relative.d",i2.2,".")') nml%record_2%grid_id
+         use_grid_relative_winds = .FALSE.
+         CALL output_obs ( obs , 2 , trim(tmp_filename)//dt_char , number_of_obs ,  1 , &
+                           .TRUE., .TRUE., nml%record_2%remove_data_above_qc_flag,      &
+                           nml%record_2%remove_unverified_data, kbu_alloc, pressure , &
+                           filename, use_grid_relative_winds )
+         !BPR END
       END IF
 
  101  CONTINUE   ! come here if end of fdda loop, so we don't repeat the analysis time
+
 
       IF ( ( .NOT. nml%record_7%f4d ) .OR. & 
            ( (     nml%record_7%f4d ) .AND. ( fdda_loop .EQ. 1 ) ) ) THEN 
@@ -522,7 +653,11 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          nml%record_4%buddy_weight , date_char , &
          nml%record_2%fg_filename , nml%record_9%oa_3D_option , &
          nml%record_7%intf4d , nml%record_7%lagtem , &
-         nml%record_9%oa_type , nml%record_9%oa_3D_type , nml%record_9%radius_influence )
+         !BPR BEGIN
+         !nml%record_9%oa_type , nml%record_9%oa_3D_type , nml%record_9%radius_influence )
+         nml%record_9%oa_type , nml%record_9%oa_3D_type , nml%record_9%radius_influence , &
+         nml%record_9%oa_psfc )
+         !BPR END
          tobbox_ana = tobbox
          odis_ana = odis
       ELSE 
@@ -544,58 +679,137 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
          nml%record_4%buddy_weight , date_char , &
          nml%record_2%fg_filename , nml%record_9%oa_3D_option , &
          nml%record_7%intf4d , nml%record_7%lagtem , &
-         nml%record_9%oa_type , nml%record_9%oa_3D_type , nml%record_9%radius_influence )
+         !BPR BEGIN
+         !nml%record_9%oa_type , nml%record_9%oa_3D_type , nml%record_9%radius_influence )
+         nml%record_9%oa_type , nml%record_9%oa_3D_type , nml%record_9%radius_influence , &
+         nml%record_9%oa_psfc )
+         !BPR END
          !nml%record_4%buddy_weight , nml%record_1%start_date )
       END IF
 
       !!! Let's make sure the output to OBS_DOMAINnxx is sorted in time.
       IF ( dummy_filename(1:4) .NE. 'null' .AND. fdda_loop .NE. fdda_loop_max ) THEN
-        i_found_time = 0
-        loop_sort_time : DO
-        DO i_num = 1, number_of_obs-1
-     
-          IF ( obs(i_num)%valid_time%date_char > obs(i_num+1)%valid_time%date_char ) THEN
-            !print*,"FOUND one - ", i_num, " of ", number_of_obs, " (", i_found_time,")"
-            !print* ,"DATES:",obs(i_num)%valid_time%date_char ,"  -  ", obs(i_num+1)%valid_time%date_char 
-            obs_sort_tmp = obs(i_num)
-            obs(i_num) = obs(i_num+1)
-            obs(i_num+1) = obs_sort_tmp
-            i_found_time = i_found_time + 1
-          END IF
-        
-        END DO
-        if (i_found_time == 0 ) exit loop_sort_time
-        if (i_found_time  > 0 ) i_found_time = 0
-        END DO loop_sort_time
-      ENDIF
+        !BPR BEGIN
+        !Modifications made to speed up this sorting of obs by time since this
+        !checking contributes notably to total run times (at least in cases with
+        !many observations)
+        !The altered code allows the time comparison to be done on integers
+        !rather than characters and prevents the obs from being reshuffled
+        !everytime two are found from being out of order. Instead, it first
+        !figures out the final order and then fills the derived type array based
+        !on the final order.
+        ALLOCATE ( obs_before_sort   ( nml%record_3%max_number_of_obs ) )
+        ALLOCATE ( date_int          ( nml%record_3%max_number_of_obs ) )
+        ALLOCATE ( obs_order_index   ( nml%record_3%max_number_of_obs ) )
+        !Save a copy of the obs before sorting them
+        obs_before_sort = obs
+        !Put all of the date strings of the obs into an integer array
+        !It is faster to do integer comparisons than string comparisons (at
+        !least for a string this length)
+        READ( obs(:)%valid_time%date_char,'(I14)') date_int 
+        !Set the time in the obs array to a clearly wrong number so that if we 
+        !fail to fill any entry in obs we will know
+        obs(:)%valid_time%date_char = '-9999999999999'
+        obs_order_index(:) = 0
 
+        !Choose sort type
+        !After each method is noted how the computation time for the method
+        !scales for n observations in 1) the best case, 2) the average case, 3)
+        !the worse case
+        !1 = bubble sort (original method): n, n**2, n**2
+        !2 = comb sort: n, n*log(n), n**2
+        sort_type = 2
+        !Bubble sort
+        IF(sort_type.EQ.1) THEN
+         obs_order_index(:) = (/(i_num,i_num=1,nml%record_3%max_number_of_obs)/)
+        !BPR END
+         i_found_time = 0
+         loop_sort_time : DO
+         DO i_num = 1, number_of_obs-1
+      
+           !BPR BEGIN 
+           !IF ( obs(i_num)%valid_time%date_char > obs(i_num+1)%valid_time%date_char ) THEN
+           IF( date_int(i_num) > date_int(i_num+1) ) THEN
+           !BPR END
+             !print*,"FOUND one - ", i_num, " of ", number_of_obs, " (", i_found_time,")"
+             !print* ,"DATES:",obs(i_num)%valid_time%date_char ,"  -  ", obs(i_num+1)%valid_time%date_char 
+             !BPR BEGIN
+             date_int_sort_tmp = date_int(i_num)
+             obs_order_sort_tmp = obs_order_index(i_num)
+             date_int(i_num) = date_int(i_num+1)
+             obs_order_index(i_num) = obs_order_index(i_num+1)
+             date_int(i_num+1) = date_int_sort_tmp
+             obs_order_index(i_num+1) = obs_order_sort_tmp
+             !obs_sort_tmp = obs(i_num)
+             !obs(i_num) = obs(i_num+1)
+             !obs(i_num+1) = obs_sort_tmp
+             !BPR END
+             i_found_time = i_found_time + 1
+           END IF
+         
+         END DO
+ 
+         if (i_found_time == 0 ) exit loop_sort_time
+         if (i_found_time  > 0 ) i_found_time = 0
+         END DO loop_sort_time
+        !BPR BEGIN
+        !Comb sort
+        ELSEIF( sort_type .eq. 2 ) THEN
+         CALL COMBSORT_INT(date_int(1:number_of_obs),obs_order_index(1:number_of_obs))
+        ELSE
+         PRINT *,'Invalid sort_type in driver.F90 = ',sort_type
+         STOP
+        ENDIF
+        !Put the obs stored in obs_before_sort into obs in the order that the 
+        !sorting code found
+        DO i_num = 1, number_of_obs
+         obs(i_num) = obs_before_sort(obs_order_index(i_num)) 
+        ENDDO
+
+        DEALLOCATE ( obs_order_index )
+        DEALLOCATE ( date_int )
+        DEALLOCATE ( obs_before_sort )
+        !BPR END
+
+      ENDIF
 
       IF ( fdda_loop.EQ.1) THEN
         obs_file_count = (icount-1)*2 + 1
         IF ( .NOT. nml%record_7%f4d ) obs_file_count = icount
         WRITE (obs_nudge_file,'("OBS_DOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
         INQUIRE ( EXIST = exist , FILE = obs_nudge_file )
-        CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 ,      &
-                          .TRUE., exist, nml%record_2%remove_data_above_qc_flag,    &
-                          nml%record_2%remove_unverified_data, kbu_alloc, pressure, &
-                          filename )  
+        !BPR BEGIN
+        use_grid_relative_winds = .TRUE.
+        CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
+                          .TRUE., exist, nml%record_2%remove_data_above_qc_flag, &
+                          nml%record_2%remove_unverified_data, kbu_alloc, pressure , &  
+                          filename, use_grid_relative_winds )
+        !                 filename )
+        !BPR END
       ELSEIF ( fdda_loop.EQ.2 .AND. fdda_loop.NE.fdda_loop_max) THEN
         obs_file_count = (icount-1)*2 
         WRITE (obs_nudge_file,'("OBS_DOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
         INQUIRE ( EXIST = exist , FILE = obs_nudge_file )
-        CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 ,      &
-                          .TRUE., exist, nml%record_2%remove_data_above_qc_flag,    &
+        !BPR BEGIN
+        use_grid_relative_winds = .TRUE.
+        CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
+                          .TRUE., exist, nml%record_2%remove_data_above_qc_flag, &
                           nml%record_2%remove_unverified_data, kbu_alloc, pressure, &
-                          filename )  
+                          filename, use_grid_relative_winds  )  
+        !                 filename )
+        !BPR END
       ELSEIF ( fdda_loop.GT.2 .AND. fdda_loop.NE.fdda_loop_max) THEN
         obs_file_count = (icount-1)*2 
         WRITE (obs_nudge_file,'("OBS_DOMAIN",i1,i2.2)') nml%record_2%grid_id, obs_file_count
-        CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 ,      &
-                          .TRUE., .FALSE., nml%record_2%remove_data_above_qc_flag,  &
+        !BPR BEGIN
+        use_grid_relative_winds = .TRUE.
+        CALL output_obs ( obs , 2 , trim(obs_nudge_file), number_of_obs ,  1 , &
+                          .TRUE., .FALSE., nml%record_2%remove_data_above_qc_flag, &
                           nml%record_2%remove_unverified_data, kbu_alloc, pressure, &
-                          filename )  
+                          filename, use_grid_relative_winds  )  
+        !                 filename )
+        !BPR END
       ENDIF
-
 
       !  If this is the time that we have observations, we can de-allocate the space.
 

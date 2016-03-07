@@ -62,10 +62,42 @@ SUBROUTINE proc_namelist ( unit , filename , nml )
    remove_data_above_qc_flag = 200000
    remove_unverified_data = .FALSE.
 
+   !BPR BEGIN
+   ! Default to using very large tolerances for dewpoint QC checks so as to
+   ! default to the the original Obsgrid methodology of not doing a separate QC
+   ! on dewpoint in addition to the QC already performed for RH
+   max_error_dewpoint = 99999.9
+   max_buddy_dewpoint = 99999.9
+
+   ! Default to original Obsgrid behavior of not doing QC on surface pressure
+   qc_psfc = .FALSE.
+
+   ! Default to original Obsgrid behavior of generally only dealing with
+   ! single-level above-surface observations if they fall on a pressure level
+   ! with gridded data.
+   use_p_tolerance_one_lev = .FALSE.
+   max_p_tolerance_one_lev_qc = 1
+   max_p_tolerance_one_lev_oa = 1
+
+   !BPR END
+
    !  Initialize the array of radius of influence scans.  This permits an easy way
    !  to determine the number of requested scans without an additional input value.
 
    radius_influence = -1
+
+   !BPR BEGIN
+   ! Default to the original OBSGRID setup of not scaling RH decreases in the
+   ! Cressman analysis
+   scale_cressman_rh_decreases = .FALSE.
+
+   ! Default to the original OBSGRID setup of using the same radii of influence
+   ! for applying surface obs to the analysis as are used for non-surface obs
+   radius_influence_sfc_mult = 1.0 
+
+   ! Default to original Obsgrid behavior of not doing objective analysis on surface pressure
+   oa_psfc = .FALSE.
+   !BPR END
 
    !  Initialize the array of observation file names to 'null'.
 

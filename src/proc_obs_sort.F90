@@ -3,7 +3,10 @@
 SUBROUTINE proc_obs_sort ( obs_filename , unit , &
 obs , number_of_obs , total_number_of_obs , fatal_if_exceed_max_obs , total_dups , index1 , &
 print_out_obs_found , print_out_files , & 
-levels , pressure , &
+!BPR BEGIN
+!levels , pressure , &
+levels , pressure , slp_x , temperature , use_p_tolerance_one_lev , &
+!BPR END
 max_p_extend_t , max_p_extend_w , &
 height , iew , jns , map_projection , date , time , fdda_loop ) 
 
@@ -28,6 +31,11 @@ height , iew , jns , map_projection , date , time , fdda_loop )
    REAL                                             :: max_p_extend_t , &
                                                        max_p_extend_w
    INTEGER                                          :: iew , jns , map_projection
+   !BPR BEGIN
+   REAL    , INTENT ( IN ) , DIMENSION ( jns, iew ) :: slp_x 
+   REAL    , INTENT ( IN ) , DIMENSION ( jns , iew , levels ) :: temperature
+   LOGICAL , INTENT ( IN )                          :: use_p_tolerance_one_lev
+   !BPR END
    REAL , DIMENSION ( jns , iew , levels )          :: height
    INTEGER , INTENT(IN)                             :: date , time , fdda_loop
    CHARACTER (LEN=24)                               :: date_time_char
@@ -48,7 +56,10 @@ height , iew , jns , map_projection , date , time , fdda_loop )
 
    CALL read_observations ( obs_filename , unit , obs , number_of_obs , & 
    total_number_of_obs , fatal_if_exceed_max_obs , print_out_obs_found , & 
-   height , pressure , iew , jns , levels , map_projection )
+!BPR BEGIN
+!  height , pressure , iew , jns , levels , map_projection )
+   height , pressure , slp_x , temperature , iew , jns , levels , map_projection )
+!BPR END
 
    !  There should be at least a single observation to make the rest of
    !  this routine worth anyone's time.
@@ -71,10 +82,26 @@ height , iew , jns , map_projection , date , time , fdda_loop )
       !  any missing levels that the analysis would like to have available
       !  for the QC and OA.  The requested levels are the analysis levels.
       !  The only requirements are that there are at least 2 levels of data,
-      !  and that the observation has not already been discarded.  While not
-      !  really an interpolation, the data that comes in at a specific level
-      !  (SATOB and AIREP), we should put them at the nearest analysis 
-      !  pressure surface.
+      ! BPR BEGIN
+      !!  and that the observation has not already been discarded.  While not
+      !! really an interpolation, the data that comes in at a specific level
+      !! (SATOB and AIREP), we should put them at the nearest analysis 
+      !! pressure surface.
+      !   and that the observation has not already been discarded.  
+      !  For single-level above surface observations:
+      !  1) If the user has not chosen to use a pressure tolerance for using
+      !  these obs (i.e., the user has set use_p_tolerance_one_lev = .FALSE.) 
+      !  then FM-97 and FM-88 observations will be "adjusted" to the
+      !  neareast analysis pressure surface.  Other single-level above-surface
+      !  observations will not be used unless they happen to fall exactly on an
+      !  analysis pressure level.  
+      !  2) If the user has chosen to use a pressure tolerance for using these
+      !  obs (i.e., the user has set use_p_tolerance_one_lev = .TRUE. )
+      !  then all such obs will be treated the same.  Namely, none will be
+      !  "adjusted" to the nearest analysis pressure surface.  Rather, as long
+      !  as they are close enough to the nearest analysis pressure surface, they
+      !  will be directly compared against / used for that surface 
+      ! BPR END
    
       DO i = 1 , number_of_obs
          IF ( ( ASSOCIATED ( obs(i)%surface ) ) .AND. &
@@ -89,12 +116,23 @@ height , iew , jns , map_projection , date , time , fdda_loop )
             IF  ( ASSOCIATED ( obs(i)%surface%next ) ) THEN
                CALL interp_all ( pressure , levels , obs(i)%surface , obs(i)%location%longitude ) 
             END IF
-   
-            IF ( ( obs(i)%info%platform(1:11) .EQ. 'FM-97 AIREP' ) .OR. &
-                 ( obs(i)%info%platform(1:11) .EQ. 'FM-88 SATOB' ) ) THEN
-               CALL extend_to_closest ( obs(i)%surface , pressure , levels , &
-               max_p_extend_t , max_p_extend_w )
+
+
+            !BPR BEGIN
+            !If the user has chosen to use a pressure tolerance for comparing
+            !single-level above surface obs to the analysis pressure levels then
+            !we do not "adjust" the FM-97 and FM-88 data to the nearest analysis
+            !pressure surface
+            IF ( .NOT. use_p_tolerance_one_lev ) THEN    
+            !BPR END
+             IF ( ( obs(i)%info%platform(1:11) .EQ. 'FM-97 AIREP' ) .OR. &
+                  ( obs(i)%info%platform(1:11) .EQ. 'FM-88 SATOB' ) ) THEN
+                CALL extend_to_closest ( obs(i)%surface , pressure , levels , &
+                max_p_extend_t , max_p_extend_w )
+             END IF
+            !BPR BEGIN
             END IF
+            !BPR END
    
          END IF
       END DO

@@ -95,7 +95,10 @@ program plot_raobs
   n_times = idiff / interval
 
   ! Build metoa file
-  WRITE(oa_file, '("metoa_em.d",I2.2".",A19,".nc")') grid_id, start_date
+  !BPR BEGIN
+  !WRITE(oa_file, '("metoa_em.d",I2.2".",A19,".nc")') grid_id, start_date
+  WRITE(oa_file, '("metoa_em.d",I2.2,".",A19,".nc")') grid_id, start_date
+  !BPR END
   
   IF ( read_metoa ) THEN
      print*," Attempting to open file: ", trim(oa_file)

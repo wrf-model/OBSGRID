@@ -3,15 +3,32 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
                      total_dups , map_projection , &
                      qc_test_error_max        , qc_test_buddy          , &
                      qc_test_vert_consistency , qc_test_convective_adj , &
+!BPR BEGIN
+                     qc_psfc , &
+!BPR END
                      max_error_t      , max_error_uv    , &
                      max_error_z      , max_error_rh    , &
+!BPR BEGIN
+                     max_error_dewpoint ,                 &
+!BPR END
                      max_error_p      , print_error_max , &
                      max_buddy_t      , max_buddy_uv    , &
                      max_buddy_z      , max_buddy_rh    , &
-                     max_buddy_p      , print_buddy     , &
+!BPR BEGIN
+                     max_buddy_dewpoint                 , &
+!BPR END
+!BPR BEGIN
+!                    max_buddy_p      , print_buddy     , &
+                     max_buddy_p      ,                   &
+                     use_p_tolerance_one_lev , max_p_tolerance_one_lev_qc , &
+                     print_buddy      ,                   &
+!BPR END
                      print_found_obs  ,                   &
                      print_vert       , print_dry       , & 
-                     pressure , date , time , dx , buddy_weight , &
+!BPR BEGIN
+!                    pressure , date , time , dx , buddy_weight , &
+                     pressure , pres, date , time , dx , buddy_weight , &
+!BPR END
                      obs , index , max_number_of_obs , & 
                      t , u , v , h , rh , slp_x , sst , tobbox , odis )
 
@@ -58,17 +75,31 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
    LOGICAL , INTENT ( IN )                    :: qc_test_error_max         , &
                                                  qc_test_buddy             , &
                                                  qc_test_vert_consistency  , &
-                                                 qc_test_convective_adj
+!BPR BEGIN
+!                                                qc_test_convective_adj
+                                                 qc_test_convective_adj    , &
+                                                 qc_psfc 
+!BPR END
    REAL    , INTENT ( IN )                    :: max_error_p,             &
                                                  max_error_t,             &
                                                  max_error_uv,            &
                                                  max_error_z,             &
                                                  max_error_rh,            &
+!BPR BEGIN
+                                                 max_error_dewpoint,      &
+!BPR END
                                                  max_buddy_p,             &
                                                  max_buddy_t,             &
                                                  max_buddy_uv,            &
                                                  max_buddy_z,             &
-                                                 max_buddy_rh
+!BPR BEGIN
+!                                                max_buddy_rh
+                                                 max_buddy_rh,            &
+                                                 max_buddy_dewpoint
+
+   LOGICAL , INTENT ( IN )                    :: use_p_tolerance_one_lev
+   INTEGER , INTENT ( IN )                    :: max_p_tolerance_one_lev_qc
+!BPR END
    LOGICAL , INTENT ( IN )                    :: print_error_max,         &
                                                  print_buddy    ,         &
                                                  print_found_obs ,        &
@@ -91,6 +122,9 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
    !  xob,yob:      x, y locations of station obs
    !  lonob:        longitude of the observation, for local time computation
    !  station_id:   station identifier
+   !BPR BEGIN
+   !  station_elevation: Elevation of station in m MSL
+   !BPR END
   
    REAL          , DIMENSION (max_number_of_obs)           :: obs_value
    INTEGER       , DIMENSION (max_number_of_obs)           :: index_criteria
@@ -99,6 +133,9 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
    CHARACTER ( LEN =   8 ) , DIMENSION (max_number_of_obs) :: station_id
    INTEGER       , DIMENSION (max_number_of_obs)           :: qc_flag
    LOGICAL       , DIMENSION (max_number_of_obs)           :: ship_report
+   !BPR BEGIN
+   REAL          , DIMENSION (max_number_of_obs)           :: station_elevation
+   !BPR END
 
    !  Data from the routine that supplies the background field for
    !  QC checking
@@ -106,13 +143,21 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
    !  gridded:      background/first field as input, final analysis as output
 
    REAL          , DIMENSION (iew_alloc,jns_alloc)        :: gridded
+   !BPR BEGIN
+   !Hold T/RH for calculating dewpoint
+   REAL          , DIMENSION (iew_alloc,jns_alloc)        :: gridded_t, gridded_rh
+   !BPR END
 
    !  Internally computed value.
 
    !  error_difference:  initial maximum difference between observations and
    !                   the interpolated value of the analysis at the ob
    !                   location.
-   !  ivar:            1=U, 2=V, 3=T, 4=RH, 5=SLP
+   !BPR BEGIN
+   !!  ivar:            1=U, 2=V, 3=T, 4=RH, 5=SLP
+   !  ivar:            1=U, 2=V, 3=T, 4=RH, 5=SLP, 6=PSFC, 7=DEWPOINT
+   !BPR END
+
    !  kp:              vertical index
    !  local_time:      integer time (hhmm), crudely corrected to the local
    !                   time based upon the longitude
@@ -124,9 +169,31 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
    INTEGER        , DIMENSION (max_number_of_obs)        :: local_time
    CHARACTER ( LEN =   8 )                    :: name
 
+   !BPR BEGIN
+   !Maximum difference between pressure of ob and pressure of background
+   !data it is compared against for QC (Pa)
+   !Default is 1
+   INTEGER                                    :: request_p_diff
+   !BPR END
+   !BPR BEGIN
+   INCLUDE 'constants.inc'   
+   !BPR END
+
    INTERFACE
       INCLUDE 'proc_ob_access.int'
    END INTERFACE
+
+   !BPR BEGIN
+   !request_p_diff = 700
+   !If the user wants to allow a tolerance between an obs pressure and the
+   !first-guess field used to QC it, then use the user-specified tolerance.
+   !If not, then use a tolerance of 1 Pa, which is effectively no tolerance.
+   IF( use_p_tolerance_one_lev ) THEN
+    request_p_diff = max_p_tolerance_one_lev_qc
+   ELSE 
+    request_p_diff = 1
+   END IF
+   !BPR END 
 
    !  The first quality control (QC) that can be performed is with
    !  data that is vertically stacked.  These reports have the temperature,
@@ -175,11 +242,24 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
 
       vertical_level_loop : DO kp = 1, kbu_alloc
    
-         variable_loop : DO ivar = 1, 5
+!BPR BEGIN
+!        variable_loop : DO ivar = 1, 5
+         variable_loop : DO ivar = 1, 7
    
             ! do error checks only for ivar = PMSL and for kp = 1
-   
-            IF ( ( kp .GT. 1 ) .AND. ( ivar .EQ. 5 ) ) EXIT variable_loop
+            !IF ( ( kp .GT. 1 ) .AND. ( ivar .EQ. 5 ) ) EXIT variable_loop
+
+            ! If ivar = PMSLPSFC or PMSL and this is not the lowest level (i.e., kp .ne. 1)
+            ! then go on to the next variable because PMSL and PMSL from PSFC 
+            ! are only available at the lower level
+            IF ( ( kp .GT. 1 ) .AND. ( ( ivar .EQ. 5 ) .or. ( ivar .EQ. 6 ) ) ) CYCLE variable_loop
+
+            !If user chose not to QC surface pressure then go to the next
+            !variable
+            IF ( ( .NOT. qc_psfc ) .AND. ( ivar .EQ. 6 ) )THEN
+             CYCLE variable_loop
+            END IF
+!BPR END
    
             which_variable : SELECT CASE ( ivar )
                CASE ( 1 ) 
@@ -214,18 +294,49 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
                   buddy_difference = max_buddy_p
                   CALL yx2xy ( slp_x(1,1   ) , jns_alloc , iew_alloc , gridded )
                   gridded = gridded * 100
+               !BPR BEGIN
+               CASE ( 6 )
+                  name = 'PMSLPSFC'
+                  error_difference = max_error_p
+                  buddy_difference = max_buddy_p
+                  !CALL yx2xy ( pres(1,1,kp) , jns_alloc , iew_alloc , gridded )
+                  CALL yx2xy ( slp_x(1,1 ) , jns_alloc , iew_alloc , gridded )
+                  !Convert from hPa to Pa
+                  gridded = gridded * 100
+               CASE ( 7 ) 
+                  name = 'DEWPOINT'
+                  error_difference = max_error_dewpoint
+                  buddy_difference = max_buddy_dewpoint
+                  CALL yx2xy (     t(1,1,kp) , jns_alloc , iew_alloc , gridded_t )
+                  CALL yx2xy (    rh(1,1,kp) , jns_alloc , iew_alloc , gridded_rh )
+                  !Calculate dewpoint using formula in obs_sort_module.F90
+                  !Since log(0) is undefined, if RH is near zero then set it to
+                  !some small value
+                  WHERE( gridded_rh .LT. very_small_rh )
+                   gridded = 1. / ( 1./gridded_t - Rv_over_L * LOG ( very_small_rh / 100. ) )
+                  ELSEWHERE
+                   gridded = 1. / ( 1./gridded_t - Rv_over_L * LOG ( gridded_rh / 100. ) )
+                  END WHERE
+               !BPR END
             END SELECT which_variable
    
             !  Obtain observations for kp level and for variable ivar for this
             !  time period.  
    
             CALL proc_ob_access ( 'get', name , print_found_obs , &
-            pressure(kp) , date , time , 1 , 2**20 , number_of_obs , num_obs_found , obs , &
+            !BPR BEGIN
+            !pressure(kp) , date , time , 1 , 2**20 , number_of_obs , num_obs_found , obs , &
+            pressure(kp) , date , time , request_p_diff , 2**20 , number_of_obs , num_obs_found , obs , &
+            !BPR END
             iew_alloc , jns_alloc , kbu_alloc , &
             total_dups , map_projection , &
             get_value=obs_value , get_x_location=xob , get_y_location=yob , &
             get_longitude=lonob , get_array_index=index_criteria , &
-            get_over_water=ship_report , get_id=station_id , get_qc_info=qc_flag )
+            !BPR BEGIN
+            !get_over_water=ship_report , get_id=station_id , get_qc_info=qc_flag )
+            get_over_water=ship_report , get_id=station_id , get_qc_info=qc_flag , &
+            get_elevation=station_elevation , get_fg_3d_t=t, get_fg_3d_h=h )
+            !BPR END
    
             !  The local time will be used to modify the acceptable differences
             !  between the observations and the first guess analysis.
@@ -238,12 +349,30 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
             IF ( kp .EQ. 1 ) THEN
                CALL ob_density   ( xob , yob , dx , num_obs_found , tobbox , iew_alloc , jns_alloc )
             END IF
-   
+
+
+            ! BPR BEGIN
+            IF( name .eq. 'PMSLPSFC') THEN
+             PRINT *,' '
+             PRINT *,'****************************************************************************'
+             PRINT *,'Variable PMSLPSFC in the QC checks refers to the surface pressure in the '
+             PRINT *,' obs (PSFC) being converted to sea level pressure (PMSL) for comparison to '
+             PRINT *,' first-guess PMSL.  This is done because the terrain assumed by the first '
+             PRINT *,' guess may vary from the actual terrain and so first guess PSFC may not '
+             PRINT *,' match actual PSFC.  Using PMSL is less sensitive to this terrain mismatch.'
+             PRINT *,'****************************************************************************'
+             PRINT *,' '
+            END IF
+            ! BPR END
+
             !  Perform the maximum error difference QC test with the available
             !  observations and the background field analysis.
        
             IF ( qc_test_error_max ) THEN
                CALL error_max ( station_id , obs_value , ship_report , xob , yob , & 
+               !BPR BEGIN
+               station_elevation , &
+               !BPR END
                index_criteria , qc_flag , num_obs_found , &
                gridded , iew_alloc , jns_alloc , &
                name , error_difference , pressure(kp) , local_time , print_error_max )
@@ -255,6 +384,9 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
    
             IF ( qc_test_buddy ) THEN
                CALL buddy_check ( station_id, obs_value , num_obs_found , xob, yob, qc_flag,   &
+               !BPR BEGIN
+               station_elevation , &
+               !BPR END
                gridded, iew_alloc , jns_alloc , name,                      &
                pressure(kp), local_time, dx , buddy_weight , buddy_difference , print_buddy )
             END IF
@@ -263,7 +395,10 @@ SUBROUTINE proc_qc ( iew_alloc , jns_alloc , kbu_alloc , number_of_obs , &
             !  qc_flags information to be stored.
 
             CALL proc_ob_access ( 'put', name , print_found_obs , &
-            pressure(kp) , date , time , 1 , 2**20 , number_of_obs , num_obs_found , obs , &
+            !BPR BEGIN
+            !pressure(kp) , date , time , 1 , 2**20 , number_of_obs , num_obs_found , obs , &
+            pressure(kp) , date , time , request_p_diff , 2**20 , number_of_obs , num_obs_found , obs , &
+            !BPR END
             iew_alloc , jns_alloc , kbu_alloc , &
             total_dups , map_projection , &
             put_value=obs_value , put_array_index=index_criteria , put_qc_info=qc_flag )

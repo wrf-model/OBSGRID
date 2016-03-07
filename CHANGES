@@ -1,4 +1,37 @@
 -----------------------------------------------------
+Update: January, 2016 V3.8.0
+ - Optimize objective analysis and time sorting of obs
+ - Add option to scale decreases in RH introduced via the analysis [see option
+   scale_cressman_rh_decreases] (Reen et al. 2016; 
+   http://dx.doi.org/10.1175/JAMC-D-14-0301.1)
+ - Surface pressure improvements (improve surface pressure estimation of obs,
+   add ability to QC surface pressure obs, add ability to create surface
+   pressure objective analysis) [see options qc_psfc and oa_psfc] (Reen 2015; 
+   http://www.dtic.mil/cgi-bin/GetTRDoc?AD=ADA621305)
+ - Improve "duplicate" obs merging (prefer ob closest to target time and time of
+   merged ob is now time of ob closer to target date)   
+ - New littler output files (qc_obs_used_earth_relative*) analogous to
+   qc_obs_used* but with earth-relative winds rather than grid-relative winds.
+   These can be used as input to the Model Evaluation Tools (MET)
+ - Allow smaller radii of influence for surface obs [see setting
+   radius_influence_sfc_mult]
+ - Single-level above-surface observations (e.g. aircraft obs) can be QC'd 
+   against nearby pressure levels in the first guess [see settings 
+   use_p_tolerence_one_lev, max_p_tolerance_one_lev_qc, and 
+   max_p_tolerance_one_lev_oa]
+ - Allow quality control of dewpoint [see settings max_error_dewpoint and 
+   max_buddy_dewpoint]
+ - Improve consistency of littler output files (make dewpoint consistent with
+   temperature and humidity, recalculate wind direction after rotation and
+   vertical interpolation of u/v)
+ - Allow user to choose to do no analysis (specify analysis type "None")
+ - Minor bug fixes 
+-----------------------------------------------------
+Update: July, 2014 V3.7.0
+ - Fix error that caused SLP to be erroneously marked as missing in some cases
+ - Add NetCDF version of qc_obs* files
+ - Modify compilation to deal with NetCDF changes (add -lnetcdff)
+-----------------------------------------------------
 Update: April, 2013  V3.4.0
  - Add support for NCAR/MMM observation files which contain unusable
  data that must be ignored (e.g. GPSPW, SATEM, etc.).
@@ -15,4 +48,3 @@ Update: April, 2010 V3.2.0
  - Increase search area around each observation, ensuring the banana scheme
    has enough space.
  - minor bug fixes
------------------------------------------------------

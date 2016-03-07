@@ -38,10 +38,14 @@ module report_module
 
   end type report
 
-  character(len=84), parameter :: rpt_format =&
+  !BPR BEGIN
+  !rpt_format was dimensioned one character too small
+  !character(len=84), parameter :: rpt_format =&
+  character(len=85), parameter :: rpt_format =&
        '  ( 2f20.5 , 2a40 , '  &
        // ' 2a40 , 1f20.5 , 5i10 , 3L10 , '  &
        // ' 2i10 , a20 ,  13( f13.5 , i7 ) ) '
+  !BPR END
 
   character(len=22), parameter :: meas_format =&
        ' ( 10( f13.5 , i7 ) ) '

@@ -122,7 +122,7 @@ PROGRAM plot_obs
    n_times = idiff / interval
  
    ! Build metoa file
-   WRITE(oa_file, '("metoa_em.d",I2.2".",A19,".nc")') grid_id, start_date
+   WRITE(oa_file, '("metoa_em.d",I2.2,".",A19,".nc")') grid_id, start_date
    print*," Attempting to open file: ", trim(oa_file)
    rcode = nf_open(oa_file, 0, met_ncid)
    IF ( rcode /= 0 ) THEN

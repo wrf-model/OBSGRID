@@ -11,7 +11,10 @@ icount , total_count , interval , &
 max_error_t , max_error_uv           , &
 max_error_z , max_error_p , &
 buddy_weight , date_char , root_filename , oa_3D_option , &
-intf4d , lagtem , oa_type , oa_3D_type , rad_influence )
+!BPR BEGIN
+!intf4d , lagtem , oa_type , oa_3D_type , rad_influence )
+intf4d , lagtem , oa_type , oa_3D_type , rad_influence, oa_psfc )
+!BPR END
 
 !  This routine is a driver for the required utilities to output the 
 !  final analysis of this program.  The input values are the objectively 
@@ -54,6 +57,10 @@ intf4d , lagtem , oa_type , oa_3D_type , rad_influence )
    INTEGER                                        :: oa_3D_option
    CHARACTER *(*)                                 :: oa_type , oa_3D_type
    INTEGER , DIMENSION(10)                        :: rad_influence
+   !BPR BEGIN
+   LOGICAL                                        :: oa_psfc
+   !BPR END
+
 
    !  Temporary holding arrays for the header information.  What is in the header
    !  on input is the data from the first guess file.  To output the data, we need
@@ -122,7 +129,10 @@ intf4d , lagtem , oa_type , oa_3D_type , rad_influence )
       latitude_x , longitude_x , latitude_d , longitude_d , &
       slp_x , slp_C , sst , tobbox , odis , &
       iew_alloc , jns_alloc , kbu_alloc , iewd , jnsd , date_char, print_analysis , &
-      oa_type , oa_3D_type , oa_3D_option , rad_influence )
+!BPR BEGIN
+!     oa_type , oa_3D_type , oa_3D_option , rad_influence )
+      oa_type , oa_3D_type , oa_3D_option , rad_influence , oa_psfc )
+!BPR END
    ELSE
       CALL make_date ( current_date_8 , current_time_6 , fdda_date_24 )
       slp_x(:jns_alloc-1,:iew_alloc-1) = slp_x(:jns_alloc-1,:iew_alloc-1) * 100.

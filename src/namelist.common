@@ -34,21 +34,35 @@
    COMMON   /record4_nmll/ qc_test_error_max            , &
                            qc_test_buddy                , &
                            qc_test_vert_consistency     , &
-                           qc_test_convective_adj    
+!BPR BEGIN
+!                          qc_test_convective_adj    
+                           qc_test_convective_adj       , &
+                           qc_psfc                      , &
+                           use_p_tolerance_one_lev   
+!BPR END
 
    COMMON   /record4_nmlr/ max_error_t                  , &
                            max_error_uv                 , &
                            max_error_z                  , &
                            max_error_rh                 , &
+!BPR BEGIN
+                           max_error_dewpoint           , &
+!BPR END
                            max_error_p                  , &
                            max_buddy_t                  , &
                            max_buddy_uv                 , &
                            max_buddy_z                  , &
                            max_buddy_rh                 , &
+!BPR BEGIN
+                           max_buddy_dewpoint           , &
+!BPR END
                            max_buddy_p                  , &
                            buddy_weight                 , &
                            max_p_extend_t               , &
-                           max_p_extend_w    
+                           max_p_extend_w               
+!BPR BEGIN
+   COMMON   /record4_nmli/ max_p_tolerance_one_lev_qc 
+!BPR END
 
    !  Record 5 NAMELIST variables.
 
@@ -91,4 +105,14 @@
 
    COMMON   /record9_nmll/ oa_min_switch                , &
                            oa_max_switch                , &
-                           oa_3D_option    
+!BPR BEGIN
+!                          oa_3D_option                 &
+                           oa_3D_option                 , &
+                           oa_psfc                      , &
+                           scale_cressman_rh_decreases  
+!BPR END
+
+!BPR BEGIN
+   COMMON   /record9_nmlr/ radius_influence_sfc_mult    
+   COMMON   /record9_nmli/ max_p_tolerance_one_lev_oa 
+!BPR END

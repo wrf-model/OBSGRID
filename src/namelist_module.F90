@@ -37,21 +37,39 @@ MODULE namelist
       LOGICAL                 :: qc_test_error_max            , & ! perform error-max check
                                  qc_test_buddy                , & ! perform buddy check
                                  qc_test_vert_consistency     , & ! T, u, v vertical consistency
-                                 qc_test_convective_adj           ! lapse rate tests
+!BPR BEGIN
+!                                qc_test_convective_adj           ! lapse rate tests
+                                 qc_test_convective_adj       , & ! lapse rate tests
+                                 qc_psfc                          ! quality control surface pressure
+!BPR END
 
       REAL                    :: max_error_t                  , &
                                  max_error_uv                 , &
                                  max_error_z                  , &
                                  max_error_rh                 , &
+!BPR BEGIN
+                                 max_error_dewpoint           , &
+!BPR END
                                  max_error_p                  , &
                                  max_buddy_t                  , &
                                  max_buddy_uv                 , &
                                  max_buddy_z                  , &
                                  max_buddy_rh                 , &
+!BPR BEGIN
+                                 max_buddy_dewpoint           , &
+!BPR END
                                  max_buddy_p                  , & 
                                  buddy_weight                 , &  
                                  max_p_extend_t               , &
                                  max_p_extend_w    
+!BPR BEGIN
+     LOGICAL                  :: use_p_tolerance_one_lev          ! T/F Allow single level obs vertically placed within
+                                                                  ! a pressure tolerance of the pressure level for which 
+                                                                  ! obs are being sought to be used
+     INTEGER                  :: max_p_tolerance_one_lev_qc       ! Pressure tolerance between ob and the first guess 
+                                                                  ! pressure level that can be used to QC it (Pa)
+                                                                  ! use_p_tolerance_one_lev must be set to true to use this
+!BPR END
    END TYPE nml_record_4
 
    TYPE nml_record_5
@@ -97,6 +115,21 @@ MODULE namelist
       LOGICAL                 :: oa_min_switch                , & ! if MQD has less than number of obs, T/F use Cressman
                                  oa_max_switch                    ! if MQD has more than number of obs, T/F use Cressman
       INTEGER                 :: oa_3D_option  
+!BPR BEGIN
+      LOGICAL                 :: oa_psfc                          ! Should surface pressure be objectively analyzed
+      LOGICAL                 :: scale_cressman_rh_decreases      ! Should Cressman-caused decreases to RH at locations 
+                                                                  ! with lower RH than at the ob location be scaled based 
+                                                                  ! on the relationship between RH at the ob location and
+                                                                  ! at the application location
+      REAL                    :: radius_influence_sfc_mult        ! To get the radius of influence used for surface obs 
+                                                                  ! what should the radius of influence used by non-surface
+                                                                  ! obs be multiplied by  
+      INTEGER                 :: max_p_tolerance_one_lev_oa       ! Maximum pressure difference allowed between a single 
+                                                                  ! level ob and the pressure level it is analyzed on
+                                                                  ! User must enable use_p_tolerance_one_lev for this to
+                                                                  ! have an effect and must be less than max_p_tolerance_one_lev_qc
+                                                                  
+!BPR END
    END TYPE nml_record_9
 
    TYPE all_nml
@@ -285,6 +318,73 @@ SUBROUTINE check_namelist ( nml )
       listing = .false.
       call error_handler ( error_number , error_message , fatal , listing )
    END IF test_405
+
+   !BPR BEGIN
+   !  406:  Perform quality control on surface pressure?
+   !  Tell user whether or not they are quality controlling surface pressure
+   !  If they are not, but they are objectively analyzing that field, then throw
+   !  a fatal error given the danger of objectively analyzing non-QC'd obs
+
+   error_message = ' '
+   error_number = 00013406
+   error_message(1:31) = 'check_namelist                 '
+   listing = .false.
+
+   test_406 : IF ( .NOT. nml%record_4%qc_psfc ) THEN
+      IF ( nml%record_9%oa_psfc ) THEN
+       fatal = .true.
+       error_message(32:)  = ' Surface pressure is NOT being QCed but is being objectively analyzed.'
+      ELSE
+       fatal = .false.
+       error_message(32:)  = ' Quality control checks will NOT be performed on surface pressure.'
+      END IF
+   ELSE
+      fatal = .false.
+      error_message(32:)  = ' Quality control checks WILL be performed on surface pressure.'
+   END IF test_406
+   call error_handler ( error_number , error_message , fatal , listing )
+
+   !  407:  Allow pressure tolerance when doing QC of single level above surface obs?
+
+   error_message = ' '
+   error_number = 00013407
+   error_message(1:31) = 'check_namelist                 '
+   listing = .false.
+   fatal = .false.
+
+   test_407 : IF ( nml%record_4%use_p_tolerance_one_lev ) THEN
+      WRITE(error_message(32:),'(A,I9,A)') ' Single-level above-surface obs will be QCed &
+       &against the nearest pressure level in the analysis as long as the pressure difference &
+       &is no more than',& 
+       nml%record_4%max_p_tolerance_one_lev_qc, &
+       ' Pa.  No obs will be extended to the nearest pressure level.'
+   ELSE
+      error_message(32:) = ' Single-level above-surface obs will generally only be QCed if they fall&
+       & on an analysis pressure level. However, will attempt to adjust obs marked as FM-88 SATOB or FM-97 AIREP&
+       & to the nearest pressure level.'
+   END IF test_407
+   call error_handler ( error_number , error_message , fatal , listing )
+
+   !  408:  Make user aware that a pressure tolerance of 1 hPa for using a single-level above-surface
+   !        ob on the objective analysis at a pressure level, is like having no
+   !        tolerance at all.
+
+   test_408 : IF ( ( nml%record_4%use_p_tolerance_one_lev ) .AND. &
+                   ( nml%record_4%max_p_tolerance_one_lev_qc .EQ. 1 ) ) THEN
+      error_message = ' '
+      error_number = 00013408
+      error_message(1:31) = 'check_namelist                 '
+      listing = .false.
+      fatal = .false.
+
+      WRITE(error_message(32:),'(A)') ' Pressure tolerance for single-level above-surface obs being QCed &
+       &against an analysis is 1 hPa.  This is equivalent to having no pressure tolerance!'
+
+      call error_handler ( error_number , error_message , fatal , listing )
+   END IF test_408
+
+
+   !BPR END
 
    !  501:  Print out message for each observation found?
 
@@ -537,8 +637,14 @@ SUBROUTINE check_namelist ( nml )
 
    !  901:  Which objective analysis technique is to be used?
 
+   !BPR BEGIN
+   !Allow "None" option for cases in which we only want to QC data
+   !test_901 : IF ( ( nml%record_9%oa_type           .NE. 'MQD'      ) .AND. &
+   !                ( nml%record_9%oa_type           .NE. 'Cressman' ) ) THEN
    test_901 : IF ( ( nml%record_9%oa_type           .NE. 'MQD'      ) .AND. &
-                   ( nml%record_9%oa_type           .NE. 'Cressman' ) ) THEN
+                   ( nml%record_9%oa_type           .NE. 'Cressman' ) .AND. &
+                   ( nml%record_9%oa_type           .NE. 'None' ) ) THEN
+   !BPR END
       nml%record_9%oa_type = 'Cressman' 
    END IF test_901
 
@@ -654,6 +760,89 @@ SUBROUTINE check_namelist ( nml )
       call error_handler ( error_number , error_message , fatal , listing )
    END IF test_906
 
+
+   !BPR BEGIN
+   !  907:  What is the minimum number of observations required to still do MQD?
+
+   error_message = ' '
+   error_number = 00013907
+   error_message(1:31) = 'check_namelist                 '
+   fatal = .false.
+   listing = .false.
+
+   test_907 : IF ( nml%record_9%oa_psfc ) THEN
+      error_message(32:) = ' Will objectively analyze surface pressure [psfc will NOT be affected by SLP analysis].'
+   ELSE
+      error_message(32:) = ' Will NOT objectively analyze surface pressure [psfc will be affected by SLP analysis].'
+   END IF test_907
+   call error_handler ( error_number , error_message , fatal , listing )
+
+   !  908:  Allow pressure tolerance when doing OA of single level above
+   !  surface obs?
+
+   error_message = ' '
+   error_number = 00013908
+   error_message(1:31) = 'check_namelist                 '
+   listing = .false.
+   fatal = .false.
+
+   test_908 : IF ( nml%record_4%use_p_tolerance_one_lev ) THEN
+      WRITE(error_message(32:),'(A,I9,A)') ' Single-level above-surface obs will be included in &
+       &the objective analysis on the nearest pressure level as long as the pressure difference &
+       &is no more than',& 
+       nml%record_9%max_p_tolerance_one_lev_oa, &
+       ' Pa.  No obs will be extended to the nearest pressure level.'
+   ELSE
+      error_message(32:) = ' Single-level above-surface obs will generally only be included in &
+       &the objective analysis if they fall on an analysis pressure level. However, will attempt &
+       &to adjust obs marked as FM-88 SATOB or FM-97 AIREP to the nearest pressure level.'
+   END IF test_908
+   call error_handler ( error_number , error_message , fatal , listing )
+
+   !  909:  Make sure pressure tolerance allowed between single-level above-surface obs and the 
+   !  pressure level they are analyzed on is less than or equal to the pressure tolerance used to  
+   !  do the QC
+
+   test_909 : IF ( ( nml%record_4%use_p_tolerance_one_lev ) .AND. &
+                   ( nml%record_9%max_p_tolerance_one_lev_oa .GT. nml%record_4%max_p_tolerance_one_lev_qc ) ) THEN
+      error_message = ' '
+      error_number = 00013909
+      error_message(1:31) = 'check_namelist                 '
+      listing = .false.
+      fatal = .true.
+
+      WRITE(error_message(32:),'(A,I9,A,I9,A)') ' Pressure tolerance for single-level above-surface obs being included in &
+       &the objective analysis is greater than the pressure tolerance for QCing the data.  For QC tolerance is: ',&
+       nml%record_4%max_p_tolerance_one_lev_qc, &
+       ' Pa, for OA tolerance is: ',&
+       nml%record_9%max_p_tolerance_one_lev_oa,&
+       ' Pa'
+
+      call error_handler ( error_number , error_message , fatal , listing )
+   END IF test_909
+
+   !  910:  Make user aware that a pressure tolerance of 1 hPa for using a single-level above-surface
+   !        ob on the objective analysis at a pressure level, is like having no
+   !        tolerance at all. 
+
+   test_910 : IF ( ( nml%record_4%use_p_tolerance_one_lev ) .AND. &
+                   ( nml%record_9%max_p_tolerance_one_lev_oa .EQ. 1 ) ) THEN
+      error_message = ' '
+      error_number = 00013910
+      error_message(1:31) = 'check_namelist                 '
+      listing = .false.
+      fatal = .false.
+
+      WRITE(error_message(32:),'(A)') ' Pressure tolerance for single-level above-surface obs being included in &
+       &the objective analysis is 1 hPa.  This is equivalent to having no pressure tolerance!'
+
+      call error_handler ( error_number , error_message , fatal , listing )
+   END IF test_910
+   !BPR END
+
+
+
+
 END SUBROUTINE check_namelist
 
 !------------------------------------------------------------------------------
@@ -745,23 +934,36 @@ SUBROUTINE store_namelist ( nml )
    nml%record_4%qc_test_buddy            = qc_test_buddy                
    nml%record_4%qc_test_vert_consistency = qc_test_vert_consistency     
    nml%record_4%qc_test_convective_adj   = qc_test_convective_adj        
+   !BPR BEGIN
+   nml%record_4%qc_psfc                  = qc_psfc
+   !BPR END
 
    nml%record_4%max_error_t              = max_error_t                  
    nml%record_4%max_error_uv             = max_error_uv                 
    nml%record_4%max_error_z              = max_error_z                  
    nml%record_4%max_error_rh             = max_error_rh                 
+   !BPR BEGIN
+   nml%record_4%max_error_dewpoint       = max_error_dewpoint           
+   !BPR END
    nml%record_4%max_error_p              = max_error_p                  
 
    nml%record_4%max_buddy_t              = max_buddy_t                  
    nml%record_4%max_buddy_uv             = max_buddy_uv                 
    nml%record_4%max_buddy_z              = max_buddy_z                  
    nml%record_4%max_buddy_rh             = max_buddy_rh                
+   !BPR BEGIN
+   nml%record_4%max_buddy_dewpoint       = max_buddy_dewpoint          
+   !BPR END
    nml%record_4%max_buddy_p              = max_buddy_p                    
 
    nml%record_4%buddy_weight             = buddy_weight    
 
    nml%record_4%max_p_extend_t           = max_p_extend_t    
    nml%record_4%max_p_extend_w           = max_p_extend_w    
+   !BPR BEGIN
+   nml%record_4%use_p_tolerance_one_lev  = use_p_tolerance_one_lev
+   nml%record_4%max_p_tolerance_one_lev_qc  = max_p_tolerance_one_lev_qc
+   !BPR END
    
    !  Record 5 NAMELIST values:
 
@@ -803,9 +1005,94 @@ SUBROUTINE store_namelist ( nml )
    nml%record_9%oa_min_switch            = oa_min_switch    
    nml%record_9%oa_max_switch            = oa_max_switch    
    nml%record_9%oa_3D_option             = oa_3D_option    
+   !BPR BEGIN
+   nml%record_9%oa_psfc                  = oa_psfc
+   nml%record_9%scale_cressman_rh_decreases = scale_cressman_rh_decreases    
+   nml%record_9%radius_influence_sfc_mult = radius_influence_sfc_mult   
+   nml%record_9%max_p_tolerance_one_lev_oa  = max_p_tolerance_one_lev_oa
+   !BPR END
 
 END SUBROUTINE store_namelist
 
+!------------------------------------------------------------------------------
+
+!Find pressure ranges where observations cannot be QC'ed against the first-guess
+!field or cannot be included in the objective analysis
+SUBROUTINE one_lev_coverage_check ( kbu_alloc , pressure ,           &
+           max_p_tolerance_one_lev_qc, max_p_tolerance_one_lev_oa )
+
+    IMPLICIT NONE
+ 
+    !Number of vertical levels in first guess field
+    INTEGER, INTENT(IN)                           :: kbu_alloc
+    !Pressure of each vertical level (Pa).  The first level, the surface just
+    !has 100100 since in reality the pressure of the surface varies across the
+    !domain
+    REAL , INTENT(IN)  , DIMENSION(kbu_alloc)     :: pressure
+    !Maximum pressure difference (Pa) between ob and the pressure level it can
+    !be QCed against
+    INTEGER , INTENT(IN)                          :: max_p_tolerance_one_lev_qc
+    !Maximum pressure difference (Pa) between ob and the pressure level on which
+    !it can be used in an objective analysis
+    INTEGER , INTENT(IN)                          :: max_p_tolerance_one_lev_oa
+
+    INTEGER      :: curk
+    INTEGER , DIMENSION(kbu_alloc)                :: top_of_p_range_qc, bot_of_p_range_qc
+    INTEGER , DIMENSION(kbu_alloc)                :: top_of_p_range_oa, bot_of_p_range_oa
+
+    !Find the top and bottom of pressure ranges around each pressure level in
+    !the first-guess field
+    top_of_p_range_qc(1) = 0
+    bot_of_p_range_qc(1) = 0
+    DO curk = 2,kbu_alloc
+     top_of_p_range_qc(curk) = pressure(curk) - max_p_tolerance_one_lev_qc 
+     bot_of_p_range_qc(curk) = pressure(curk) + max_p_tolerance_one_lev_qc 
+     top_of_p_range_oa(curk) = pressure(curk) - max_p_tolerance_one_lev_oa 
+     bot_of_p_range_oa(curk) = pressure(curk) + max_p_tolerance_one_lev_oa 
+    ENDDO
+
+    IF( max_p_tolerance_one_lev_qc .GT. 1 ) THEN
+     PRINT *,' '
+     PRINT *,'*******************************************************************************'
+     PRINT *,'Quality control of single-level above-surface observations can use first-guess '
+     PRINT *,' fields within ',max_p_tolerance_one_lev_qc,' Pa of observation'
+     PRINT *,'Single-level above-surface obs will not be quality controlled against '
+     PRINT *,' the first guess field if their pressure falls in the following ranges: '
+     WRITE(*,'(A3,I6,A3)') '<= ',top_of_p_range_qc(kbu_alloc),' Pa'
+     DO curk = kbu_alloc,3,-1
+      !Use ".GE." here because pressure difference must be LESS than the
+      !tolerance, not equal to the tolerance
+      IF( top_of_p_range_qc(curk-1) .GE. bot_of_p_range_qc(curk) ) THEN
+       WRITE(*,'(I6,A3,I6,A3)') top_of_p_range_qc(curk-1),' - ',bot_of_p_range_qc(curk),' Pa'
+      END IF
+     ENDDO
+     WRITE(*,'(A3,I6,A3)') '>= ',bot_of_p_range_qc(2),' Pa' 
+     PRINT *,'*******************************************************************************'
+     PRINT *,' '
+    END IF 
+
+    IF( max_p_tolerance_one_lev_oa .GT. 1 ) THEN
+     PRINT *,'*******************************************************************************'
+     PRINT *,' '
+     PRINT *,'Objective analysis can use single-level above-surface observations within '
+     PRINT *,max_p_tolerance_one_lev_oa,' Pa of observation'
+     PRINT *,'Single-level above-surface obs will not be included in the objective analysis'
+     PRINT *,' at any level if their pressure falls in the following ranges: '
+     WRITE(*,'(A3,I6,A3)') '<= ',top_of_p_range_oa(kbu_alloc),' Pa'
+     DO curk = kbu_alloc,3,-1
+      !Use ".GE." here because pressure difference must be LESS than the
+      !tolerance, not equal to the tolerance
+      IF( top_of_p_range_oa(curk-1) .GE. bot_of_p_range_oa(curk) ) THEN
+       WRITE(*,'(I6,A3,I6,A3)') top_of_p_range_oa(curk-1),' - ',bot_of_p_range_oa(curk),' Pa'
+      END IF
+     ENDDO
+     WRITE(*,'(A3,I6,A3)') '>= ',bot_of_p_range_oa(2),' Pa' 
+     PRINT *,'*******************************************************************************'
+     PRINT *,' '
+    END IF 
+
+
+END SUBROUTINE one_lev_coverage_check 
 !------------------------------------------------------------------------------
 
 END MODULE namelist

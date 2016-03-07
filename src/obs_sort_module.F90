@@ -426,7 +426,10 @@ END FUNCTION time_eq_old
 !
 ! -------------------------------------------------------------------------
 
-LOGICAL FUNCTION time_eq ( a , b , date , time )
+!BPR BEGIN
+!LOGICAL FUNCTION time_eq ( a , b , date , time )
+LOGICAL FUNCTION time_eq ( a , b , date , time, ob_closest_to_target_time )
+!BPR END
 
 ! This defines operator .EQ. for 'time_info' data type
 
@@ -436,9 +439,24 @@ LOGICAL FUNCTION time_eq ( a , b , date , time )
 
    TYPE ( time_info ) , INTENT ( INOUT )        :: a , b
    INTEGER            , INTENT ( IN )           :: date , time 
+   !BPR BEGIN
+   INTEGER            , INTENT ( OUT )          :: ob_closest_to_target_time
+   !BPR END
 
    !  Local variables.
 
+   !BPR BEGIN
+   !This defines how close two times need to be to be equal
+   !In the standard version of OBSGRID this is 30 minutes (1800 seconds), but
+   !this results in 15-minute surface obs being merged and this may not be
+   !desirable
+   !The assumption that the first of two obs to be merged is correct (all else
+   !being equal) could conceivably introduce a bias, especially since the time
+   !of the merged ob appears to be assigned the current "target time").  
+   !INTEGER, PARAMETER               ::time_equal_tolerance_seconds = 300
+   INTEGER, PARAMETER               ::time_equal_tolerance_seconds = 1800
+   !BPR END
+   
    CHARACTER (LEN=19)               :: target_date , a_date , b_date
    INTEGER                          :: diff_seconds , a_diff_seconds , b_diff_seconds
 
@@ -472,35 +490,80 @@ LOGICAL FUNCTION time_eq ( a , b , date , time )
 
    CALL geth_idts ( a_date , b_date , diff_seconds )
    
+
+   !BPR BEGIN
+   !BEGIN OLD COMMENT
    !  If the times (a and b) are within half an hour of each other, we say that they
    !  are the same time.  
+   !END OLD COMMENT
+   !  If the times (a and b) are within time_equal_tolerance_seconds of each other, we say that they
+   !  are the same time.  
+   !IF ( ABS ( diff_seconds ) .LT. 1800 ) THEN
+   IF ( ABS ( diff_seconds ) .LT. time_equal_tolerance_seconds ) THEN
+   !BPR END
 
-   IF ( ABS ( diff_seconds ) .LT. 1800 ) THEN
-
+      !BPR BEGIN OLD COMMENT
       !  Now that we know a and b are the same time, the important question is now
       !  are they the time that we want?  If they are the same (which means either
       !  a or b is within an hour of the target time), we set both of these times
       !  to the target time.
+      !BPR END OLD COMMENT
 
+     
       CALL geth_idts ( target_date , a_date , a_diff_seconds )
       CALL geth_idts ( target_date , b_date , b_diff_seconds )
+
+      !BPR BEGIN
+      !Determine which ob of "duplicates" is closer to the target time
+      IF( ABS ( a_diff_seconds ) .LT. ABS ( b_diff_seconds ) ) THEN
+       ob_closest_to_target_time = 1
+      ELSE
+       ob_closest_to_target_time = 2
+      ENDIF
+
+
+      !Check if either ob is within 1 hour of target time, if so then use 
+      !the time of the ob closest to the target time
+      !Previously it just used the target time.
+      !Advantages of the new method include:
+      ! 1) It keeps the actual time so subsequent "duplicate" obs can compare
+      !    their time against the previously merged ob to see if the new
+      !    duplicate is closer to the target time
+      ! 2) An original ob time is kept.  so that the merging of say a 1224 UTC 
+      !    1226 UTC ob does not result in a merged 1200 UTC ob, but rather a
+      !    1224 UTC ob.
+      !Disadvantage of the new method:
+      ! 1) In cases where one merged ob is prior to the ob time and one merged
+      !    ob is after the ob time, the new ob time will not represent any type 
+      !    of rough average of the obs times.  For example, previously a 1145
+      !    UTC and 1214 UTC ob would be merged to form a 1200 UTC ob, whereas
+      !    now they would be merged to form a 1214 UTC bill.
+      !BPR END
 
       IF ( ( ABS ( a_diff_seconds ) .LT. 3600 ) .OR. &
            ( ABS ( b_diff_seconds ) .LT. 3600 ) ) THEN
 
-         a%date_char( 1: 4) = target_date( 1: 4)
-         a%date_char( 5: 6) = target_date( 6: 7) 
-         a%date_char( 7: 8) = target_date( 9:10) 
-         a%date_char( 9:10) = target_date(12:13) 
-         a%date_char(11:12) = target_date(15:16) 
-         a%date_char(13:14) = target_date(18:19) 
+         !BPR BEGIN
+         IF ( ob_closest_to_target_time == 1 ) THEN
+          b%date_char(1:14) = a%date_char(1:14)
+         ELSEIF ( ob_closest_to_target_time == 2 ) THEN
+          a%date_char(1:14) = b%date_char(1:14)
+         ENDIF
 
-         b%date_char( 1: 4) = target_date( 1: 4)
-         b%date_char( 5: 6) = target_date( 6: 7) 
-         b%date_char( 7: 8) = target_date( 9:10) 
-         b%date_char( 9:10) = target_date(12:13) 
-         b%date_char(11:12) = target_date(15:16) 
-         b%date_char(13:14) = target_date(18:19) 
+         !a%date_char( 1: 4) = target_date( 1: 4)
+         !a%date_char( 5: 6) = target_date( 6: 7) 
+         !a%date_char( 7: 8) = target_date( 9:10) 
+         !a%date_char( 9:10) = target_date(12:13) 
+         !a%date_char(11:12) = target_date(15:16) 
+         !a%date_char(13:14) = target_date(18:19) 
+
+         !b%date_char( 1: 4) = target_date( 1: 4)
+         !b%date_char( 5: 6) = target_date( 6: 7) 
+         !b%date_char( 7: 8) = target_date( 9:10) 
+         !b%date_char( 9:10) = target_date(12:13) 
+         !b%date_char(11:12) = target_date(15:16) 
+         !b%date_char(13:14) = target_date(18:19) 
+         !BPR END
       END IF
 
       time_eq = .TRUE.
@@ -508,6 +571,9 @@ LOGICAL FUNCTION time_eq ( a , b , date , time )
    ELSE
 
       time_eq = .FALSE.
+      !BPR BEGIN
+      ob_closest_to_target_time = 0
+      !BPR END
 
    END IF
   
@@ -540,6 +606,9 @@ SUBROUTINE check_duplicate_ob ( obs , index , num_obs , total_dups , date , time
    INTEGER         , INTENT ( OUT )       :: total_dups
    INTEGER         , INTENT ( IN  )       :: date    , &
                                              time
+   !BPR BEGIN
+   INTEGER                                :: ob_closest_to_target_time
+   !BPR END
 
    INCLUDE 'error.inc'
    INTERFACE
@@ -585,10 +654,20 @@ SUBROUTINE check_duplicate_ob ( obs , index , num_obs , total_dups , date , time
          !  If time fields are not completely identical, go to next observation.
          !  Sort is by location ONLY, not by time; so next+1 may be identical
          !  even though next has different time.
+         !BPR BEGIN
+         !  time_eq does NOT check that the "time fields are not completely
+         !  identical" as the above comment states.  Rather it checks if they are 
+         !  close enough, which in the default version was 30 minutes.  This 
+         !  tolerance is now a parameter in time_eq
+         !BPR END
 
 ! foo
 !        IF ( .NOT. ( obs(first)%valid_time .EQ. obs(second)%valid_time ) ) THEN
-         IF ( .NOT. time_eq ( obs(first)%valid_time , obs(second)%valid_time , date , time ) ) THEN
+!BPR BEGIN
+!        IF ( .NOT. time_eq ( obs(first)%valid_time , obs(second)%valid_time , date , time ) ) THEN
+         IF ( .NOT. time_eq ( obs(first)%valid_time , obs(second)%valid_time , &
+                              date , time , ob_closest_to_target_time ) ) THEN
+!BPR END
             error_number = 0332001
             error_message(1:31) = 'check_duplicate_ob             '
             error_message(32:)  = ' Found multiple times for ' &
@@ -605,10 +684,15 @@ SUBROUTINE check_duplicate_ob ( obs , index , num_obs , total_dups , date , time
 
          !  Observations are from same location and time, so merge them.
 
-         CALL merge_obs ( obs(first) , obs(second) )
+!BPR BEGIN
+!        CALL merge_obs ( obs(first) , obs(second) )
+         CALL merge_obs ( obs(first) , obs(second) , ob_closest_to_target_time )
+!BPR END
 
          !  Mark second of pair as discarded; data is put in 'first'.  Note that
          !  a duplicate has been found by incrementing the counter.
+
+
 
          obs(second)%info%discard  = .true.
          obs(first)%info%num_dups  = obs(first)%info%num_dups + 1
@@ -873,7 +957,10 @@ END SUBROUTINE extend_to_closest
 !
 !------------------------------------------------------------------------------
 
-SUBROUTINE height_to_pres ( height , pressure , iew , jns , kbu , &
+!BPR BEGIN
+!SUBROUTINE height_to_pres ( height , pressure , iew , jns , kbu , &
+SUBROUTINE height_to_pres ( height , pressure , slp_x , temperature , iew , jns , kbu , &
+!BPR END
 map_projection , latitude , longitude , value ) 
 
 !  This routine is used to compute the pressure of an observation
@@ -885,6 +972,9 @@ map_projection , latitude , longitude , value )
   
    USE map_utils
    USE map_utils_helper
+!BPR BEGIN
+   USE get_fg_at_point
+!BPR END
 
    IMPLICIT NONE
 
@@ -892,6 +982,10 @@ map_projection , latitude , longitude , value )
                                               map_projection
    REAL    , DIMENSION ( jns , iew , kbu ) :: height
    REAL    , DIMENSION ( kbu )             :: pressure
+   !BPR BEGIN
+   REAL    , INTENT ( IN ) , DIMENSION ( jns, iew ) :: slp_x
+   REAL    , INTENT ( IN ) , DIMENSION ( jns , iew , kbu ) :: temperature
+   !BPR END
    REAL                                    :: latitude , & 
                                               longitude
    TYPE ( meas_data )                      :: value
@@ -908,6 +1002,22 @@ map_projection , latitude , longitude , value )
 
    LOGICAL                                 :: found
 
+   !BPR BEGIN
+   REAL                                    :: h_start, h_diff
+   REAL                                    :: p_start
+   REAL                                    :: t_start, t_ob, t_layer_average
+   INTEGER                                 :: request_qc_max
+   LOGICAL                                 :: not_missing
+   LOGICAL                                 :: is_missing
+   REAL                                    :: r
+
+   INCLUDE 'constants.inc'
+
+   INCLUDE 'missing.inc'
+   not_missing ( r )  = ( ABS ( r - missing_r ) .GT. 1. )
+   is_missing ( r )  = ( ABS ( r - missing_r ) .LE. 1. )
+   !BPR END
+
    !  We can zoom directly out of here if the height with which we are 
    !  going to do the approximation is a flag (meaning it is missing).
 
@@ -922,9 +1032,18 @@ map_projection , latitude , longitude , value )
       !  exit out of here without modifying the input data set (value).
    
       inside_domain : IF ( ( x_location .GT. 1       ) .AND. &
-                           ( x_location .LT. iew - 2 ) .AND. &
+!BPR BEGIN
+!Cannot see reason why this cannot be -1 instead of -2.  This will allow obs
+!near the edge of the domain to use the first guess fields in estimating surface
+!pressure and thus not need to rely on less accurate standard atmosphere method
+!                          ( x_location .LT. iew - 2 ) .AND. &
+                           ( x_location .LT. iew - 1 ) .AND. &
+!BPR END
                            ( y_location .GT. 1       ) .AND. &
-                           ( y_location .LT. jns - 2 ) ) THEN 
+!BPR BEGIN
+!                          ( y_location .LT. jns - 2 ) ) THEN 
+                           ( y_location .LT. jns - 1 ) ) THEN 
+!BPR END
    
          i = NINT ( x_location )
          j = NINT ( y_location )
@@ -950,18 +1069,98 @@ map_projection , latitude , longitude , value )
             END IF
          END DO find_trapping
    
+         !BPR BEGIN
+         !Original comment
          !  If we found the trapping levels, great.  If not, we drop through this
          !  block and out of the routine.  This would happen if an observation was
          !  reported very high in the atmosphere, beyond the analysis levels.  We 
          !  compute the new pressure from linear interpolation.  The QC flag for the
          !  pressure reflects that this data was interpolated.
+         !New comment
+         !  If we found the trapping levels, interpolate the pressure.
+         !  If not, we now consider three cases:
+         !   1) Ob height is between sea level and height of lowest non-surface
+         !      pressure level.
+         !      -Interpolate between these two layers
+         !      -Pressure QC flag marked to indicate pressure from first guess
+         !   2) Ob height is below sea level
+         !      -Use temperature and height of ob with standard atmosphere lapse
+         !       rate to obtain temperature at sea level
+         !      -Use sea level pressure/height and estimated temperature along
+         !       with ob height/temperature to calculate pressure at ob
+         !      -Pressure QC flag marked to indicate pressure from first guess
+         !       since we only use std atmosphere lapse rate for temperature
+         !   3) Ob height is above top level
+         !      -Do nothing here and let standard atmosphere routine deal with this
+         !       case
+         !BPR END
    
          found_level : IF ( found ) THEN
             value%pressure%data = EXP ( ( LOG ( p_below ) * ( h_ob - h_above) + LOG ( p_above ) * ( h_below - h_ob ) ) /  &
             ( h_below - h_above ) )
             value%pressure%qc   = p_from_h_first_guess
+         !BPR BEGIN
+         ELSE
+
+          !DO NOT USE THE SURFACE PRESSURE / HEIGHT BECAUSE THIS IS SENSITIVE TO
+          !THE HORIZONTAL INTERPOLATION FROM THE SOURCE OF THE FIRST GUESS TO
+          !THE CURRENT GRID
+
+          !If the ob is between sea level and the 1st layer above the surface
+          IF ( ( h_ob .GE. 0.0 ) .AND. ( h_ob .LT. height(j,i,2) ) ) THEN         
+           h_below =  0.0 
+           h_above =  height(j,i,2) 
+           p_below =  slp_x(j,i)  * 100. 
+           p_above =  pressure(2) * 100.
+           !If distance to interpolate pressure over is at least 1 meter
+           !then do the interpolation
+           IF(ABS(h_below-h_above).GE.1.0) THEN
+            value%pressure%data = EXP ( ( LOG ( p_below ) * ( h_ob - h_above) + LOG ( p_above ) * ( h_below - h_ob ) ) /  &
+            ( h_below - h_above ) )
+           ELSE !If distance to interpolate pressure over is less than 1 meter
+            !then simply average the two pressures.  The interpolation equation may fail to
+            !produce acceptable results if interpolating over too small a vertical separation 
+            value%pressure%data = 0.5 * ( p_below + p_above )
+           END IF
+           value%pressure%qc   = p_from_h_first_guess
+
+          !If the ob is below sea level (and below the second layer)
+          ELSE IF ( h_ob .LT. 0.0 ) THEN
+           h_start = 0.0
+           p_start = slp_x(j,i) * 100.
+           h_diff = h_start - h_ob
+
+           !Set the QC flag value below which the temperature must be QC'd at 
+           !in order to use it here to calculate pressure
+           !Note this appears to be BEFORE we do the error_max or buddy check so 
+           !we do not know if the temperature ob will pass these QC checks but we 
+           !check the QC flag anyway in case it indicates we should not use the
+           !temperature ob
+           request_qc_max = MIN ( fails_error_max , fails_buddy_check )
+           IF ( ( not_missing ( value%temperature%data ) ) .AND. &
+            !If temperature ob is available, use temperature at ob height 
+                ( value%temperature%qc .LT. request_qc_max ) ) THEN
+            t_ob = value%temperature%data
+           ELSE
+            !If temperature ob is missing or QC indicates problems get
+            !temperature from first guess field
+            CALL GET_FG_T_AT_POINT(temperature,height,latitude,longitude,h_ob,t_ob)
+            !If this fails then use standard atmosphere
+            IF ( is_missing ( t_ob ) ) THEN
+             t_ob = t_at_sea_level_std_atm + dTdz_std_atm_lt_11000m * h_ob
+            END IF
+           END IF
+           !Find temperature at lowest level to estimate using standard atmosphere lapse rate the 
+           !temperature at the ob
+           t_start = t_ob + dTdz_std_atm_lt_11000m * h_diff
+           t_layer_average = 0.5 * (t_start + t_ob )
+           value%pressure%data = p_start / (exp( ( -h_diff * g ) / (gasr * t_layer_average ) ) )
+           value%pressure%qc   = p_from_h_first_guess
+          END IF
+
+         !BPR END
          END IF found_level
-   
+
       END IF inside_domain
 
    END IF missing_height
@@ -1990,6 +2189,7 @@ SUBROUTINE keep_best ( field1 , field2 , best )
 
       ELSE IF ( field1%qc .EQ. field2%qc ) THEN
 
+
          !  Second, if they have the same quality control values, use data 
          !  that was chosen 'best'
 
@@ -2066,17 +2266,20 @@ SUBROUTINE link_levels ( list1 , list2 , info1 , info2 , best )
                             next1%meas%height%data , .1 ) ) .AND. &
               ( eps_equal ( info2%elevation        , & 
                             next2%meas%height%data , .1 ) ) .AND. &
-              ( .NOT. eps_equal ( info1%elevation , missing_r , 1. ) ) .AND. &
-              ( eps_equal ( next1%meas%height%data , & 
-                            next2%meas%height%data , .1 ) ) ) ) THEN
+              !BPR BEGIN
+              ( .NOT. eps_equal ( info1%elevation , missing_r , 1. ) ) ) ) THEN
+              !( .NOT. eps_equal ( info1%elevation , missing_r , 1. ) ) .AND. &
+              !( eps_equal ( next1%meas%height%data , & 
+              !              next2%meas%height%data , .1 ) ) ) ) THEN
+              !BPR END
 
          !  There are two ways that cause us to merge the data into one level:
          !  1) Both levels are at same pressure level within precision of pressure,
          !  so merge data from both levels into one measurement.
          !  2) If both of the observations are surface reports, then the pressure
-         !  may be different, but the height = terrain elevation, and the two
-         !  heights are equal.
-
+         !  may be different, but the height = terrain elevation
+         !  BPR--Removed following criteria since this is not necessarily the
+         !  case for duplicate obs-->, and the two heights are equal.
          CALL merge_measurements ( next1%meas , next2%meas , best )
 
          !  Advance the pointers.
@@ -2300,7 +2503,10 @@ END SUBROUTINE merge_measurements
 !
 ! --------------------------------------------------------------------------
 
-SUBROUTINE merge_obs ( first , second )
+!BPR BEGIN
+!SUBROUTINE merge_obs ( first , second )
+SUBROUTINE merge_obs ( first , second , ob_closest_to_target_time )
+!BPR END
 
 !  Reports 'first' and 'second' have been found to have same location and
 !  time, therefore they must be merged and one of them discarded.
@@ -2312,6 +2518,9 @@ SUBROUTINE merge_obs ( first , second )
 
    TYPE ( report ) , INTENT ( INOUT )            :: first , &
                                                     second  
+   !BPR BEGIN
+   INTEGER            , INTENT ( IN )            :: ob_closest_to_target_time
+   !BPR END
    INTEGER                                       :: best
 
    INCLUDE 'error.inc'
@@ -2336,26 +2545,40 @@ SUBROUTINE merge_obs ( first , second )
    ELSE IF ( first%info%seq_num     .LT. second%info%seq_num     ) THEN
       best = 2
    ELSE
-      best = 1
-      error_number =3321001
-      error_message(1:31) = 'merge_obs                      '
-      error_message(32:)  = ' Arbitrarily assuming "first" obs &
-      &is better than "second" for ' // & 
-      TRIM ( first%location%name ) // '  ' // &
-      TRIM ( first%location%id ) // '.'
-      fatal = .false.
-      listing = .false.
+!BPR BEGIN
+      !Previously this first branch is all that existed.  
+      !Now, if we have no reason to pick one ob over the other, choose the ob
+      !that is closest to the target date.  I believe that the target date is the date/time 
+      !whose analysis you are QC'ing the obs against
+      !Only revert to old code if ob_closest_to_target_time was set to zero (which I
+      !do not think should ever be true at this point in the code)
+      IF( (ob_closest_to_target_time .ne. 1) .and. (ob_closest_to_target_time .ne.  2) ) THEN
+       best = 1
+       error_number =3321001
+       error_message(1:31) = 'merge_obs                      '
+       error_message(32:)  = ' Arbitrarily assuming "first" obs &
+       &is better than "second" for ' // & 
+       TRIM ( first%location%name ) // '  ' // &
+       TRIM ( first%location%id ) // '.'
+       fatal = .false.
+       listing = .false.
+      ELSE
+       best = ob_closest_to_target_time
+      ENDIF
+!BPR END
+      
 !     CALL error_handler ( error_number , error_message , &
 !     fatal , listing )
    END IF
 
-   !  Will put all useful information in first report; discard second
-   !  report.  Update report being kept with the num_vld_fld, num_error,
-   !  num_warnings, etc, from best.
-
-   IF ( best .EQ. 2 ) THEN
-      first%info = second%info
-   END IF
+   !BPR BEGIN
+   !Moved this after the link_levels call because link_levels relies on
+   !first%info and second%info to determine surface obs but if we have set these
+   !equal before calling link_levels, link_levels cannot actually determine if
+   !obs are surface obs if the elevations of first%info and second%info differ
+   !IF ( best .EQ. 2 ) THEN
+   !   first%info = second%info
+   !END IF
 
    ! Now look at all terrestrial fields, keeping the best values.
 
@@ -2384,6 +2607,15 @@ SUBROUTINE merge_obs ( first , second )
 
    CALL link_levels ( first%surface , second%surface , &
    first%info , second%info , best )
+
+   !  Will put all useful information in first report; discard second
+   !  report.  Update report being kept with the num_vld_fld, num_error,
+   !  num_warnings, etc, from best.
+
+   IF ( best .EQ. 2 ) THEN
+      first%info = second%info
+   END IF
+
 
 END SUBROUTINE merge_obs
 
@@ -2500,9 +2732,12 @@ END SUBROUTINE merge_sort
 !
 ! -------------------------------------------------------------------------
 
+!BPR BEGIN
 SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
                         new_file, qc_flag_keep, remove_unverified, num_klvls, pressure, &
-                        met_file)
+                        met_file, use_grid_relative_winds )
+!                       met_file ) 
+!BPR END
 
 !  Take the array of observations and write them including measurements
 !  at all levels.  The two options (out_opt and forinput) are described
@@ -2525,6 +2760,9 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
    INTEGER , INTENT ( IN )                           :: unit
    CHARACTER ( LEN = * ) , INTENT ( IN )             :: file_name
    LOGICAL , INTENT ( IN )                           :: forinput, new_file
+   !BPR BEGIN
+   LOGICAL , INTENT ( IN )                           :: use_grid_relative_winds
+   !BPR END
 
    INTEGER                                           :: i , iout, num_klvls
    INTEGER                                           :: qc_flag_keep
@@ -2536,7 +2774,7 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
    LOGICAL                                           :: keep_data
    LOGICAL                                           :: OBS_data=.FALSE.
    LOGICAL                                           :: is_sounding      
-   LOGICAL                                           :: no_qc_done      
+   LOGICAL                                           :: no_qc_done
    INTEGER                                           :: true_num_obs
    INTEGER                                           :: track_surface_data
 
@@ -2545,17 +2783,23 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
    INTEGER                                           :: ilev
    CHARACTER (LEN=132)                               :: nfile
    REAL, ALLOCATABLE, DIMENSION(:)                   :: press_nc, z_nc, temp_nc, td_nc
-   REAL, ALLOCATABLE, DIMENSION(:)                   :: spd_nc, dir_nc, u_nc, v_nc, rh_nc 
+   REAL, ALLOCATABLE, DIMENSION(:)                   :: spd_nc, dir_nc, u_nc, v_nc, rh_nc
 
    INTEGER, ALLOCATABLE, DIMENSION(:)                :: press_qc_nc, z_qc_nc, temp_qc_nc, td_qc_nc
-   INTEGER, ALLOCATABLE, DIMENSION(:)                :: spd_qc_nc, dir_qc_nc, u_qc_nc, v_qc_nc, rh_qc_nc             
+   INTEGER, ALLOCATABLE, DIMENSION(:)                :: spd_qc_nc, dir_qc_nc, u_qc_nc, v_qc_nc, rh_qc_nc
    INTEGER                                           :: int_sounding, int_bogus, int_discard, iout_nc
 
    CHARACTER ( LEN = 132 )                           :: met_file
    INTEGER                                           :: met_ncid
    INTEGER                                           :: idummy
    REAL                                              :: rdummy
-   
+
+   !BPR BEGIN
+   TYPE ( meas_data )                                :: meas_earth_winds, meas_write
+   !BPR END
+   !BPR BEGIN
+   LOGICAL                                           :: qc_done_against_nearby_level
+   !BPR END
 
    end_meas%pressure%data    = end_data_r
    end_meas%height%data      = end_data_r
@@ -2837,10 +3081,18 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
          ENDIF
          !!!!IF ( obs(i)%info%num_vld_fld == 1 .AND. (obs(i)%info%elevation .ne. missing) .AND. &
          IF ( obs(i)%info%num_vld_fld == 1  .AND. &
-            ( next%meas%height%data .eq. obs(i)%info%elevation ) ) THEN
+            !BPR BEGIN
+            !Without inclusion of check to see if elevation is missing,
+            !single-level above-surface observations with the height and
+            !elevation set to missing will be converted to being not a sounding
+            !( next%meas%height%data .eq. obs(i)%info%elevation ) ) THEN
+            ( eps_equal( next%meas%height%data, obs(i)%info%elevation, 1.) ) .AND. &
+            ( .NOT. eps_equal( obs(i)%info%elevation, missing_r, 1.) ) ) THEN
+            !BPR END
            is_sounding = .FALSE.
            obs(i)%info%is_sound = .FALSE.
          ENDIF
+
          IF ( is_sounding ) THEN
            DO WHILE ( ASSOCIATED ( next ) )
               IF ( no_qc_done ) THEN
@@ -2857,9 +3109,29 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
               ENDIF
               IF ( remove_unverified ) THEN
                 keep_data = any ( ( pres_hPA .eq. next%meas%pressure%data ) )
-                IF ( (obs(i)%info%elevation .ne. missing) .AND. & 
-                      (next%meas%height%data .eq. obs(i)%info%elevation) ) keep_data = .TRUE.
+                !BPR BEGIN
+                IF ( (.NOT. eps_equal( obs(i)%info%elevation, missing_r, 1.) ) .AND. &
+                     (eps_equal(next%meas%height%data, obs(i)%info%elevation, 1.) ) ) keep_data = .TRUE.
+                !IF ( (obs(i)%info%elevation .ne. missing) .AND. &
+                !      (next%meas%height%data .eq. obs(i)%info%elevation) ) keep_data = .TRUE.
+                !BPR END
                 !!IF ( is_sounding .AND. next%meas%pressure%qc .gt. 4 )  keep_data = .TRUE.
+                !BPR BEGIN
+                !keep_data is initially defined above by being set to true for
+                !any observations whose pressure matched one of the pressure
+                !levels in the first-guess field we are using to QC against
+                !Then it is set to true for all surface observations
+                !Now, check to see if the QC flag is set to the value (extend_influence) that
+                !indicates that either:
+                !1) The ob was assigned a nearby pressure where there is a level in the first guess
+                !2) The ob was QC'd against a nearby pressure where there is a level in the first guess
+                !If the first is true then the pressure would have been changed
+                !in the data so keep_data should already be true, but if the
+                !second is true then keep_data is currently set to false but
+                !should be set to true
+                qc_done_against_nearby_level = contains_2n ( next%meas%pressure%qc, extend_influence )
+                IF ( is_sounding .AND. qc_done_against_nearby_level ) keep_data = .TRUE.
+                !BPR END
                 IF ( keep_data ) true_num_obs = true_num_obs + 1
               ELSE
                 true_num_obs = true_num_obs + 1
@@ -2872,9 +3144,29 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
 
         !! 2012-12-17 cB - If surface and we don't want data above a set qc value - discard
         !!                 Also discard soundings with no data
-        if ( .NOT. is_sounding .and. (obs(i)%surface%meas%pressure%qc >= qc_flag_keep) ) & 
+        if ( .NOT. is_sounding .and. (obs(i)%surface%meas%pressure%qc >= qc_flag_keep) ) &
                       obs(i)%info%discard = .TRUE.
         if (       is_sounding .and. true_num_obs.eq.0) obs(i)%info%discard = .TRUE.
+        !BPR BEGIN
+        !Obsgrid assumes is_sounding=FALSE implies a surface ob.  If
+        !is_sounding=FALSE and the ob height does not match the station
+        !elevation height, without the following code discard might be false and
+        !thus the ob header is written but when we go down to the code where the
+        !ob itself is written Obsgrid may not find any valid obs to write and
+        !thus we have an ob header without any actual obs.  An ob of this format
+        !in the OBS_DOMAIN* file will cause WRF obs nudging to crash
+        IF((.NOT. is_sounding) .AND. &
+           (.NOT. eps_equal(next%meas%height%data, obs(i)%info%elevation, 1.))) THEN
+         obs(i)%info%discard = .TRUE.
+         PRINT '(A,A,A,A,F12.2,A,F12.2,A,A,A,A)','WARNING: Ob indicates is_sounding=.FALSE. ',&
+          'but the ob height does ',&
+          'not match the station elevation.  This ob will be omitted since Obsgrid assumes ',&
+          'is_sounding=.FALSE. indicates a surface ob. Height = ', next%meas%height%data, &
+          ', Elevation = ', obs(i)%info%elevation,', Ob ID = ',TRIM(ADJUSTL(obs(i)%location%id)),&
+          ', Ob Time = ', obs(i)%valid_time%date_char 
+        ENDIF
+
+        !BPR END
 
          if ( obs(i)%ground%slp%qc   >= qc_flag_keep ) then
            obs(i)%ground%slp%data = missing_r
@@ -2885,97 +3177,132 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
          endif
 
          IF ( OBS_data ) THEN
-           IF ( .NOT. obs(i)%info%discard ) THEN
-           IF ( is_sounding ) THEN
-             WRITE ( UNIT = unit , FMT='(1x,A14)' ) obs(i)%valid_time%date_char(1:14)
-             WRITE ( UNIT = unit , FMT='(2x,2(F9.4,1x))' ) obs(i)%location%latitude, obs(i)%location%longitude
-             IF ( obs(i)%location%id(1:5) == "US un" ) THEN
-               WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' )    &
-                  "-----                                   " , &
-                  "Unknown Station                         "
-             ELSE
-               WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' ) obs(i)%location%id, obs(i)%location%name
-             ENDIF
-             WRITE ( UNIT = unit , FMT='(2x,2(A16,2x),F8.0,2x,2(L4,2x),I5)' )       &
-               obs(i)%info%platform, obs(i)%info%source, obs(i)%info%elevation, &
-               is_sounding, obs(i)%info%bogus, true_num_obs
+         IF ( .NOT. obs(i)%info%discard ) THEN
+           WRITE ( UNIT = unit , FMT='(1x,A14)' ) obs(i)%valid_time%date_char(1:14)
+           WRITE ( UNIT = unit , FMT='(2x,2(F9.4,1x))' ) obs(i)%location%latitude, obs(i)%location%longitude
+           IF ( obs(i)%location%id(1:5) == "US un" ) THEN
+             WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' )    &
+                "-----                                   " , &
+                "Unknown Station                         "
+           ELSE
+             WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' ) obs(i)%location%id, obs(i)%location%name
            ENDIF
-           ENDIF
+           WRITE ( UNIT = unit , FMT='(2x,2(A16,2x),F8.0,2x,2(L4,2x),I5)' )       &
+             obs(i)%info%platform, obs(i)%info%source, obs(i)%info%elevation, &
+             is_sounding, obs(i)%info%bogus, true_num_obs
+         ENDIF
          ELSE
-           IF ( .NOT. obs(i)%info%discard ) THEN
-             WRITE ( UNIT = unit , FMT = rpt_format ) &
-                obs(i)%location , obs(i)%info , obs(i)%valid_time , obs(i)%ground
+           !BPR BEGIN
+           !Only write the header if this ob has not been marked as discard=TRUE
+           !or the output file we are writing is not supposed to throw out obs
+           !IF ( .NOT. obs(i)%info%discard ) THEN
+           IF (   out_opt .EQ. 0                                   .OR. &
+              (   out_opt .GT. 0 .AND. .NOT. obs(i)%info%discard ) .OR. &
+              (   out_opt .LT. 0 .AND.       obs(i)%info%discard ) ) THEN
+           !BPR END
+            WRITE ( UNIT = unit , FMT = rpt_format ) &
+              obs(i)%location , obs(i)%info , obs(i)%valid_time , obs(i)%ground
            ENDIF
          ENDIF
-    
+
          track_surface_data = 0
 
          next => obs(i)%surface
 
-       IF ( .not. OBS_data ) THEN
-         ilev = 0
-         if(allocated(press_nc)) deallocate(press_nc)
-         allocate(press_nc(true_num_obs))
-         if(allocated(press_qc_nc)) deallocate(press_qc_nc)
-         allocate(press_qc_nc(true_num_obs))
-         if(allocated(z_nc)) deallocate(z_nc)
-         allocate(z_nc(true_num_obs))
-         if(allocated(z_qc_nc)) deallocate(z_qc_nc)
-         allocate(z_qc_nc(true_num_obs))
-         if(allocated(temp_nc)) deallocate(temp_nc)
-         allocate(temp_nc(true_num_obs))
-         if(allocated(temp_qc_nc)) deallocate(temp_qc_nc)
-         allocate(temp_qc_nc(true_num_obs))
-         if(allocated(td_nc)) deallocate(td_nc)
-         allocate(td_nc(true_num_obs))
-         if(allocated(td_qc_nc)) deallocate(td_qc_nc)
-         allocate(td_qc_nc(true_num_obs))
-         if(allocated(spd_nc)) deallocate(spd_nc)
-         allocate(spd_nc(true_num_obs))
-         if(allocated(spd_qc_nc)) deallocate(spd_qc_nc)
-         allocate(spd_qc_nc(true_num_obs))
-         if(allocated(dir_nc)) deallocate(dir_nc)
-         allocate(dir_nc(true_num_obs))
-         if(allocated(dir_qc_nc)) deallocate(dir_qc_nc)
-         allocate(dir_qc_nc(true_num_obs))
-         if(allocated(u_nc)) deallocate(u_nc)
-         allocate(u_nc(true_num_obs))
-         if(allocated(u_qc_nc)) deallocate(u_qc_nc)
-         allocate(u_qc_nc(true_num_obs))
-         if(allocated(v_nc)) deallocate(v_nc)
-         allocate(v_nc(true_num_obs))
-         if(allocated(v_qc_nc)) deallocate(v_qc_nc)
-         allocate(v_qc_nc(true_num_obs))
-         if(allocated(rh_nc)) deallocate(rh_nc)
-         allocate(rh_nc(true_num_obs))
-         if(allocated(rh_qc_nc)) deallocate(rh_qc_nc)
-         allocate(rh_qc_nc(true_num_obs))
-
-         press_nc    = missing_r
-         press_qc_nc = missing
-         z_nc        = missing_r
-         z_qc_nc     = missing
-         temp_nc     = missing_r
-         temp_qc_nc  = missing
-         td_nc       = missing_r
-         td_qc_nc    = missing
-         spd_nc      = missing_r
-         spd_qc_nc   = missing
-         dir_nc      = missing_r
-         dir_qc_nc   = missing
-         u_nc        = missing_r
-         u_qc_nc     = missing
-         v_nc        = missing_r
-         v_qc_nc     = missing
-         rh_nc       = missing_r
-         rh_qc_nc    = missing
-       ENDIF  
+         IF ( .not. OBS_data ) THEN
+           ilev = 0
+           if(allocated(press_nc)) deallocate(press_nc)
+           allocate(press_nc(true_num_obs))
+           if(allocated(press_qc_nc)) deallocate(press_qc_nc)
+           allocate(press_qc_nc(true_num_obs))
+           if(allocated(z_nc)) deallocate(z_nc)
+           allocate(z_nc(true_num_obs))
+           if(allocated(z_qc_nc)) deallocate(z_qc_nc)
+           allocate(z_qc_nc(true_num_obs))
+           if(allocated(temp_nc)) deallocate(temp_nc)
+           allocate(temp_nc(true_num_obs))
+           if(allocated(temp_qc_nc)) deallocate(temp_qc_nc)
+           allocate(temp_qc_nc(true_num_obs))
+           if(allocated(td_nc)) deallocate(td_nc)
+           allocate(td_nc(true_num_obs))
+           if(allocated(td_qc_nc)) deallocate(td_qc_nc)
+           allocate(td_qc_nc(true_num_obs))
+           if(allocated(spd_nc)) deallocate(spd_nc)
+           allocate(spd_nc(true_num_obs))
+           if(allocated(spd_qc_nc)) deallocate(spd_qc_nc)
+           allocate(spd_qc_nc(true_num_obs))
+           if(allocated(dir_nc)) deallocate(dir_nc)
+           allocate(dir_nc(true_num_obs))
+           if(allocated(dir_qc_nc)) deallocate(dir_qc_nc)
+           allocate(dir_qc_nc(true_num_obs))
+           if(allocated(u_nc)) deallocate(u_nc)
+           allocate(u_nc(true_num_obs))
+           if(allocated(u_qc_nc)) deallocate(u_qc_nc)
+           allocate(u_qc_nc(true_num_obs))
+           if(allocated(v_nc)) deallocate(v_nc)
+           allocate(v_nc(true_num_obs))
+           if(allocated(v_qc_nc)) deallocate(v_qc_nc)
+           allocate(v_qc_nc(true_num_obs))
+           if(allocated(rh_nc)) deallocate(rh_nc)
+           allocate(rh_nc(true_num_obs))
+           if(allocated(rh_qc_nc)) deallocate(rh_qc_nc)
+           allocate(rh_qc_nc(true_num_obs))
+  
+           press_nc    = missing_r
+           press_qc_nc = missing
+           z_nc        = missing_r
+           z_qc_nc     = missing
+           temp_nc     = missing_r
+           temp_qc_nc  = missing
+           td_nc       = missing_r
+           td_qc_nc    = missing
+           spd_nc      = missing_r
+           spd_qc_nc   = missing
+           dir_nc      = missing_r
+           dir_qc_nc   = missing
+           u_nc        = missing_r
+           u_qc_nc     = missing
+           v_nc        = missing_r
+           v_qc_nc     = missing
+           rh_nc       = missing_r
+           rh_qc_nc    = missing
+         ENDIF
 
          DO WHILE ( ASSOCIATED ( next ) )
-            if ( obs(i)%info%discard ) exit 
+            if ( obs(i)%info%discard ) exit
             keep_data = any ( ( pres_hPA .eq. next%meas%pressure%data ) )
-            IF ( (obs(i)%info%elevation .ne. missing) .AND. (next%meas%height%data .eq. obs(i)%info%elevation) ) keep_data = .TRUE.
+            !BPR BEGIN
+            !IF ( (obs(i)%info%elevation .ne. missing) .AND. (next%meas%height%data .eq. obs(i)%info%elevation) ) keep_data = .TRUE.
+            IF ( (.NOT. eps_equal( obs(i)%info%elevation, missing_r, 1.) ) .AND. &
+                 (eps_equal(next%meas%height%data, obs(i)%info%elevation, 1.) ) ) keep_data = .TRUE.
+            !BPR BEGIN
             !!IF ( is_sounding .AND. next%meas%pressure%qc .gt. 4 )  keep_data = .TRUE.
+            !BPR BEGIN
+            !keep_data is initially defined above by being set to true for
+            !any observations whose pressure matched one of the pressure
+            !levels in the first-guess field we are using to QC against
+            !Then it is attempted to be set to true for all surface observations 
+            ! However if a surface observation has a slightly different height
+            ! than the elevation of the station keep_data will NOT be set to
+            ! true.  Sometimes these may differ by ~1m.  
+            ! So that someone in the future does not rely on keep_data for
+            ! surface data and have it behave unexpectedly one could use the
+            ! following line to put a tolerance on the difference between station elevation and
+            ! height of ob BUT this might break cases where one has a sounding
+            ! with a value very close to the surface so will not use this line
+            ! at this time.
+            ! IF ( (obs(i)%info%elevation .ne. missing) .AND.  &
+            !  eps_equal( next%meas%height%data, obs(i)%info%elevation, 3. ) ) keep_data = .TRUE.
+            !Now, check to see if the QC flag is set to the value (extend_influence) that
+            !indicates that either:
+            !1) The ob was assigned a nearby pressure where there is a level in the first guess
+            !2) The ob was QC'd against a nearby pressure where there is a level in the first guess
+            !If the first is true then the pressure would have been changed
+            !in the data so keep_data should already be true, but if the
+            !second is true then keep_data is currently set to false but
+            qc_done_against_nearby_level = contains_2n ( next%meas%pressure%qc, extend_influence )
+            IF ( is_sounding .AND. qc_done_against_nearby_level ) keep_data = .TRUE.
+            !BPR END
 
             !!! Make sure no surface ob has more than one entry
             track_surface_data = track_surface_data + 1
@@ -3062,185 +3389,210 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
             IF (obs(i)%ground%precip%data   == missing_r) obs(i)%ground%precip%qc   = missing
             IF (next%meas%thickness%data    == missing_r) next%meas%thickness%qc    = missing
 
-            IF ( is_sounding ) THEN
-              IF ( (keep_data .AND. remove_unverified) .OR. (.NOT. remove_unverified) ) THEN
-                IF ( OBS_data ) THEN
-                  WRITE ( UNIT = unit , FMT='(1x,6(F11.3,1x,F11.3,1x))' )        &
-                    next%meas%pressure%data,    real(next%meas%pressure%qc),     &
-                    next%meas%height%data,      real(next%meas%height%qc),       &
-                    next%meas%temperature%data, real(next%meas%temperature%qc),  &
-                    next%meas%u%data,           real(next%meas%u%qc),            &
-                    next%meas%v%data,           real(next%meas%v%qc),            &
-                    next%meas%rh%data,          real(next%meas%rh%qc)
-                ELSE
-                  WRITE ( UNIT = unit , FMT = meas_format )  next%meas
-                ENDIF
-                IF ( file_name(1:10) == "qc_obs_use" ) THEN
-                  ilev = ilev + 1
-                  press_nc(ilev)    = next%meas%pressure%data
-                  press_qc_nc(ilev) = next%meas%pressure%qc
-                  z_nc(ilev)        = next%meas%height%data
-                  z_qc_nc(ilev)     = next%meas%height%qc
-                  temp_nc(ilev)     = next%meas%temperature%data
-                  temp_qc_nc(ilev)  = next%meas%temperature%qc
-                  td_nc(ilev)       = next%meas%dew_point%data
-                  td_qc_nc(ilev)    = next%meas%dew_point%qc
-                  spd_nc(ilev)      = next%meas%speed%data
-                  spd_qc_nc(ilev)   = next%meas%speed%qc
-                  dir_nc(ilev)      = next%meas%direction%data
-                  dir_qc_nc(ilev)   = next%meas%direction%qc
-                  u_nc(ilev)        = next%meas%u%data
-                  u_qc_nc(ilev)     = next%meas%u%qc
-                  v_nc(ilev)        = next%meas%v%data
-                  v_qc_nc(ilev)     = next%meas%v%qc
-                  rh_nc(ilev)       = next%meas%rh%data
-                  rh_qc_nc(ilev)    = next%meas%rh%qc
-                ENDIF
-              ENDIF
+            ! BPR BEGIN
+            ! Rotate winds to earth-relative (keep non wind fields the same) and place
+            ! in meas_earth_winds
+            ! Also fills in speed/direction in grid-relative winds (next%meas) since the
+            ! direction is not necessarily correct at this point
+            CALL grid_to_earth_winds ( next%meas, meas_earth_winds, obs(i)%location%longitude )
+            IF( use_grid_relative_winds ) THEN
+             meas_write = next%meas
             ELSE
-              IF ( (keep_data .AND. remove_unverified) .OR. (.NOT. remove_unverified) ) THEN
-                IF ( OBS_data ) THEN
-                  WRITE ( UNIT = unit , FMT='(1x,A14)' ) obs(i)%valid_time%date_char(1:14)
-                  WRITE ( UNIT = unit , FMT='(2x,2(F9.4,1x))' ) obs(i)%location%latitude, obs(i)%location%longitude
-                  IF ( obs(i)%location%id(1:5) == "US un" ) THEN
-                    WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' )    &
-                       "-----                                   " , &
-                       "Unknown Station                         "
-                  ELSE
-                    WRITE ( UNIT = unit , FMT='(2x,2(A40,3x))' ) obs(i)%location%id, obs(i)%location%name
-                  ENDIF
-                  WRITE ( UNIT = unit , FMT='(2x,2(A16,2x),F8.0,2x,2(L4,2x),I5)' )       &
-                    obs(i)%info%platform, obs(i)%info%source, obs(i)%info%elevation, &
-                    is_sounding, obs(i)%info%bogus, true_num_obs
-                  WRITE ( UNIT = unit , FMT='(1x,9(F11.3,1x,F11.3,1x))' )        &
-                    obs(i)%ground%slp%data,      real(obs(i)%ground%slp%qc),     &
-                    obs(i)%ground%ref_pres%data, real(obs(i)%ground%ref_pres%qc),&
-                    next%meas%height%data,       real(next%meas%height%qc),      &
-                    next%meas%temperature%data,  real(next%meas%temperature%qc), &
-                    next%meas%u%data,            real(next%meas%u%qc),           &
-                    next%meas%v%data,            real(next%meas%v%qc),           &
-                    next%meas%rh%data,           real(next%meas%rh%qc),          &
-                    next%meas%pressure%data,     real(next%meas%pressure%qc),    &
-                    obs(i)%ground%precip%data,   real(obs(i)%ground%precip%qc)
-                ELSE
-                  WRITE ( UNIT = unit , FMT = meas_format )  next%meas
-                ENDIF
-                IF ( file_name(1:10) == "qc_obs_use" ) THEN
-                  ilev = ilev + 1
-                  press_nc(ilev)    = next%meas%pressure%data
-                  press_qc_nc(ilev) = next%meas%pressure%qc
-                  z_nc(ilev)        = next%meas%height%data
-                  z_qc_nc(ilev)     = next%meas%height%qc
-                  temp_nc(ilev)     = next%meas%temperature%data
-                  temp_qc_nc(ilev)  = next%meas%temperature%qc
-                  td_nc(ilev)       = next%meas%dew_point%data
-                  td_qc_nc(ilev)    = next%meas%dew_point%qc
-                  spd_nc(ilev)      = next%meas%speed%data
-                  spd_qc_nc(ilev)   = next%meas%speed%qc
-                  dir_nc(ilev)      = next%meas%direction%data
-                  dir_qc_nc(ilev)   = next%meas%direction%qc
-                  u_nc(ilev)        = next%meas%u%data
-                  u_qc_nc(ilev)     = next%meas%u%qc
-                  v_nc(ilev)        = next%meas%v%data
-                  v_qc_nc(ilev)     = next%meas%v%qc
-                  rh_nc(ilev)       = next%meas%rh%data
-                  rh_qc_nc(ilev)    = next%meas%rh%qc
-                ENDIF
-              ENDIF
+             meas_write = meas_earth_winds
             ENDIF
-
+            ! BPR END
             
-            IF ( file_name(1:10) == "qc_obs_raw" ) THEN
-              ilev = ilev + 1
-              press_nc(ilev)    = next%meas%pressure%data
-              press_qc_nc(ilev) = next%meas%pressure%qc
-              z_nc(ilev)        = next%meas%height%data
-              z_qc_nc(ilev)     = next%meas%height%qc
-              temp_nc(ilev)     = next%meas%temperature%data
-              temp_qc_nc(ilev)  = next%meas%temperature%qc
-              td_nc(ilev)       = next%meas%dew_point%data
-              td_qc_nc(ilev)    = next%meas%dew_point%qc
-              spd_nc(ilev)      = next%meas%speed%data
-              spd_qc_nc(ilev)   = next%meas%speed%qc
-              dir_nc(ilev)      = next%meas%direction%data
-              dir_qc_nc(ilev)   = next%meas%direction%qc
-              u_nc(ilev)        = next%meas%u%data
-              u_qc_nc(ilev)     = next%meas%u%qc
-              v_nc(ilev)        = next%meas%v%data
-              v_qc_nc(ilev)     = next%meas%v%qc
-              rh_nc(ilev)       = next%meas%rh%data
-              rh_qc_nc(ilev)    = next%meas%rh%qc
-            ENDIF
+            !BPR BEGIN REORDERING
+            !The following code is reordered from the standard version to be less repetitive 
+            !and hopefully clearer to read
+            !All of the old code is not included in commented out fashion because it would be confusing
+            !The reordering involved...
+            !-The keep_data/remove_unverified conditional is placed on the outside of the is_sounding
+            ! conditional since it is applied to both
+            !-The is_sounding conditional is placed within the OBS_data conditional since it only matters
+            ! for the obs nudging files
+            !-The qc_obs_raw* netcdf file writing is included with the qc_obs_used* netcdf file 
+            ! writing because the code to write them is identical.  While the keep_data/remove_unverified
+            ! conditional was previously not applied to qc_obs_raw it can be applied for simplicity since
+            ! remove_unverified will be FALSE for the qc_obs_raw file
+            IF ( (keep_data .AND. remove_unverified) .OR. (.NOT. remove_unverified) ) THEN
+             IF ( OBS_data ) THEN
+                IF ( is_sounding ) THEN
+                  WRITE ( UNIT = unit , FMT='(1x,6(F11.3,1x,F11.3,1x))' )        &
+                    !BPR BEGIN
+                    !next%meas%pressure%data,    real(next%meas%pressure%qc),     &
+                    !next%meas%height%data,      real(next%meas%height%qc),       &
+                    !next%meas%temperature%data, real(next%meas%temperature%qc),  &
+                    !next%meas%u%data,           real(next%meas%u%qc),            &
+                    !next%meas%v%data,           real(next%meas%v%qc),            &
+                    !next%meas%rh%data,          real(next%meas%rh%qc)
+                    meas_write%pressure%data,    real(meas_write%pressure%qc),     &
+                    meas_write%height%data,      real(meas_write%height%qc),       &
+                    meas_write%temperature%data, real(meas_write%temperature%qc),  &
+                    meas_write%u%data,           real(meas_write%u%qc),            &
+                    meas_write%v%data,           real(meas_write%v%qc),            &
+                    meas_write%rh%data,          real(meas_write%rh%qc)
+                    !BPR END
+                ELSE !If not marked as a sounding
+                  WRITE ( UNIT = unit , FMT='(1x,9(F11.3,1x,F11.3,1x))' )        &
+                    !BPR BEGIN
+                    !obs(i)%ground%slp%data,      real(obs(i)%ground%slp%qc),     &
+                    !obs(i)%ground%ref_pres%data, real(obs(i)%ground%ref_pres%qc),&
+                    !next%meas%height%data,       real(next%meas%height%qc),      &
+                    !next%meas%temperature%data,  real(next%meas%temperature%qc), &
+                    !next%meas%u%data,            real(next%meas%u%qc),           &
+                    !next%meas%v%data,            real(next%meas%v%qc),           &
+                    !next%meas%rh%data,           real(next%meas%rh%qc),          &
+                    !next%meas%pressure%data,     real(next%meas%pressure%qc),    &
+                    !obs(i)%ground%precip%data,   real(obs(i)%ground%precip%qc)
+                    obs(i)%ground%slp%data,       real(obs(i)%ground%slp%qc),     &
+                    obs(i)%ground%ref_pres%data,  real(obs(i)%ground%ref_pres%qc),&
+                    meas_write%height%data,       real(meas_write%height%qc),      &
+                    meas_write%temperature%data,  real(meas_write%temperature%qc), &
+                    meas_write%u%data,            real(meas_write%u%qc),           &
+                    meas_write%v%data,            real(meas_write%v%qc),           &
+                    meas_write%rh%data,           real(meas_write%rh%qc),          &
+                    meas_write%pressure%data,     real(meas_write%pressure%qc),    &
+                    obs(i)%ground%precip%data,    real(obs(i)%ground%precip%qc)
+                    !BPR END
+                ENDIF !If marked as sounding or not
+             ELSE !Not an OBS_DOMAIN file
+                !BPR BEGIN
+                !WRITE ( UNIT = unit , FMT = meas_format )  next%meas
+                WRITE ( UNIT = unit , FMT = meas_format )  meas_write
+                !BPR END
+             ENDIF !If OBS_DOMAIN file or not
+
+             !Prepare data for netCDF output files
+             IF ( ( file_name(1:10) == "qc_obs_use" ) .OR. ( file_name(1:10) == "qc_obs_raw" ) ) THEN
+               ilev = ilev + 1
+               !BPR BEGIN
+               !Change next%meas to meas_write so we can choose whether to use 
+               !grid- or earth-relative winds
+
+               !press_nc(ilev)    = next%meas%pressure%data
+               !press_qc_nc(ilev) = next%meas%pressure%qc
+               !z_nc(ilev)        = next%meas%height%data
+               !z_qc_nc(ilev)     = next%meas%height%qc
+               !temp_nc(ilev)     = next%meas%temperature%data
+               !temp_qc_nc(ilev)  = next%meas%temperature%qc
+               !td_nc(ilev)       = next%meas%dew_point%data
+               !td_qc_nc(ilev)    = next%meas%dew_point%qc
+               !spd_nc(ilev)      = next%meas%speed%data
+               !spd_qc_nc(ilev)   = next%meas%speed%qc
+               !dir_nc(ilev)      = next%meas%direction%data
+               !dir_qc_nc(ilev)   = next%meas%direction%qc
+               !u_nc(ilev)        = next%meas%u%data
+               !u_qc_nc(ilev)     = next%meas%u%qc
+               !v_nc(ilev)        = next%meas%v%data
+               !v_qc_nc(ilev)     = next%meas%v%qc
+               !rh_nc(ilev)       = next%meas%rh%data
+               !rh_qc_nc(ilev)    = next%meas%rh%qc
+               press_nc(ilev)    = meas_write%pressure%data
+               press_qc_nc(ilev) = meas_write%pressure%qc
+               z_nc(ilev)        = meas_write%height%data
+               z_qc_nc(ilev)     = meas_write%height%qc
+               temp_nc(ilev)     = meas_write%temperature%data
+               temp_qc_nc(ilev)  = meas_write%temperature%qc
+               td_nc(ilev)       = meas_write%dew_point%data
+               td_qc_nc(ilev)    = meas_write%dew_point%qc
+               spd_nc(ilev)      = meas_write%speed%data
+               spd_qc_nc(ilev)   = meas_write%speed%qc
+               dir_nc(ilev)      = meas_write%direction%data
+               dir_qc_nc(ilev)   = meas_write%direction%qc
+               u_nc(ilev)        = meas_write%u%data
+               u_qc_nc(ilev)     = meas_write%u%qc
+               v_nc(ilev)        = meas_write%v%data
+               v_qc_nc(ilev)     = meas_write%v%qc
+               rh_nc(ilev)       = meas_write%rh%data
+               rh_qc_nc(ilev)    = meas_write%rh%qc
+               !BPR END
+             ENDIF !If writing a file for which a netCDF version should be written
+            ENDIF !If current ob data is to be written to this file
+            !BPR END REORDERING
+
             next => next%next
          END DO
+         !BPR BEGIN
+         !Default use of discard does not appear to account for out_opt variable
+         !IF ( .not. OBS_data .and. .not. obs(i)%info%discard ) THEN
+         IF ( .not. OBS_data ) THEN
+           !Only write the footer if this ob has not been marked as discard=TRUE
+           !or the output file we are writing is not supposed to throw out obs
+           IF (   out_opt .EQ. 0                                   .OR. &
+              (   out_opt .GT. 0 .AND. .NOT. obs(i)%info%discard ) .OR. &
+              (   out_opt .LT. 0 .AND.       obs(i)%info%discard ) ) THEN
+           !BPR END
 
-         IF ( .not. OBS_data .and. .not. obs(i)%info%discard ) THEN
 
-           iout_nc = iout_nc + 1
-           int_sounding = 0
-           IF (is_sounding) int_sounding = 1
-           int_bogus = 0
-           IF (obs(i)%info%bogus) int_bogus = 1
-           int_discard = 0
-           IF (obs(i)%info%discard) int_discard = 1
+            iout_nc = iout_nc + 1
+            int_sounding = 0
+            IF (is_sounding) int_sounding = 1
+            int_bogus = 0
+            IF (obs(i)%info%bogus) int_bogus = 1
+            int_discard = 0
+            IF (obs(i)%info%discard) int_discard = 1
+ 
+            start = 1
+            count = 1
+            start(2) = iout_nc
+            count(1) = 14
+            CALL check (nf_put_vara_text(ncid, 1,start,count,obs(i)%valid_time%date_char(1:14)))
+            count(1) = 40
+            CALL check (nf_put_vara_text(ncid, 2,start,count,obs(i)%location%id))
+            CALL check (nf_put_vara_text(ncid, 3,start,count,obs(i)%location%name))
+            CALL check (nf_put_vara_text(ncid, 4,start,count,obs(i)%info%platform))
+            CALL check (nf_put_vara_text(ncid, 5,start,count,obs(i)%info%source))
+ 
+            start = 1
+            count = 1
+            start(1) = iout_nc
+            CALL check (nf_put_vara_real(ncid, 6,start,count,obs(i)%location%longitude))
+            CALL check (nf_put_vara_real(ncid, 7,start,count,obs(i)%location%latitude))
+            CALL check (nf_put_vara_real(ncid, 8,start,count,obs(i)%info%elevation))
+            CALL check (nf_put_vara_real(ncid, 9,start,count,obs(i)%ground%slp%data))
+            CALL check (nf_put_vara_int(ncid,10,start,count,obs(i)%ground%slp%qc))
+            CALL check (nf_put_vara_real(ncid,11,start,count,obs(i)%ground%ref_pres%data))
+            CALL check (nf_put_vara_int(ncid,12,start,count,obs(i)%ground%ref_pres%qc))
+            CALL check (nf_put_vara_int(ncid,13,start,count,true_num_obs))
+            CALL check (nf_put_vara_int(ncid, 14,start,count,int_sounding))
+            CALL check (nf_put_vara_int(ncid, 15,start,count,int_bogus))
+            CALL check (nf_put_vara_int(ncid, 16,start,count,int_discard))
+ 
+            start = 1
+            count = 1
+            start(2) = iout_nc
+            count(1) = true_num_obs
+            CALL check (nf_put_vara_real(ncid,17,start,count,press_nc))
+            CALL check (nf_put_vara_int(ncid,18,start,count,press_qc_nc))
+            CALL check (nf_put_vara_real(ncid,19,start,count,z_nc))
+            CALL check (nf_put_vara_int(ncid,20,start,count,z_qc_nc))
+            CALL check (nf_put_vara_real(ncid,21,start,count,temp_nc))
+            CALL check (nf_put_vara_int(ncid,22,start,count,temp_qc_nc))
+            CALL check (nf_put_vara_real(ncid,23,start,count,td_nc))
+            CALL check (nf_put_vara_int(ncid,24,start,count,td_qc_nc))
+            CALL check (nf_put_vara_real(ncid,25,start,count,spd_nc))
+            CALL check (nf_put_vara_int(ncid,26,start,count,spd_qc_nc))
+            CALL check (nf_put_vara_real(ncid,27,start,count,dir_nc))
+            CALL check (nf_put_vara_int(ncid,28,start,count,dir_qc_nc))
+            CALL check (nf_put_vara_real(ncid,29,start,count,u_nc))
+            CALL check (nf_put_vara_int(ncid,30,start,count,u_qc_nc))
+            CALL check (nf_put_vara_real(ncid,31,start,count,v_nc))
+            CALL check (nf_put_vara_int(ncid,32,start,count,v_qc_nc))
+            CALL check (nf_put_vara_real(ncid,33,start,count,rh_nc))
+            CALL check (nf_put_vara_int(ncid,34,start,count,rh_qc_nc))
 
-           start = 1
-           count = 1
-           start(2) = iout_nc
-           count(1) = 14
-           CALL check (nf_put_vara_text(ncid, 1,start,count,obs(i)%valid_time%date_char(1:14)))
-           count(1) = 40
-           CALL check (nf_put_vara_text(ncid, 2,start,count,obs(i)%location%id))
-           CALL check (nf_put_vara_text(ncid, 3,start,count,obs(i)%location%name))
-           CALL check (nf_put_vara_text(ncid, 4,start,count,obs(i)%info%platform))
-           CALL check (nf_put_vara_text(ncid, 5,start,count,obs(i)%info%source))
-
-           start = 1
-           count = 1
-           start(1) = iout_nc
-           CALL check (nf_put_vara_real(ncid, 6,start,count,obs(i)%location%longitude))
-           CALL check (nf_put_vara_real(ncid, 7,start,count,obs(i)%location%latitude))
-           CALL check (nf_put_vara_real(ncid, 8,start,count,obs(i)%info%elevation))
-           CALL check (nf_put_vara_real(ncid, 9,start,count,obs(i)%ground%slp%data))
-           CALL check (nf_put_vara_int(ncid,10,start,count,obs(i)%ground%slp%qc))
-           CALL check (nf_put_vara_real(ncid,11,start,count,obs(i)%ground%ref_pres%data))
-           CALL check (nf_put_vara_int(ncid,12,start,count,obs(i)%ground%ref_pres%qc))
-           CALL check (nf_put_vara_int(ncid,13,start,count,true_num_obs))
-           CALL check (nf_put_vara_int(ncid, 14,start,count,int_sounding))
-           CALL check (nf_put_vara_int(ncid, 15,start,count,int_bogus))
-           CALL check (nf_put_vara_int(ncid, 16,start,count,int_discard))
-
-           start = 1
-           count = 1
-           start(2) = iout_nc
-           count(1) = true_num_obs
-           CALL check (nf_put_vara_real(ncid,17,start,count,press_nc))
-           CALL check (nf_put_vara_int(ncid,18,start,count,press_qc_nc))
-           CALL check (nf_put_vara_real(ncid,19,start,count,z_nc))
-           CALL check (nf_put_vara_int(ncid,20,start,count,z_qc_nc))
-           CALL check (nf_put_vara_real(ncid,21,start,count,temp_nc))
-           CALL check (nf_put_vara_int(ncid,22,start,count,temp_qc_nc))
-           CALL check (nf_put_vara_real(ncid,23,start,count,td_nc))
-           CALL check (nf_put_vara_int(ncid,24,start,count,td_qc_nc))
-           CALL check (nf_put_vara_real(ncid,25,start,count,spd_nc))
-           CALL check (nf_put_vara_int(ncid,26,start,count,spd_qc_nc))
-           CALL check (nf_put_vara_real(ncid,27,start,count,dir_nc))
-           CALL check (nf_put_vara_int(ncid,28,start,count,dir_qc_nc))
-           CALL check (nf_put_vara_real(ncid,29,start,count,u_nc))
-           CALL check (nf_put_vara_int(ncid,30,start,count,u_qc_nc))
-           CALL check (nf_put_vara_real(ncid,31,start,count,v_nc))
-           CALL check (nf_put_vara_int(ncid,32,start,count,v_qc_nc))
-           CALL check (nf_put_vara_real(ncid,33,start,count,rh_nc))
-           CALL check (nf_put_vara_int(ncid,34,start,count,rh_qc_nc))
-
-           WRITE ( UNIT = unit , FMT = meas_format ) end_meas
-           WRITE ( UNIT = unit , FMT = end_format ) obs(i)%info%num_vld_fld, &
+            WRITE ( UNIT = unit , FMT = meas_format ) end_meas
+            WRITE ( UNIT = unit , FMT = end_format ) obs(i)%info%num_vld_fld, &
               obs(i)%info%num_error, obs(i)%info%num_warning
+           !BPR BEGIN
+           ENDIF !If regarding whether data is to be discarded
+           !BPR END
          ENDIF
          IF ( .NOT. forinput ) &
             write(unit,*) 'End of measurements for observation ' , i
 
-         END IF 
+      END IF 
 
    END DO
 
@@ -3263,7 +3615,10 @@ END SUBROUTINE output_obs
 !---------------------------------------------------------------------------
 
 SUBROUTINE read_measurements ( file_num , surface , location , bad_data , error , &
-height , pressure , iew , jns , levels , map_projection , elevation )
+!BPR BEGIN
+!height , pressure , iew , jns , levels , map_projection , elevation )
+height , pressure , slp_x , temperature , iew , jns , levels , map_projection , elevation )
+!BPR END
 
 !  This routine reads in 'measurements' at as many levels as there are in
 !  the report, then stops and returns when an end-of-measurements flag is
@@ -3281,6 +3636,10 @@ height , pressure , iew , jns , levels , map_projection , elevation )
    INTEGER , INTENT ( IN )                          :: levels
    REAL    , INTENT ( IN ) , DIMENSION ( levels )   :: pressure
    INTEGER                                          :: iew , jns , map_projection
+   !BPR BEGIN
+   REAL    , INTENT ( IN ) , DIMENSION ( jns, iew ) :: slp_x
+   REAL    , INTENT ( IN ) , DIMENSION ( jns , iew , levels ) :: temperature
+   !BPR END
    REAL , DIMENSION ( jns , iew , levels )          :: height
 
    CHARACTER ( LEN = 32 ) , PARAMETER    :: sub_name = 'read_measurements'
@@ -3291,6 +3650,10 @@ height , pressure , iew , jns , levels , map_projection , elevation )
    CHARACTER ( LEN = 40 )                       :: location_id , &
                                                    location_name
    REAL , INTENT(IN)                            :: elevation
+   !BPR BEGIN
+   LOGICAL                                      :: used_std_atmos_so_recalc
+   TYPE ( meas_data )                           :: meas_earth_winds
+   !BPR END
 
    INCLUDE 'error.inc'
    INTERFACE
@@ -3435,9 +3798,29 @@ height , pressure , iew , jns , levels , map_projection , elevation )
       !  1)  With the available geopotential height field, we can compute a 
       !  fairly accurate pressure if the height is available from the observation.
 
+      !BPR BEGIN
+      !Check if pressure QC flag indicates that the pressure was calculated
+      !using standard atmosphere + height
+      !Only check if the QC flag is not the missing flag
+      IF ( current%meas%pressure%qc - missing .ne. 0 ) THEN
+       used_std_atmos_so_recalc = contains_2n ( current%meas%pressure%qc, p_std_atm_and_height )
+      ELSE
+       used_std_atmos_so_recalc = .FALSE.
+      ENDIF
+
+      !IF ( ( eps_equal ( current%meas%pressure%data , missing_r , 1. ) ) .OR. &
+      !     ( eps_equal ( current%meas%pressure%data ,        0. , 1. ) ) ) THEN
+      !If pressure is missing, set to zero, or was diagnosed using standard
+      !atmosphere + height
       IF ( ( eps_equal ( current%meas%pressure%data , missing_r , 1. ) ) .OR. &
-           ( eps_equal ( current%meas%pressure%data ,        0. , 1. ) ) ) THEN
-         CALL height_to_pres ( height , pressure , iew , jns , levels , map_projection , &
+           ( eps_equal ( current%meas%pressure%data ,        0. , 1. ) ) .OR. & 
+           ( used_std_atmos_so_recalc ) ) THEN
+      !BPR END
+      !BPR BEGIN
+      !  CALL height_to_pres ( height , pressure , iew , jns , levels , map_projection , &
+         CALL height_to_pres ( height , pressure , slp_x , temperature , iew , jns , &
+                               levels , map_projection , &
+      !BPR END
          location%latitude , location%longitude , current%meas )
       END IF 
 
@@ -3478,6 +3861,13 @@ height , pressure , iew , jns , levels , map_projection , elevation )
       !  domain.
 
       CALL diagnostics ( current%meas , location%longitude )
+
+      ! BPR BEGIN
+      ! Rotate winds to earth-relative (keep non wind fields the same) and place
+      ! in meas_earth_winds
+      !TYPE ( meas_data )    :: meas_earth_winds
+      !CALL grid_to_earth_winds ( current%meas, meas_earth_winds, location%longitude )
+      ! BPR END
 
       !  Increment count of measurements correctly read in (these are the levels).
 
@@ -3549,7 +3939,10 @@ END SUBROUTINE read_measurements
 
 SUBROUTINE read_observations ( file_name , file_num , obs , n_obs , &
 total_number_of_obs , fatal_if_exceed_max_obs , print_out_found_obs , &
-height , pressure , iew , jns , levels , map_projection )
+!BPR BEGIN
+!height , pressure , iew , jns , levels , map_projection )
+height , pressure , slp_x , temperature , iew , jns , levels , map_projection )
+!BPR END
 
 !  This routine opens file 'file_name' and reads all observations, and 
 !  measurements at all levels, from the file into the 'obs' observation array.
@@ -3572,6 +3965,10 @@ height , pressure , iew , jns , levels , map_projection )
    INTEGER , INTENT ( IN )                          :: levels
    REAL    , INTENT ( IN ) , DIMENSION ( levels )   :: pressure
    INTEGER                                          :: iew , jns , map_projection
+   !BPR BEGIN
+   REAL    , INTENT ( IN ) , DIMENSION ( jns, iew ) :: slp_x
+   REAL    , INTENT ( IN ) , DIMENSION ( jns , iew , levels ) :: temperature
+   !BPR END
    REAL , DIMENSION ( jns , iew , levels )          :: height
 
    CHARACTER ( LEN = 32 ) , PARAMETER   :: proc_name = 'read_observations '
@@ -3814,7 +4211,11 @@ height , pressure , iew , jns , levels , map_projection )
          NULLIFY ( obs(obs_num)%surface )
          CALL read_measurements( file_num , obs(obs_num)%surface , &
          obs(obs_num)%location , outside_window , error_ret , & 
-         height , pressure , iew , jns , levels , map_projection , obs(obs_num)%info%elevation )
+!BPR BEGIN
+!        height , pressure , iew , jns , levels , map_projection , obs(obs_num)%info%elevation )
+         height , pressure , slp_x , temperature , iew , jns , levels , map_projection , &
+         obs(obs_num)%info%elevation )
+!BPR END
 
          !  An error in the measurements read is handled in a couple of ways.  A 
          !  flat out error in the read requires the process to start again (cycle
@@ -4101,6 +4502,277 @@ SUBROUTINE temp_to_pres ( new )
 END SUBROUTINE temp_to_pres
 
 !
+! ----------------------------------------------------------------------------
+
+!------------------------------------------------------------------------------
+!BPR BEGIN
+!
+!Check if sumtocheck decomposed includes numtofind
+!If it does contains_2n = .true., elsewise contains_2n = .false.
+!sumtocheck is a sum of the form:
+!2**x(1)+2**x(2)+...
+!where x(n) is composed of integers
+LOGICAL FUNCTION contains_2n ( sumtocheck, numtofind )
+   INTEGER, INTENT(IN)        :: sumtocheck
+   INTEGER, INTENT(IN)        :: numtofind
+
+   INTEGER                    :: maxn
+   INTEGER                    :: curn
+   INTEGER                    :: cur2n
+   INTEGER                    :: sumnow
+
+   !Determine maximum exponent of n to check
+   maxn=18
+   !In theory could take floor of log base 2 of huge(sumtocheck)
+   !to determine this but this is overkill here (and may not work due
+   !to integer/real issues?)
+   curn=maxn
+
+   sumnow=sumtocheck
+   sumnowpos: DO WHILE( sumnow > 0 )
+
+    IF( sumnow < numtofind ) THEN
+     contains_2n = .FALSE.
+     RETURN
+    ELSEIF( sumnow == numtofind ) THEN
+     contains_2n = .TRUE.
+     RETURN
+    ENDIF
+
+    cur2n=2**curn
+    !PRINT *,'cur2n = ',cur2n,' curn=',curn
+    !PRINT *,'sumnow =',sumnow
+
+    DO WHILE( cur2n > sumnow )
+     curn=curn-1
+     cur2n=2**curn
+     !PRINT *,'LOOP cur2n = ',cur2n,' curn=',curn
+    END DO
+    IF( cur2n == numtofind ) THEN
+     contains_2n = .TRUE.
+     RETURN
+    ENDIF
+    sumnow=sumnow-cur2n
+   END DO sumnowpos
+   !Have completely decomposed sumnow and did not find numtofind
+   contains_2n = .FALSE.
+
+END FUNCTION contains_2n
+
+!------------------------------------------------------------------------------
+
+SUBROUTINE grid_to_earth_winds ( meas_grid_winds, meas_earth_winds , longitude )
+
+!  Copy meas_grid_winds to meas_earth_winds, but rotate winds from grid to earth
+!  Also set meas_earth_winds wind speed and direction since they are not necessarily
+!  consistent with u/v
+
+   IMPLICIT NONE
+
+   TYPE ( meas_data ), INTENT(INOUT) :: meas_grid_winds
+   TYPE ( meas_data ), INTENT(OUT)   :: meas_earth_winds
+   REAL, INTENT(IN)                  :: longitude
+
+   REAL                  :: dir_map , lon_dif
+
+   INTEGER               :: iew_map , jns_map
+
+   REAL , PARAMETER :: piover180 = 3.14159265358 / 180.
+   REAL , PARAMETER :: one80overpi = 180. / 3.14159265358 
+   INTEGER               :: uv_to_dirspd_status
+
+   INCLUDE 'proc_get_info_header.inc'
+   INCLUDE 'map.inc'
+   INCLUDE 'error.inc'
+   INTERFACE
+      INCLUDE 'error.int'
+   END INTERFACE
+
+   meas_earth_winds = meas_grid_winds
+
+   !  The wind components are computed in two steps.  First we need the
+   !  meteorological u and v from the speed and direction.  Second, those
+   !  values of u and v are rotated to the model grid.
+
+   IF      ( (       eps_equal ( meas_grid_winds%u%data       , missing_r , 1. ) ) .OR. &
+             (       eps_equal ( meas_grid_winds%v%data   , missing_r , 1. ) ) ) THEN
+      meas_earth_winds%u%data = missing_r
+      meas_earth_winds%u%qc = missing
+      meas_earth_winds%v%data = missing_r
+      meas_earth_winds%v%qc = missing
+      meas_earth_winds%speed%data = missing_r
+      meas_earth_winds%speed%qc = missing
+      meas_earth_winds%direction%data = missing_r
+      meas_earth_winds%direction%qc = missing
+   ELSE
+     !Calculate the grid-relative wind direction / speed
+     !dir_map = one80overpi * acos(-1.0*meas_grid_winds%v%data/meas_earth_winds%speed%data)
+     CALL uv_to_dirspd(meas_grid_winds%u%data,meas_grid_winds%v%data,meas_grid_winds%direction%data,&
+                       meas_grid_winds%speed%data,uv_to_dirspd_status)
+     IF(uv_to_dirspd_status.lt.0) THEN
+      PRINT *,'ERROR: Error in uv_to_dirspd'
+      STOP "ERROR in uv_to_dirspd"
+     ENDIF
+     meas_grid_winds%direction%qc = MAX( meas_earth_winds%u%qc, meas_earth_winds%v%qc )
+     meas_grid_winds%speed%qc = meas_grid_winds%direction%qc
+
+     !Set the earth-relative wind speed equal to the grid-relative value since
+     !they are equal
+     meas_earth_winds%speed%data = meas_grid_winds%speed%data
+     meas_earth_winds%speed%qc = meas_grid_winds%speed%qc
+
+     !If the grid-relative wind speed is basically zero then mark direction as
+     !missing
+     !Also mark earth-relative u/v as zero 
+     IF( eps_equal ( meas_grid_winds%speed%data, 0.0 , 0.00001 ) ) THEN
+      meas_grid_winds%direction%data = missing_r
+      meas_grid_winds%direction%qc= missing
+      meas_earth_winds%direction%data = missing_r
+      meas_earth_winds%direction%qc= missing
+      meas_earth_winds%u%data = 0.0
+      meas_earth_winds%v%data = 0.0
+     ELSE
+      !Calculate the earth-relative wind direction 
+      meas_earth_winds%direction%data = meas_grid_winds%direction%data + (longitude - lon_center ) * &
+       cone_factor * sign(1.0, lat_center) 
+      meas_earth_winds%direction%qc = meas_earth_winds%speed%qc
+      !Calculate the earth-relative u/v
+      meas_earth_winds%u%data = -1. * meas_earth_winds%speed%data * &
+       SIN ( meas_earth_winds%direction%data * piover180 )
+      meas_earth_winds%v%data = -1. * meas_earth_winds%speed%data * &
+       COS ( meas_earth_winds%direction%data * piover180 )
+     ENDIF
+     meas_earth_winds%u%qc =  meas_earth_winds%speed%qc
+     meas_earth_winds%v%qc =  meas_earth_winds%speed%qc
+
+
+      !lon_dif = longitude - lon_center
+      !if ( lon_dif .gt. 180. ) lon_dif = lon_dif - 360.
+      !if ( lon_dif .lt. -180. ) lon_dif = lon_dif + 360.
+      !dir_map = new%direction%data - ( lon_dif ) * cone_factor * SIGN ( 1. , lat_center )
+      !if ( dir_map .GT. 360. ) dir_map = dir_map - 360.
+      !if ( dir_map .LT.   0. ) dir_map = 360     + dir_map
+      !new%u%data = -1. * new%speed%data * SIN ( dir_map * piover180 )
+      !new%v%data = -1. * new%speed%data * COS ( dir_map * piover180 )
+      !new%u%qc   = new%direction%qc
+      !new%v%qc   = new%direction%qc
+   END IF
+
+END SUBROUTINE grid_to_earth_winds 
+
+!Calculate wind direction and wind speed from u and v
+SUBROUTINE uv_to_dirspd(u,v,direction,speed,uv_to_dirspd_status)
+
+ IMPLICIT NONE
+
+ REAL, INTENT(IN)     :: u,v
+ REAL, INTENT(OUT)    :: direction,speed
+ INTEGER, INTENT(OUT) :: uv_to_dirspd_status
+ REAL                 :: pi
+ REAL                 :: absu,absv !Absolute value of wind components
+
+ uv_to_dirspd_status = 0
+
+ pi = acos(-1.0)
+
+ speed = (u*u+v*v)**0.5
+ absu=abs(u)
+ absv=abs(v)
+
+ if((u.ge.0).and.(v.gt.0)) then !Quadrant 1
+  direction = atan(absu/absv)
+ elseif((u.gt.0).and.(v.le.0)) then !Quadrant 2
+  direction = atan(absv/absu) + pi/2.0
+ elseif((u.le.0).and.(v.lt.0)) then !Quadrant 3
+  direction = atan(absu/absv) + pi
+ elseif((u.lt.0).and.(v.ge.0)) then !Quadrant 4
+  direction = atan(absv/absu) + 3*pi/2.0
+ elseif((u.eq.0).and.(v.eq.0)) then !Calm
+  direction = 0
+ endif
+
+ direction = 360.0*direction/(2*pi)
+
+ !Now convert from real vector to meteorological wind vector
+ if((u.eq.0).and.(v.eq.0)) then !Calm
+  direction=0.0
+ else
+  direction=direction+180.0
+ endif
+
+ if(direction.ge.360.0) then
+  direction=direction-360.0
+ endif
+
+END SUBROUTINE uv_to_dirspd
+
+!BPR END
+
+!BPR BEGIN
+!Sort list using comb sort algorithm
+SUBROUTINE COMBSORT_INT(array_to_sort,order_index)
+
+ IMPLICIT NONE
+
+ INTEGER, PARAMETER              :: INT_14DIGITS = selected_int_kind ( 14 )
+ !The array to be sorted
+ INTEGER (kind=INT_14DIGITS) , INTENT(INOUT), DIMENSION(:) :: array_to_sort
+ !An array holding indices to translate between the array_to_sort
+ !passed in, and the one passed out
+ !In other words, if order_index(5)=8 it means that what was in
+ !array_to_sort(8) on input is now in array_to_sort(5)
+ INTEGER, INTENT(INOUT), DIMENSION(:) :: order_index
+
+
+ INTEGER         :: num_vals_to_sort
+ INTEGER         :: gap
+ !Gap shrink factor
+ REAL, PARAMETER :: shrink = 1.3
+ INTEGER         :: counter
+ LOGICAL         :: swapped
+ INTEGER (KIND=INT_14DIGITS) :: element_to_sort_temp
+ INTEGER         :: order_index_temp
+
+ !Determine how many values we have to sort
+ num_vals_to_sort = size(array_to_sort)
+
+ !Initialize gap to number of elements to sort
+ gap = num_vals_to_sort
+
+ !Initialize order index so that order_index(n) = n
+ !This indicates that before sorting the n'th element in array_to_sort
+ !when it was passed in is now the n'th element in array_to_sort
+ order_index(:) = (/ (counter,counter=1,num_vals_to_sort) /)
+
+ !Set swapped to TRUE so that we can enter the loop
+ swapped = .true.
+ DO WHILE( ( gap .ne. 1 ) .OR. ( swapped ) )
+  swapped = .false.
+  !Update the gap value
+  gap = gap / shrink
+  IF( gap .lt. 1 ) THEN
+   gap = 1
+  END IF
+
+  DO counter = 1, num_vals_to_sort - gap
+   IF( array_to_sort(counter) .gt. array_to_sort(counter + gap) ) THEN
+    !Swap [counter] and [counter + gap]
+    element_to_sort_temp         = array_to_sort( counter )
+    order_index_temp             = order_index  ( counter )
+    array_to_sort( counter )     = array_to_sort( counter + gap )
+    order_index  ( counter )     = order_index  ( counter + gap )
+    array_to_sort( counter + gap ) = element_to_sort_temp
+    order_index  ( counter + gap ) = order_index_temp
+    swapped = .TRUE.
+   END IF
+  END DO
+ END DO
+
+
+END SUBROUTINE COMBSORT_INT
+!BPR END
+
+!^L
 ! ----------------------------------------------------------------------------
   subroutine check(status)
 

@@ -2,15 +2,32 @@ SUBROUTINE proc_qc ( iew , jns , kmax , number_of_obs , &
                      total_dups , map_projection , &
                      qc_test_error_max        , qc_test_buddy          , &
                      qc_test_vert_consistency , qc_test_convective_adj , &
+!BPR BEGIN
+                     qc_psfc , &
+!BPR END
                      max_error_t      , max_error_uv   , &
                      max_error_z      , max_error_rh   , &
+!BPR BEGIN
+                     max_error_dewpoint ,                 &
+!BPR END
                      max_error_p      , print_error_max , &
                      max_buddy_t      , max_buddy_uv   , &
                      max_buddy_z      , max_buddy_rh   , &
-                     max_buddy_p      , print_buddy    , &
+!BPR BEGIN
+                     max_buddy_dewpoint ,                &
+!BPR END
+!BPR BEGIN
+!                    max_buddy_p      , print_buddy    , &
+                     max_buddy_p                       , &
+                     use_p_tolerance_one_lev , max_p_tolerance_one_lev_qc , &
+                     print_buddy                       , &
+!BPR END
                      print_found_obs    , &
                      print_vert       , print_dry       , & 
-                     pressure , date , time , dx , buddy_weight , &
+!BPR BEGIN
+!                    pressure , date , time , dx , buddy_weight , &
+                     pressure , pres , date , time , dx , buddy_weight , &
+!BPR END
                      obs , index , max_number_of_obs , &
                      t , u , v , h , rh , slp_x , sst , tobbox , odis )
    USE observation
@@ -21,17 +38,30 @@ SUBROUTINE proc_qc ( iew , jns , kmax , number_of_obs , &
    LOGICAL , INTENT ( IN )                    :: qc_test_error_max         , &
                                                  qc_test_buddy             , &
                                                  qc_test_vert_consistency  , &
-                                                 qc_test_convective_adj
+!BPR BEGIN
+!                                                qc_test_convective_adj
+                                                 qc_test_convective_adj    , &
+                                                 qc_psfc
+!BPR END
    REAL    , INTENT ( IN )                    :: max_error_p,             &
                                                  max_error_t,             &
                                                  max_error_uv,            &
                                                  max_error_z,             &
                                                  max_error_rh,            &
+!BPR BEGIN
+                                                 max_error_dewpoint,      &
+!BPR END
                                                  max_buddy_p,             &
                                                  max_buddy_t,             &
                                                  max_buddy_uv,            &
                                                  max_buddy_z,             &
-                                                 max_buddy_rh
+!BPR BEGIN
+!                                                max_buddy_rh
+                                                 max_buddy_rh,            &
+                                                 max_buddy_dewpoint
+   LOGICAL , INTENT ( IN )                    :: use_p_tolerance_one_lev
+   INTEGER , INTENT ( IN )                    :: max_p_tolerance_one_lev_qc
+!BPR END
    LOGICAL , INTENT ( IN )                    :: print_error_max,         &
                                                  print_buddy    ,         &
                                                  print_found_obs ,        &
@@ -50,7 +80,11 @@ SUBROUTINE proc_qc ( iew , jns , kmax , number_of_obs , &
                                       u  , &
                                       v  , &
                                       h  , &
-                                      rh
+!BPR BEGIN
+!                                     rh
+                                      rh , &
+                                      pres
+!BPR END
 
    REAL , DIMENSION(jns,iew)       :: slp_x        , &
                                       sst          , &

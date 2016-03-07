@@ -33,6 +33,49 @@ factored_difference , test_number )
       
 END SUBROUTINE modify_qc_flag
 
+!BPR BEGIN
+!------------------------------------------------------------------------------
+
+!Add qc_flag_to_add to qc_flag unless qc_flag already includes qc_flag_to_add
+SUBROUTINE add_to_qc_flag ( qc_flag, qc_flag_to_add ) 
+
+   IMPLICIT NONE
+
+   INTEGER , INTENT ( INOUT ) :: qc_flag
+   INTEGER , INTENT ( IN )    :: qc_flag_to_add
+
+   INTEGER                    :: qc_small , & 
+                                 qc_large
+
+   !Since mod(a,p) = a - [ int(a/p) * p ],              
+   !    qc_small   = qc_flag - [ int(qc_flag/qc_flag_to_add) * qc_flag_to_add ]     
+   !For simplicity flag = qc_flag and add = qc_flag_to_add, then 
+   !    qc_small   = flag - [ int(flag/add) * add ]
+   qc_small = mod ( qc_flag , qc_flag_to_add ) 
+   !Since qc_flag, qc_flag_to_add, and "2" are all integers this will be integer
+   !math and so equivalent to:
+   !qc_large= 2 * int [ flag / ( 2 * add ) ]
+   qc_large = ( qc_flag / ( qc_flag_to_add * 2 ) ) * 2
+   !The following equation expanded out and rearranged:
+   ! Term#                         1                       2         3     4
+   !                         [    flag    ]             [ flag ]
+   !flag_new = 2 * add * int [------------] - add * int [------] + flag + add
+   !                         [   2 * add  ]             [  add ]
+   !So the last two terms do the simple adding of "add" to the current flag
+   !"flag".  The first two terms check to see if with integer math the "2" in the
+   !integer divide cancels the 2 outside the integer divide.  This is checking
+   !to see if add is in flag already.  
+   !If add is NOT already in flag then the 2's effectively cancel each other and
+   !thus the first two terms cancel each other out.
+   !If add is already in flag then 2's do not effectively cancel each other and 
+   !the first term is the second term minus "add" so the sum of the first two
+   !terms in "-add", which cancels the fourth term and we are left with the
+   !original flag.
+   qc_flag = qc_large*qc_flag_to_add + qc_small + qc_flag_to_add
+      
+END SUBROUTINE add_to_qc_flag
+!BPR END
+
 !------------------------------------------------------------------------------
 
 SUBROUTINE ob_density ( xob , yob , grid_dist , numobs , tobbox , iew , jns )
@@ -87,7 +130,6 @@ END SUBROUTINE ob_density
 ! no longer needed.
 !
 !                      Aijun Deng     06/11/2008 at Penn State
-!
     IMPLICIT NONE
 
     INTEGER                               :: jns, iew     ! Array x and y dimensions
@@ -96,24 +138,78 @@ END SUBROUTINE ob_density
     REAL, DIMENSION( : , : ), INTENT(OUT) :: distance     ! Outgoing distance array
 
     INTEGER :: i, j, ii, jj
-    REAL    :: dijmin, di, dj, dij
+    !BPR BEGIN
+    !REAL    :: dijmin, di, dj, dij
+    REAL    :: dijmin, dij
+    INTEGER  :: di, dj
+    INTEGER  :: ALLOCATE_STATUS, DEALLOCATE_STATUS
+    !BPR END
+    REAL    :: domain_diagonal_m, domain_diagonal_grid_cells
+    INTEGER :: delta_i, delta_j
+    REAL, DIMENSION( jns+1, iew+1 )           :: dij_lookup
+    LOGICAL, DIMENSION( : , : ), ALLOCATABLE :: ob_in_box
 
-    distance(:,:) = sqrt( (iew-1)*dx*(iew-1)*dx + (jns-1)*dx*(jns-1)*dx )   ! Initialize 
-                    ! the distance array to be the domain diagonal size (something big).
+    !BPR BEGIN
+    !Modified subroutine to increase computational efficiency 
+
+    !Calculate the distance from non-adjacent corners of the domain
+    domain_diagonal_m = sqrt( (iew-1)*dx*(iew-1)*dx + (jns-1)*dx*(jns-1)*dx ) !meters   
+    domain_diagonal_grid_cells = domain_diagonal_m / dx  !Grid cells
+
+    !distance(:,:) = sqrt( (iew-1)*dx*(iew-1)*dx + (jns-1)*dx*(jns-1)*dx )   ! Initialize 
+    !                ! the distance array to be the domain diagonal size (something big).
+    !Initialize the distance array to be the domain diagonal size (i.e., !something big)
+    distance(:,:) = domain_diagonal_m
+
+    !Create a lookup table with the distance (in grid cells) for two points that
+    !differ by a given number of points in the x/y direction
+    !Note that you pass as the first element: the difference in x plus one 
+    !Note that you pass as the second element: the difference in y plus one 
+    DO delta_i = 1, iew + 1
+     DO delta_j = 1, jns + 1
+      dij_lookup(delta_j,delta_i) = SQRT(REAL(delta_j-1)*REAL(delta_j-1)+REAL(delta_i-1)*REAL(delta_i-1)) 
+     ENDDO
+    ENDDO
+
+    !ob_in_box =  
+    ALLOCATE(ob_in_box(lbound(tobbox,1):ubound(tobbox,1),lbound(tobbox,2):ubound(tobbox,2)), &
+             STAT = ALLOCATE_STATUS)
+    IF( ALLOCATE_STATUS .ne. 0 ) THEN
+     PRINT *,'ERROR: obs_distance: Could not allocate ob_in_box'
+     STOP 'ERROR: obs_distance: Could not allocate ob_in_box'
+    END IF
+    WHERE( tobbox > 0.5)
+     ob_in_box = .TRUE.
+    ELSEWHERE
+     ob_in_box = .FALSE.
+    ENDWHERE
+
     dijmin = 0.0
 
     DO i = 1, iew
     DO j = 1, jns
-        IF( tobbox(j,i) > 0.5 ) THEN
+        !BPR BEGIN
+        !IF( tobbox(j,i) > 0.5 ) THEN
+        IF( ob_in_box(j,i) ) THEN
+        !BPR END
           distance(j,i) = 0.0
         ELSE
-          dijmin = MAXVAL( distance/dx )
+          !BPR BEGIN
+          !dijmin = MAXVAL( distance/dx )
+          dijmin = domain_diagonal_grid_cells
+          !BPR END
           DO ii = 1, iew
           DO jj = 1, jns
-            IF( tobbox(jj,ii) > 0.5 ) THEN
-              di     = ABS( FLOAT(ii-i) )
-              dj     = ABS( FLOAT(jj-j) )
-              dij    = SQRT( di*di+dj*dj )
+            !BPR BEGIN
+            !IF( tobbox(jj,ii) > 0.5 ) THEN
+            IF( ob_in_box(jj,ii) ) THEN
+              !di     = ABS( FLOAT(ii-i) )
+              !dj     = ABS( FLOAT(jj-j) )
+              !dij    = SQRT( di*di+dj*dj )
+              di     = ABS( (ii-i) )
+              dj     = ABS( (jj-j) )
+              dij    = dij_lookup( dj+1,di+1 )
+            !BPR END
               dijmin = MIN( dijmin,dij )
             ENDIF
           ENDDO
@@ -124,6 +220,14 @@ END SUBROUTINE ob_density
         ENDIF
     ENDDO
     ENDDO
+   
+    !BPR BEGIN
+    DEALLOCATE(ob_in_box, STAT = DEALLOCATE_STATUS)
+    IF( DEALLOCATE_STATUS .ne. 0 ) THEN
+     PRINT *,'ERROR: obs_distance: Could not deallocate ob_in_box'
+     STOP 'ERROR: obs_distance: Could not deallocate ob_in_box'
+    END IF
+    !BPR END
 
   END SUBROUTINE obs_distance
 
@@ -277,22 +381,48 @@ SUBROUTINE qc_consistency ( obs , num_obs )
          qc_t = current%meas%temperature%qc
          qc_rh = current%meas%rh%qc
 
-         IF      ( ( qc_t .GE. fails_error_max   ) .AND. ( qc_rh .LT. fails_error_max   ) ) THEN 
-            current%meas%rh%qc        = current%meas%rh%qc        + fails_error_max
-            current%meas%dew_point%qc = current%meas%dew_point%qc + fails_error_max
-         ELSE IF ( ( qc_t .GE. fails_buddy_check ) .AND. ( qc_rh .LT. fails_buddy_check ) ) THEN 
-            current%meas%rh%qc        = current%meas%rh%qc        + fails_buddy_check
-            current%meas%dew_point%qc = current%meas%dew_point%qc + fails_buddy_check
-         END IF
+         
+         !BPR BEGIN
+         !The following code appears to contain errors
+         !For example, consider the case qc_t .eq. fails_buddy_check and qc_rh .lt. fails_error_max
+         !Since currently fails_buddy_check .gt. fails_error_max, this will lead to qc_rh = fails_error_max 
+         !It would seem that we would want qc_rh = fails_buddy_check
+         !IF      ( ( qc_t .GE. fails_error_max   ) .AND. ( qc_rh .LT. fails_error_max   ) ) THEN 
+         !   current%meas%rh%qc        = current%meas%rh%qc        + fails_error_max
+         !   current%meas%dew_point%qc = current%meas%dew_point%qc + fails_error_max
+         !ELSE IF ( ( qc_t .GE. fails_buddy_check ) .AND. ( qc_rh .LT. fails_buddy_check ) ) THEN 
+         !   current%meas%rh%qc        = current%meas%rh%qc        + fails_buddy_check
+         !   current%meas%dew_point%qc = current%meas%dew_point%qc + fails_buddy_check
+         !END IF
+
+         IF ( ( contains_2n ( qc_t, fails_error_max ) ) .AND. &
+              ( .NOT. contains_2n ( qc_rh, fails_error_max ) ) ) THEN
+          CALL add_to_qc_flag( current%meas%rh%qc, fails_error_max )
+          CALL add_to_qc_flag( current%meas%dew_point%qc, fails_error_max )
+         ENDIF
+         IF ( ( contains_2n ( qc_t, fails_buddy_check ) ) .AND. &
+              ( .NOT. contains_2n ( qc_rh, fails_buddy_check ) ) ) THEN
+          CALL add_to_qc_flag( current%meas%rh%qc, fails_buddy_check )
+          CALL add_to_qc_flag( current%meas%dew_point%qc, fails_buddy_check )
+         ENDIF
 
          !  If td > t, then td and RH have to be bad.
 
          IF ( ( current%meas%dew_point%data .GT. current%meas%temperature%data   ) .AND. &
               ( qc_rh                       .LT. fails_buddy_check ) ) THEN 
-            current%meas%rh%qc        = current%meas%rh%qc        + fails_buddy_check
-            current%meas%dew_point%qc = current%meas%dew_point%qc + fails_buddy_check
+            !BPR BEGIN
+            !Since the conditional ensures that rh%qc does not contain the fails_buddy_check
+            !QC flag, for RH the following line is ok, but for dew_point we do not know
+            !if dewpoint already includes fails_buddy_check.  For consistency, and to 
+            !prevent potential future issues if code is modified, modify rh%qc
+            !even though it is not currently necessary
+            !current%meas%rh%qc        = current%meas%rh%qc        + fails_buddy_check
+            CALL add_to_qc_flag( current%meas%rh%qc , fails_buddy_check )
+            !current%meas%dew_point%qc = current%meas%dew_point%qc + fails_buddy_check
+            CALL add_to_qc_flag( current%meas%dew_point%qc , fails_buddy_check )
+            !BPR END
          END IF
-
+         
          !  Point to the next level
 
          current => current%next

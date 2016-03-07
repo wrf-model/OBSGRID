@@ -1,14 +1,19 @@
 MODULE ob_access
 
 USE observation
+!BPR BEGIN
+USE get_fg_at_point
+!BPR END
 
 CONTAINS
 
 !------------------------------------------------------------------------------
-
 SUBROUTINE query_ob ( obs , date , time , &
 request_variable , request_level , request_qc_max , request_p_diff , &
-value , qc )
+!BPR BEGIN
+!value , qc )
+value , qc , fg_3d_t , fg_3d_h )
+!BPR END
 
    USE date_pack
 
@@ -22,6 +27,11 @@ value , qc )
                               request_p_diff
    REAL                    :: value
    INTEGER                 :: qc
+!BPR BEGIN
+   REAL , INTENT(IN) , OPTIONAL , DIMENSION(:,:,:) :: fg_3d_t, &
+                                                      fg_3d_h
+   LOGICAL                 :: mark_as_false_extend
+!BPR END
 
    TYPE ( measurement ) , POINTER :: next_one
 
@@ -33,6 +43,20 @@ value , qc )
    CHARACTER (LEN=19)      :: obs_date , analysis_date , analysis_p1_date , analysis_m1_date
    LOGICAL                 :: close
 
+!BPR BEGIN
+   REAL                    :: curpdiff, minpdiff
+   INTEGER                 :: curlev, uselev, maxlev
+   LOGICAL                 :: isin
+
+!BPR END
+!BPR BEGIN
+   REAL                    :: rh_value, t_value, rh_qc, t_qc
+   REAL                    :: t_layer_average, t_value_at_sea_level
+   REAL                    :: psfc_value, psfc_qc
+   REAL                    :: elevation_value
+   INCLUDE 'constants.inc'
+!BPR END
+
    INCLUDE 'error.inc'
    INCLUDE 'missing.inc'
    INTERFACE
@@ -40,6 +64,10 @@ value , qc )
    END INTERFACE
 
    not_missing ( r )  = ( ABS ( r - missing_r ) .GT. 1. )
+
+!BPR BEGIN
+   mark_as_false_extend = .false.
+!BPR END
 
    !  Compute the difference in times bewteen the requested
    !  data and time, and the observation's data and time.
@@ -108,7 +136,7 @@ value , qc )
                value = obs%ground%slp%data
                qc    = obs%ground%slp%qc
             END IF 
-   
+
          CASE DEFAULT slp_vs_others
    
             !  All of the data that is not in the "ground" section is stored in
@@ -168,7 +196,96 @@ value , qc )
                                  value = next_one%meas%rh%data
                                  qc    = next_one%meas%rh%qc
                               END IF
-               
+
+                           !BPR BEGIN
+                           !Added so that we can perform QC on dewpoint to improve QC of RH
+                           CASE ( 'DEWPOINT' ) which_sfc_var
+                              IF ( ( ( not_missing ( next_one%meas%rh%data ) ) .AND. &
+                                                   ( next_one%meas%rh%qc .LT. request_qc_max ) ) .AND. &
+                                   ( ( not_missing ( next_one%meas%temperature%data ) ) .AND. &
+                                                   ( next_one%meas%temperature%qc .LT. request_qc_max ) ) ) THEN
+                                 rh_value = next_one%meas%rh%data
+                                 rh_qc    = next_one%meas%rh%qc
+                                 t_value = next_one%meas%temperature%data
+                                 t_qc    = next_one%meas%temperature%qc
+                                 !Calculate dewpoint using formula in
+                                 !obs_sort_module.F90
+                                 !Since log(0) is undefined, if RH is near zero then set it to
+                                 !some small value
+                                 IF( rh_value .LT. very_small_rh ) THEN
+                                  value = 1. / ( 1./t_value - Rv_over_L * LOG ( very_small_rh / 100. ) )
+                                 ELSE
+                                  value = 1. / ( 1./t_value - Rv_over_L * LOG ( rh_value / 100. ) )
+                                 END IF
+
+                                 !Since purpose is to improve QC of RH, pull RH QC values
+                                 qc = rh_qc
+                              END IF
+
+                           CASE ( 'PSFC    ' ) which_sfc_var
+                              !Although ob header stores surface pressure in obs%ground%psfc%data
+                              !Obsgrid seems to use the pressure in the surface level of the ob
+                              IF ( ( not_missing ( next_one%meas%pressure%data ) ) .AND. &
+                                   ( next_one%meas%pressure%qc .LT. request_qc_max ) ) THEN
+                                 value = next_one%meas%pressure%data
+                                 qc    = next_one%meas%pressure%qc
+                              END IF 
+
+                           CASE ( 'PMSLPSFC' ) which_sfc_var
+                              !This case means that we want to obtain the sea level pressure 
+                              !based on the observed surface pressure
+                              !Although ob header stores surface pressure in obs%ground%psfc%data
+                              !Obsgrid seems to use the pressure in the surface level of the ob
+                              IF ( ( not_missing ( next_one%meas%pressure%data ) )   .AND. &
+                                   ( next_one%meas%pressure%qc .LT. request_qc_max ) .AND. &
+                                   ( .NOT. eps_equal ( obs%info%elevation , missing_r , 1. ) ) ) THEN
+                                 psfc_value = next_one%meas%pressure%data
+                                 psfc_qc    = next_one%meas%pressure%qc
+                                 elevation_value = obs%info%elevation
+                                 IF ( ( not_missing ( next_one%meas%temperature%data ) ) .AND. &
+                                                    ( next_one%meas%temperature%qc .LT. request_qc_max ) ) THEN
+                                  !If the ob has a surface temperature ob that is not bad
+                                  !then use that to define temperature at level of ob and
+                                  !standard atmosphere to get to sea level
+                                  t_value = next_one%meas%temperature%data
+                                  t_value_at_sea_level = t_value - dTdz_std_atm_lt_11000m * elevation_value
+                                  t_layer_average = 0.5 * (t_value_at_sea_level + t_value )  
+                                 ELSE
+                                  !If the ob does NOT have a good surface temperature ob
+                                  !Then use first guess field to determine temperature
+                                  IF( PRESENT(fg_3d_t) .AND. PRESENT(fg_3d_h) ) THEN
+                                   CALL get_fg_t_at_point(fg_3d_t,fg_3d_h,obs%location%latitude, &
+                                    obs%location%longitude, 0.5*elevation_value, t_layer_average) 
+                                   !If average temperature of layer is missing and the height of the observation is
+                                   !below 11000m (the top of the level where the lapse rate is applicable) then use 
+                                   !standard atmosphere to find temperature
+                                   IF ( ( ABS ( t_layer_average - missing_r ) .LT. 1. ) .AND. &
+                                        ( elevation_value .LE. 11000.0 ) ) THEN
+                                    t_value_at_sea_level = t_at_sea_level_std_atm
+                                    t_value = t_value_at_sea_level + dTdz_std_atm_lt_11000m * elevation_value 
+                                    t_layer_average = 0.5 * (t_value_at_sea_level + t_value )  
+                                   END IF
+
+                                  ELSE
+                                   !If somehow we do not have the first guess field then error out since 
+                                   !this should not happen. 
+                                   !standard atmosphere
+                                   PRINT *,'ERROR: query_ob: First guess temperature and/or height are not available'
+                                   STOP
+                                   !In theory we could use standard atmosphere to get temperature
+                                   t_value_at_sea_level = t_at_sea_level_std_atm
+                                   t_value = t_value_at_sea_level + dTdz_std_atm_lt_11000m * elevation_value 
+                                   t_layer_average = 0.5 * (t_value_at_sea_level + t_value )  
+                                  END IF
+                                 END IF
+                                 IF ( not_missing ( t_layer_average ) ) THEN
+                                  !Value is the sea level pressure calculated from the 
+                                  !surface pressure, elevation, and temperatures
+                                  value      = psfc_value / (exp( ( -elevation_value * g ) / (gasr * t_layer_average ) ) )
+                                  qc         = psfc_qc
+                                 END IF
+                              END IF 
+                           !BPR END
                         END SELECT which_sfc_var      
    
                         !  We found the surface data, and we either have the data or not.  
@@ -206,12 +323,108 @@ value , qc )
    
                   next_one => obs%surface
                   still_more = ASSOCIATED ( next_one )
-   
+
+                  !BPR BEGIN
+                  !Original code assumes that a given ob will be close enough to
+                  !at most one of the pressure levels in the background field
+                  !If one expands the tolerance (request_p_diff) enough then one
+                  !must determine if current pressure level of analysis is the
+                  !one closest to this ob
+                  curlev=0
+                  uselev=-1
+                  minpdiff=9999999
+                  search_for_levela : DO WHILE ( still_more )
+                   curlev=curlev+1
+                   curpdiff=ABS ( next_one%meas%pressure%data - request_level * 100 )
+                   found_levela : IF ( curpdiff .LT. request_p_diff ) THEN
+                     IF(curpdiff.LT.minpdiff) THEN
+                      minpdiff=curpdiff
+                      uselev=curlev
+                     ENDIF
+                   END IF found_levela
+                   next_one => next_one%next
+                   still_more = ASSOCIATED ( next_one )
+                  END DO search_for_levela
+
+                  next_one => obs%surface
+                  still_more = ASSOCIATED ( next_one )
+                  maxlev=curlev
+                  !BPR END 
+ 
                   !  Does the level exist?  Loop through the linked list of the data
                   !  to find a correct pressure.
    
+                  !BPR BEGIN
+                  curlev=0
+                  !BPR END
                   search_for_level : DO WHILE ( still_more ) 
-                     found_level : IF ( ABS ( next_one%meas%pressure%data - request_level * 100 ) .LT. request_p_diff ) THEN
+                     !BPR BEGIN
+                     curlev=curlev+1
+                     curpdiff=ABS ( next_one%meas%pressure%data - request_level * 100 )
+                     !found_level : IF ( ABS ( next_one%meas%pressure%data - request_level * 100 ) .LT. request_p_diff ) THEN
+                     !found_level : IF ( curlev .EQ. uselev ) THEN
+                     !If single-level ob (e.g., ACARS) and the pressure is
+                     !within request_p_diff Pa of analysis level we are working on
+                     !OR
+                     !If multiple-level ob (e.g., sonde) and the pressure is
+                     !very close to the analysis level (within 1 Pa) 
+                     !AND
+                     !It is not a surface ob (excluded by ensuring that the height
+                     !of the ob is not identical to the station elevation,
+                     !unless the height of the ob is missing)
+                     !
+                     !Single-level obs need larger tolerances in order to be
+                     !included since they cannot be interpolated to analysis pressures
+                     !Note that some single-level obs (FM-97 AIREP and FM-88 SATOB) will
+                     !be extended to the closest analysis level if possible by
+                     !extend_to_closest if use_p_tolerance_one_lev = .FALSE.  
+                     !If this has been done they will have
+                     !the original level and the new level and so they will be
+                     !treated with the multiple-level obs
+
+                     !Multiple-level obs cannot use the broader tolerance, because they 
+                     !have been pre-interpolated to the analysis levels.  If we
+                     !use the broader tolerance we may include both the
+                     !non-interpolated levels close to the analysis level and
+                     !the new interpolated value at the analysis level
+
+                     !Surface obs are excluded here since they should be
+                     !qc'd/analyzed at the surface level (which is dealt with in
+                     !the not_slp_which_level switch under the case where
+                     !request_level=1001).  Here we are under the DEFAULT case.
+                     !In the original code, surface obs were basically excluded
+                     !from this section of code because surface obs would only be
+                     !included if their pressure was within 0Pa of analysis
+                     !level.  With the pressure tolerance expanded for
+                     !single-level obs, surface obs would be much more likely to
+                     !be included in another level if surface obs were not
+                     !specifically excluded.
+                     found_level : IF (((( maxlev .EQ. 1 ).AND.( curlev .EQ. uselev )).OR.&
+                                        (( maxlev .NE. 1 ).AND.( curpdiff .LT. 1 ))).AND.&
+                                       ((.NOT. eps_equal ( next_one%meas%height%data , obs%info%elevation , 1. ) ) .OR. &
+                                        (      eps_equal ( next_one%meas%height%data , missing_r          , 1. ) ))) THEN
+                        !If ob qualifies because it is a single-level non-surface 
+                        !ob close enough to desired level
+                        IF (( maxlev .EQ. 1 ).AND.( curlev .EQ. uselev )) THEN
+                         !Note that this ob should be marked with the qc flag
+                         !usually used for single-level obs that are assigned
+                         !the closest analysis pressure level 
+                         !This will allow ob to pass following remove_unverified test on
+                         !output in obs_sort_module.F90:
+                         !IF ( is_sounding .AND. next%meas%pressure%qc .gt. 4 )  keep_data = .TRUE.
+                         mark_as_false_extend = .true.
+                        ENDIF
+                        IF ( mark_as_false_extend ) THEN
+                         !Check if pressure qc flag already contains extend_influence flag
+                         isin = contains_2n ( next_one%meas%pressure%qc, extend_influence )
+                         !If pressure qc flag does NOT already contain the
+                         !extend_influence flag, then add it
+                         IF ( .NOT. isin ) THEN
+                          next_one%meas%pressure%qc = next_one%meas%pressure%qc + extend_influence
+                         ENDIF
+                        ENDIF
+
+                     !BPR END
    
                         !  Does the data exist on this level?  We found the right
                         !  pressure level, now check the existence of the 
@@ -247,6 +460,32 @@ value , qc )
                                  value = next_one%meas%rh%data
                                  qc    = next_one%meas%rh%qc
                               END IF
+
+                           !BPR BEGIN
+                           !Added so that we can perform QC on dewpoint to improve QC of RH
+                           CASE ( 'DEWPOINT' ) which_var
+                              IF ( ( ( not_missing ( next_one%meas%rh%data ) ) .AND. &
+                                                   ( next_one%meas%rh%qc .LT. request_qc_max ) ) .AND. &
+                                   ( ( not_missing ( next_one%meas%temperature%data ) ) .AND. &
+                                                   ( next_one%meas%temperature%qc .LT. request_qc_max ) ) ) THEN
+                                 rh_value = next_one%meas%rh%data
+                                 rh_qc    = next_one%meas%rh%qc
+                                 t_value = next_one%meas%temperature%data
+                                 t_qc    = next_one%meas%temperature%qc
+                                 !Calculate dewpoint using formula in
+                                 !obs_sort_module.F90
+                                 !Since log(0) is undefined, if RH is near zero then set it to
+                                 !some small value
+                                 IF( rh_value .LT. very_small_rh ) THEN
+                                  value = 1. / ( 1./t_value - Rv_over_L * LOG ( very_small_rh / 100. ) )
+                                 ELSE
+                                  value = 1. / ( 1./t_value - Rv_over_L * LOG ( rh_value / 100. ) )
+                                 END IF
+                                 !Since the purpose is to improve the QC of RH,
+                                 !pull RH QC values
+                                 qc = rh_qc
+                              END IF
+                           !BPR END
    
                         END SELECT which_var
    
@@ -284,15 +523,15 @@ value , qc )
       error_message(1:31) = 'query_ob                       '
       error_message(32:)  = ' Wrong time for observation ' // &
       TRIM ( obs%location%id ) // ', at time = ' // obs%valid_time%date_char(1:12) // &
-      ' (ccyymmddhhmm).'  
+      ' (ccyymmddhhmm).'
       fatal = .false.
       listing = .false.
 ! foo
-!    CALL error_handler ( error_number , error_message ,  &
-!    fatal , listing )
+!     CALL error_handler ( error_number , error_message ,  &
+!     fatal , listing )
 !    print*,obs%surface%meas%temperature%data, obs%surface%meas%temperature%qc
    END IF right_time
-   
+
 END SUBROUTINE query_ob
 
 !------------------------------------------------------------------------------
@@ -315,6 +554,12 @@ value , qc )
    LOGICAL                 :: still_more
 
    CHARACTER ( LEN = 4 )   :: plevel_char
+
+   !BPR BEGIN
+   TYPE ( measurement ) , POINTER :: next_next_one
+   LOGICAL                 :: multi_level_ob
+   INTEGER                 :: request_p_diff_use
+   !BPR END
 
    INCLUDE 'error.inc'
    INTERFACE
@@ -379,6 +624,36 @@ value , qc )
                         CASE ( 'RH      ' ) which_sfc_var
                            next_one%meas%rh%data = value
                            next_one%meas%rh%qc   =qc
+
+                        !BPR BEGIN
+                        CASE ( 'PMSLPSFC' ) which_sfc_var
+                           !Do not change the value because this case means that the program
+                           !requested a sea level pressure based on the surface pressure
+                           !so that quality control of surface pressure could be done since
+                           !directly QC'ing surface pressure is difficult due to it's elevation
+                           !dependence.  
+                           !So although we want to update the surface pressure QC flag, we do not
+                           !want to put a derived sea level pressure (which is what is in value)
+                           !into surface pressure
+                           !Surface pressure is in the header but is also the
+                           !pressure of the surface level so we need to adjust both
+                           obs%ground%psfc%qc   = qc
+                           next_one%meas%pressure%qc   = qc
+                        !BPR END
+
+                        !BPR BEGIN
+                        !Dewpoint is the moisture variable read in from the
+                        !littler file, but RH is used internally and output to
+                        !the OBS_DOMAIN file. However, the qc_obs* files use
+                        !dewpoint so dewpoint is also important
+                        !When we do QC on dewpoint we are trying to check for
+                        !bad RH.  So if we are here we are trying to update
+                        !the RH QC flags based on the dewpoint QC
+                        CASE ( 'DEWPOINT' ) which_sfc_var
+                            next_one%meas%dew_point%data = value
+                            next_one%meas%dew_point%qc   =qc
+                           next_one%meas%rh%qc   =qc
+                        !BPR END
             
                      END SELECT which_sfc_var      
 
@@ -432,10 +707,38 @@ value , qc )
                next_one => obs%surface
                still_more = ASSOCIATED ( next_one )
 
+               !BPR BEGIN
+               !Determine the pressure tolerance to use when storing observations
+               !If this is a multi-level observation then one should effectively
+               ! use no tolerance since the ob has already been interpolated to
+               ! the pressure of the first-guess field so it should exactly match
+               !If this is a single-level (above-surface) observation then we
+               ! need to use the same tolerance used in pulling the ob in the
+               ! first place.  However, we do not need to worry about determining
+               ! whether the current pressure level is the one closest to the ob
+               ! since we would not have retrieved this ob in the first place if
+               ! the current request_level was not the closest pressure level
+               !If the first level exists...
+               IF ( still_more ) THEN
+                !Make a pointer to the next level
+                next_next_one => next_one%next
+                !If this pointer is valid then this ob has at least two levels
+                multi_level_ob = ASSOCIATED ( next_next_one)
+                IF(multi_level_ob) THEN
+                 request_p_diff_use = 1
+                ELSE
+                 request_p_diff_use = request_p_diff
+                END IF
+               END IF
+               !BPR END
+
                !  Loop through the linked list of the data to find a correct pressure.
 
                search_for_level : DO WHILE ( still_more ) 
-                  found_level : IF ( ABS ( next_one%meas%pressure%data - request_level * 100 ) .LT. request_p_diff ) THEN
+                  !BPR BEGIN
+                  !found_level : IF ( ABS ( next_one%meas%pressure%data - request_level * 100 ) .LT. request_p_diff ) THEN
+                  found_level : IF ( ABS ( next_one%meas%pressure%data - request_level * 100 ) .LT. request_p_diff_use ) THEN
+                  !BPR END
 
                      !  We found the right pressure level, so just shove the data in.
 
@@ -456,6 +759,20 @@ value , qc )
                         CASE ( 'RH      ' ) which_var
                            next_one%meas%rh%data = value
                            next_one%meas%rh%qc = qc
+
+                        !BPR BEGIN
+                        !Dewpoint is the moisture variable read in from the
+                        !littler file, but RH is used internally and output to
+                        !the OBS_DOMAIN file. However, the qc_obs* files use
+                        !dewpoint so dewpoint is also important
+                        !When we do QC on dewpoint we are trying to check for
+                        !bad RH.  So if we are here we are trying to update
+                        !the RH QC flags based on the dewpoint QC
+                        CASE ( 'DEWPOINT' ) which_var
+                           next_one%meas%dew_point%data = value
+                           next_one%meas%dew_point%qc = qc
+                           next_one%meas%rh%qc = qc
+                        !BPR END
 
                      END SELECT which_var
 
@@ -500,5 +817,5 @@ value , qc )
 END SUBROUTINE store_ob
 
 !------------------------------------------------------------------------------
-   
+
 END MODULE ob_access

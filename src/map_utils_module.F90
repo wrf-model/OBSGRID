@@ -563,7 +563,8 @@ CONTAINS
 
     ! Compute cone factor
     CALL lc_cone(proj%truelat1, proj%truelat2, proj%cone)
-    PRINT '(A,F8.6)', 'Computed cone factor: ', proj%cone
+  !mchen  PRINT '(A,F8.6)', 'Computed cone factor: ', proj%cone
+    PRINT '(A,F8.3)', 'Computed cone factor: ', proj%cone
     ! Compute longitude differences and ensure we stay out of the
     ! forbidden "cut zone"
     deltalon1 = proj%lon1 - proj%stdlon

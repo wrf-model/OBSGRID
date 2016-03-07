@@ -5,6 +5,9 @@ iew_alloc , jns_alloc , kbu_alloc , &
 total_dups , map_projection , &
 get_value , get_x_location , get_y_location , get_longitude , &
 get_array_index , get_over_water , get_id , get_qc_info , &
+!BPR BEGIN
+get_elevation , get_fg_3d_t , get_fg_3d_h , &
+!BPR END
 put_value , put_array_index , put_qc_info )
 
    USE observation
@@ -32,6 +35,11 @@ put_value , put_array_index , put_qc_info )
                                                          get_qc_info
    LOGICAL                 , OPTIONAL , DIMENSION (:) :: get_over_water
    CHARACTER ( LEN =   8 ) , OPTIONAL , DIMENSION (:) :: get_id
+!BPR BEGIN
+   REAL                    , OPTIONAL , DIMENSION (:) :: get_elevation
+   REAL , INTENT(IN)       , OPTIONAL , DIMENSION(:,:,:) :: get_fg_3d_t, &
+                                                            get_fg_3d_h
+!BPR END
    REAL                    , OPTIONAL , DIMENSION (:) :: put_value
    INTEGER                 , OPTIONAL , DIMENSION (:) :: put_array_index , &
                                                          put_qc_info

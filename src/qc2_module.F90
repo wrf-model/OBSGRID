@@ -7,6 +7,9 @@ CONTAINS
 !------------------------------------------------------------------------------
 
 SUBROUTINE buddy_check ( station_id, obs, numobs, xob, yob, qc_flag,   &
+!BPR BEGIN
+station_elevation , &
+!BPR END
 gridded, iew, jns, name,                      &
 pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
 
@@ -37,6 +40,9 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
    CHARACTER ( LEN =   8 ) , DIMENSION ( : )      :: station_id
    REAL                    , DIMENSION ( : )      :: obs, xob, yob
    INTEGER                 , DIMENSION ( : )      :: qc_flag
+   !BPR BEGIN
+   REAL                    , DIMENSION ( : )      :: station_elevation
+   !BPR END
    REAL                    , DIMENSION( : , : )   :: gridded
    INTEGER                                        :: iew, jns
    CHARACTER ( LEN =   8 )                        :: name
@@ -70,12 +76,20 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
                                                  aob
    INTEGER , DIMENSION ( numobs )             :: buddy_num,          &
                                                  buddy_num_final
-   CHARACTER ( LEN = 100 )                    :: message
+   !BPR BEGIN
+   INTEGER , DIMENSION ( numobs )             :: buddy_num_index
+   REAL    , DIMENSION ( numobs )             :: factor
+   !CHARACTER ( LEN = 100 )                    :: message
+   CHARACTER ( LEN = 125 )                    :: message
+   !BPR END
    REAL                                       :: scale
 
    CHARACTER ( LEN =   8 ) , DIMENSION ( numobs ) :: station_id_small
    REAL                    , DIMENSION ( numobs ) :: obs_small , xob_small , yob_small
    INTEGER                 , DIMENSION ( numobs ) :: qc_flag_small
+   !BPR BEGIN
+   REAL                    , DIMENSION ( numobs ) :: station_elevation_small
+   !BPR END
    INTEGER                 , DIMENSION ( numobs ) :: local_time_small
 
    INCLUDE 'error.inc'
@@ -89,9 +103,18 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
    xob_small(:numobs)         = xob(:numobs)
    yob_small(:numobs)         = yob(:numobs)
    qc_flag_small(:numobs)     = qc_flag(:numobs)
+   !BPR BEGIN
+   station_elevation_small(:numobs) = station_elevation(:numobs)
+   !BPR END
    local_time_small(:numobs)  = local_time(:numobs)
 
    plevel = pressure
+
+   !BPR BEGIN
+   !Previously this value could be uninitialized when a conditional checks its
+   !value
+   buddy_num_final(:) = 0
+   !BPR END
 
    !  Define distance within which buddy check is to find neighboring stations:
 
@@ -118,6 +141,18 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
             difmax = buddy_difference
          END IF
 
+!BPR BEGIN
+      CASE ( 'PMSLPSFC'  )
+        !  Loop through each of the station locations (numobs).
+        station_loop_0a : DO num = 1, numobs
+         !Increase the maximum allowed error in sea level pressure derived from
+         !surface pressure as station elevation increases.  Since assumptions
+         !must be made in this calculation above the atmosphere below ground,
+         !the thicker the layer through which these assumptions are made the
+         !larger the potential error caused by the assumptions
+         difmax(num) = buddy_difference * ( 1.0+(station_elevation(num)/2000.0) )
+        END DO station_loop_0a
+!BPR END
       CASE ( 'PMSL    ' )
          difmax = buddy_difference
 
@@ -131,7 +166,27 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
          END IF
 
       CASE ( 'RH      ' )
+
          difmax = buddy_difference
+!BPR BEGIN
+      CASE ( 'DEWPOINT' )
+
+        !  Loop through each of the station locations (numobs).
+        !  Make the tolerance larger for lower dewpoints since the same dewpoint
+        !  difference represents less moisture difference at low dewpoints
+        station_loop_0b : DO num = 1, numobs
+         IF((obs_small(num).lt.255.0).and.(obs_small(num).ge.235.0)) THEN
+          factor(num)=1.25
+         ELSEIF((obs_small(num).lt.235.0).and.(obs_small(num).ge.215.0)) THEN
+          factor(num)=1.50
+         ELSEIF(obs_small(num).lt.215.0) THEN
+          factor(num)=1.75
+         ELSE
+          factor(num)=1.00
+         END IF
+         difmax(num) = buddy_difference * factor(num)
+        END DO station_loop_0b
+!BPR END
 
    END SELECT error_allowance_by_field
 
@@ -181,6 +236,10 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
             IF ( distance .LE. range .AND. distance .GE. 0.1 ) THEN
                buddy_num(num) = buddy_num(num) + 1
                diff(buddy_num(num)) = obs2(num3) - aob(num3)
+!BPR BEGIN
+               !Keep track of which ob the current buddy is
+               buddy_num_index(buddy_num(num)) = num3
+!BPR END
             END IF
          END IF
 
@@ -199,13 +258,25 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
       !  Check if there is any bad obs among the obs located within the 
       !  the radius surrounding the test ob.
 
-      diff_check_1 = difmax (1) * 1.25
-      diff_check_2 = difmax (1)
+      !BPR BEGIN
+      !This depended on difmax of the first ob, no matter which ob we are
+      !examining.  This does not make sense now the difmax is actually ob
+      !dependent.
+      !diff_check_1 = difmax (1) * 1.25
+      !diff_check_2 = difmax (1)
+      !BPR END
 
       check_bad_ob : IF ( buddy_num(num) .GE. 2 ) THEN
 
          kob = buddy_num(num)
          remove_bad_ob : DO numj = 1, buddy_num(num)
+            !BPR BEGIN
+            !Make the maximum allowed differences dependent on difmax for the
+            !current buddy rather than for whatever ob is the first in the
+            !overall ob array
+            diff_check_1 = difmax (buddy_num_index(numj)) * 1.25
+            diff_check_2 = difmax (buddy_num_index(numj))
+            !BPR END
             diff_numj = ABS ( diff ( numj ) - average )
             IF ( diff ( numj ) .GT. diff_check_1  &
                 .AND. diff_numj .GT. diff_check_2 ) THEN
@@ -214,6 +285,13 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
             END IF
          END DO remove_bad_ob
          buddy_num_final(num) = kob
+         !BPR BEGIN
+         !Since buddies may have been removed buddy_num_index may no longer
+         !accurately reflect the indices of the buddies.  Since we do not need
+         !this variable after this point, fill the array with clearly bad
+         !indices so this variable is not accidentally used.
+         buddy_num_index = -999
+         !BPR END
 
          !  We may have removed too many observations.
 
@@ -222,13 +300,27 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
             err(num) = diff_at_obs(num) - average
          ELSE
             err(num)     = 0.
-            qc_flag_small(num) = qc_flag_small(num) + no_buddies
+            !BPR BEGIN
+            !If qc_flag_small(num) already includes the no_buddies flag this
+            !will add it again 
+            !qc_flag_small(num) = qc_flag_small(num) + no_buddies
+            !Instead, the following call will only add the no_buddies flag if it is
+            !not already in qc_flag_small(num)
+            CALL add_to_qc_flag( qc_flag_small(num), no_buddies )
+            !BPR END
          END IF
 
       ELSE check_bad_ob
 
          err(num)     = 0.
-         qc_flag_small(num) = qc_flag_small(num) + no_buddies
+         !BPR BEGIN
+         !If qc_flag_small(num) already includes the no_buddies flag this
+         !will add it again 
+         !qc_flag_small(num) = qc_flag_small(num) + no_buddies
+         !Instead, the following call will only add the no_buddies flag if it is
+         !not already in qc_flag_small(num)
+         CALL add_to_qc_flag( qc_flag_small(num), no_buddies )
+         !BPR END
 
       END IF check_bad_ob
 
@@ -249,7 +341,10 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
 
    IF ( print_buddy ) THEN
       station_loop_4 : DO num = 1 , numobs
-         IF ( name(1:8) .EQ. 'PMSL    ' ) THEN
+!BPR BEGIN
+!        IF ( name(1:8) .EQ. 'PMSL    ' ) THEN
+         IF ( ( name(1:8) .EQ. 'PMSL    ' ) .OR. ( name(1:8) .EQ. 'PMSLPSFC' ) ) THEN
+!BPR END
             scale = 100.
          ELSE
             scale = 1.
@@ -260,11 +355,21 @@ pressure, local_time, dx , buddy_weight , buddy_difference , print_buddy )
                   &  ",NAME="  ,a8, &
                   &  ",BUDDY="     ,f5.1,&
                   &  ",LOC=(" ,f6.1,",",f6.1,")",&
+                  !BPR BEGIN
+                  &  ",PLEVEL=" ,f6.1,&
+                  !BPR END
                   &  ",OBS="       ,f6.0,&
                   &  ",1ST GUESS=" ,f6.0,&
                   &  ",DIFF="      ,f5.0)' ) &
                  station_id(num),name,difmax(num)/scale, &
-                 xob(num),yob(num),obs(num)/scale,aob(num)/scale,err(num)
+!BPR BEGIN
+!BUG FIX: Standard code fails to scale error in this diagnostic printout
+!Also add pressure level being examined (plevel) -- note that this is not
+!necessarily the pressure of the ob, but it is the pressure level for which we
+!were doing QC when we found this ob so it must be at least close to this pressure
+!                xob(num),yob(num),obs(num)/scale,aob(num)/scale,err(num)
+                 xob(num),yob(num),plevel,obs(num)/scale,aob(num)/scale,err(num)/scale
+!BPR END
             error_number = 00364001
             error_message(1:31) = 'buddy_check                    '
             error_message(32:)  = message

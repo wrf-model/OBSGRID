@@ -32,21 +32,36 @@
    LOGICAL                 :: qc_test_error_max            , &
                               qc_test_buddy                , &
                               qc_test_vert_consistency     , &
-                              qc_test_convective_adj     
+   !  BPR BEGIN
+   !                          qc_test_convective_adj       
+                              qc_test_convective_adj       , &
+                              qc_psfc
+   !  BPR END
 
    REAL                    :: max_error_t                  , &
                               max_error_uv                 , &
                               max_error_z                  , &
                               max_error_rh                 , &
+   ! BPR BEGIN
+                              max_error_dewpoint           , &
+   ! BPR END  
                               max_error_p                  , &
                               max_buddy_t                  , &
                               max_buddy_uv                 , &
                               max_buddy_z                  , &
                               max_buddy_rh                 , &
+   ! BPR BEGIN
+                              max_buddy_dewpoint           , &
+   ! BPR END
                               max_buddy_p                  , &
                               buddy_weight                 , &
                               max_p_extend_t               , &
                               max_p_extend_w    
+!BPR BEGIN
+     LOGICAL               :: use_p_tolerance_one_lev   
+     INTEGER               :: max_p_tolerance_one_lev_qc
+!BPR END
+
 
    !  Record 5 NAMELIST variables.
  
@@ -90,3 +105,9 @@
    LOGICAL                 :: oa_min_switch                , &
                               oa_max_switch
    INTEGER                 :: oa_3D_option    
+   !BPR BEGIN
+   LOGICAL                 :: oa_psfc
+   LOGICAL                 :: scale_cressman_rh_decreases
+   REAL                    :: radius_influence_sfc_mult
+   INTEGER                 :: max_p_tolerance_one_lev_oa
+   !BPR END 

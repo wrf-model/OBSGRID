@@ -1,21 +1,22 @@
 &record1
- start_year                  =  2000
- start_month                 =    01
- start_day                   =    24
+ start_year                  =  2006
+ start_month                 =    12
+ start_day                   =    19
  start_hour                  =    12
- end_year                    =  2000
- end_month                   =    01
- end_day                     =    25
+ end_year                    =  2006
+ end_month                   =    12
+ end_day                     =    20
  end_hour                    =    12
- interval                    = 21600
+ interval                    = 10800
 /
 
 &record2
  grid_id                     = 1
- obs_filename                = '../JAN00/obs'
+ obs_filename                = './obs'
  remove_data_above_qc_flag   = 32768
  remove_unverified_data      = .TRUE.
 /
+ obs_filename                = '../JAN00/obs'
  trim_domain                 = .TRUE.
  trim_value                  = 5
 
@@ -43,6 +44,11 @@
  max_p_extend_t              = 1300
  max_p_extend_w              = 1300
 /
+ max_error_dewpoint          = 20
+ max_buddy_dewpoint          = 20
+ qc_psfc                     = .TRUE.
+ use_p_tolerance_one_lev     = .TRUE.
+ max_p_tolerance_one_lev_qc  = 700
 
 &record5
  print_obs_files             = .TRUE.
@@ -86,6 +92,10 @@
  oa_3D_option                = 1
  oa_3D_type                  = 'Cressman'
  radius_influence            = 5,4,3,2,
+ scale_cressman_rh_decreases = .TRUE.
+ radius_influence_sfc_mult   = 0.4
+ oa_psfc                     = .FALSE.
+ max_p_tolerance_one_lev_oa  = 700
 
 
 &plot_sounding

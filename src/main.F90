@@ -14,6 +14,10 @@ PROGRAM main
  
    INCLUDE 'error.inc'
    INCLUDE 'big_header.inc'
+   !BPR BEGIN
+   INCLUDE 'netcdf.inc'
+   INTEGER rcode, OLD_FORMAT
+   !BPR END
 
    TYPE ( all_nml )  :: nml ! all NAMELIST information from all NAMELIST records
    CHARACTER ( LEN = 132 ) :: filename, filename_out
@@ -81,11 +85,23 @@ call opngks
       WRITE ( UNIT = * , FMT = '("                                 ")' ) 
       WRITE ( UNIT = * , FMT = '("################################ ")' ) 
       WRITE ( UNIT = * , FMT = '("          WRF OBSGRID            ")' ) 
-      WRITE ( UNIT = * , FMT = '("          Version 3.7.0          ")' )   
-      WRITE ( UNIT = * , FMT = '("          July 2014          ")' )  
+      WRITE ( UNIT = * , FMT = '("          Version 3.7.0          ")' )
+      WRITE ( UNIT = * , FMT = '("          July 2014          ")' )
       !!WRITE ( UNIT = * , FMT = '("     pre-release - 02/-9/10      ")' )  
       WRITE ( UNIT = * , FMT = '("################################ ")' ) 
       WRITE ( UNIT = * , FMT = '("                                 ")' ) 
+
+   !BPR BEGIN
+   !Set the default format for netCDF files that are written to deal with larger
+   !file sizes
+   rcode = NF_SET_DEFAULT_FORMAT(nf_format_64bit, OLD_FORMAT)
+   IF (rcode .NE. NF_NOERR) THEN
+       PRINT *, 'Attempt to set default netCDF format failed with: ',NF_STRERROR(rcode)
+       STOP 'Stop: Error setting default netCDF format'
+   ELSE
+       PRINT *,'Changing default netCDF format from ',OLD_FORMAT,' to nf_format_64bit'
+   ENDIF
+   !BPR END
 
    !  Read in the NAMELIST information.  This file is connected to the given
    !  compile-time name. All error processing on the NAMELIST data are 

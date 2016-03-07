@@ -9,7 +9,7 @@ include ../configure.oa
 SRC 		= 	driver.F error_handler.F linpak.F main.F \
 			proc_final_analysis.F proc_first_guess.F proc_get_info_header.F  \
 			proc_header.F proc_namelist.F proc_oa.F \
-			proc_ob_access.F proc_obs_sort.F proc_qc.F sample.F yx2xy.F
+			proc_ob_access.F proc_obs_sort.F proc_qc.F sample.F yx2xy.F 
 
 OBJS		=	$(SRC:.F=.o)
 
@@ -19,7 +19,7 @@ MODULES 	=	date_pack_module.o error_module.o final_analysis_module.o  \
 			namelist_module.o oa_module.o \
 			ob_access_module.o obs_sort_module.o printout_module.o \
 			qc0_module.o qc1_module.o qc2_module.o qc3_module.o \
-			small_header_data_module.o tinterp_module.o
+			small_header_data_module.o tinterp_module.o get_fg_at_point_module.o
 
 INCS		=	big_header.inc constants.inc error.inc first_guess.inc first_guess_size.inc \
 			map.inc missing.inc namelist.inc proc_get_info_header.inc
@@ -81,6 +81,7 @@ final_analysis_module.o:	error.inc error.int big_header.inc sample.int \
 first_guess_module.o:	error.inc error.int first_guess_size.inc first_guess.inc big_header.inc \
 			input_data_module.o date_pack_module.o small_header_data_module.o \
 			oa_module.o 
+get_fg_at_point_module.o:	missing.inc constants.inc map_utils_module.o map_utils_helper_module.o
 input_data_module.o:	small_header_data_module.o 
 linpak.o:		
 main.o:                 error.inc big_header.inc proc_header.int error.int \
@@ -91,11 +92,13 @@ map_utils_helper_module.o:	map_utils_module.o
 make_sfc_fdda.o:	diags_module.o 
 namelist_module.o:	error.inc error.int namelist.inc namelist.common 
 oa_module.o:		error.int error.inc first_guess_size.inc first_guess.inc 
-ob_access_module.o:	error.int error.inc missing.inc \
-			obs_sort_module.o date_pack_module.o  
+ob_access_module.o:	error.int error.inc missing.inc constants.inc \
+			obs_sort_module.o date_pack_module.o map_utils_module.o map_utils_helper_module.o \
+			get_fg_at_point_module.o
 obs_sort_module.o:	missing.inc error.inc error.int proc_get_info_header.inc map.inc \
 			constants.inc \
-			date_pack_module.o map_utils_module.o map_utils_helper_module.o 
+			date_pack_module.o map_utils_module.o map_utils_helper_module.o \
+			get_fg_at_point_module.o
 printout_module.o:	
 proc_final_analysis.o:	first_guess_size.inc first_guess.inc proc_get_info_header.inc \
 			proc_get_info_header.int sample.int header.common \
@@ -117,7 +120,8 @@ proc_qc.o:		first_guess_size.inc first_guess.inc proc_ob_access.int \
 qc0_module.o:		obs_sort_module.o  
 qc1_module.o:		qc0_module.o 
 qc2_module.o:		qc0_module.o 
-qc3_module.o:		obs_sort_module.o 
+qc3_module.o:		constants.inc \
+			obs_sort_module.o qc0_module.o
 sample.o:		printout_module.o 
 small_header_data_module.o:	
 tinterp_module.o:	small_header_data_module.o input_data_module.o 

@@ -28,7 +28,7 @@ NETCDF_LIBS	=	-L${NETCDF}/lib -lnetcdf CONFIGURE_NETCDFF_LIB
 
 NETCDF_INC	=	-I${NETCDF}/include
 
-NCARG_LIBS	=	-L${NCARG_ROOT}/lib -lncarg -lncarg_gks -lncarg_c -lX11 -lm
+NCARG_LIBS	=	-L${NCARG_ROOT}/lib -lncarg -lncarg_gks -lncarg_c -lX11 -lm -lcairo
 
 
 #### Architecture specific settings ####

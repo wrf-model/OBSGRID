@@ -31,19 +31,34 @@
                       qc_test_buddy                , &
                       qc_test_vert_consistency     , &
                       qc_test_convective_adj       , &
+! BPR BEGIN
+                      qc_psfc                      , &
+! BPR END
                       max_error_t                  , &
                       max_error_uv                 , &
                       max_error_z                  , &
                       max_error_rh                 , &
+! BPR BEGIN
+                      max_error_dewpoint           , &
+! BPR END
                       max_error_p                  , &
                       max_buddy_t                  , &
                       max_buddy_uv                 , &
                       max_buddy_z                  , &
                       max_buddy_rh                 , &
+! BPR BEGIN
+                      max_buddy_dewpoint           , &
+! BPR END
                       max_buddy_p                  , &
                       buddy_weight                 , &
                       max_p_extend_t               , &
-                      max_p_extend_w    
+! BPR BEGIN
+!                     max_p_extend_w    
+                      max_p_extend_w               , &
+                      use_p_tolerance_one_lev      , &
+                      max_p_tolerance_one_lev_qc
+! BPR END
+
 
    !  Record 5 NAMELIST variables.
 
@@ -84,4 +99,10 @@
                       oa_min_switch                , &
                       oa_max_switch                , &
                       oa_3D_option                 , &
-                      oa_3D_type           
+                      oa_3D_type                   , &
+!BPR BEGIN
+                      oa_psfc                      , &
+                      scale_cressman_rh_decreases  , & 
+                      radius_influence_sfc_mult    , &
+                      max_p_tolerance_one_lev_oa
+!BPR END

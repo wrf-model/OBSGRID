@@ -7,6 +7,9 @@ iew_alloc , jns_alloc , kbu_alloc , &
 total_dups , map_projection , &
 get_value , get_x_location , get_y_location , get_longitude , &
 get_array_index , get_over_water , get_id , get_qc_info , &
+!BPR BEGIN
+get_elevation , get_fg_3d_t , get_fg_3d_h , &
+!BPR END
 put_value , put_array_index , put_qc_info )
 
 !  This routine accepts user level requests for modifying the observational
@@ -55,6 +58,11 @@ put_value , put_array_index , put_qc_info )
                                                          get_qc_info
    LOGICAL                 , OPTIONAL , DIMENSION (:) :: get_over_water
    CHARACTER ( LEN =   8 ) , OPTIONAL , DIMENSION (:) :: get_id
+  !BPR BEGIN
+   REAL                    , OPTIONAL , DIMENSION (:) :: get_elevation 
+   REAL , INTENT(IN)       , OPTIONAL , DIMENSION(:,:,:) :: get_fg_3d_t, &
+                                                            get_fg_3d_h
+  !BPR END
    
    !  Optional arguments for storing data.
 
@@ -76,6 +84,12 @@ put_value , put_array_index , put_qc_info )
       INCLUDE 'error.int'
    END INTERFACE
 
+   !BPR BEGIN
+   INTERFACE
+      INCLUDE 'query_ob.int'
+   END INTERFACE
+   !BPR END
+
    !  There are a couple of simple errors to detect.  Make sure that the surface
    !  is requested for sea level pressure.
 
@@ -90,6 +104,37 @@ put_value , put_array_index , put_qc_info )
       CALL error_handler ( error_number , error_message , &
       fatal , listing )
    END IF oops_01
+
+   ! BPR BEGIN
+   !  Make sure that the surface is requested for mean sea level pressure
+   !  derived from surface pressure.
+
+   oops_01a : IF ( ( request_variable .EQ. 'PMSLPSFC' ) .AND. &
+                  ( NINT ( request_level ) .NE. 1001 ) ) THEN
+      error_number = 99999001
+      error_message(1:31) = 'proc_ob_access                 '
+      error_message(32:)  = ' For sea level pressure from surface pressure, request pressure &
+      &level 1001 mb.'
+      fatal = .true.
+      listing = .false.
+      CALL error_handler ( error_number , error_message , &
+      fatal , listing )
+   END IF oops_01a
+
+   !  Make sure that the surface is requested for surface pressure
+
+   oops_01b : IF ( ( request_variable .EQ. 'PSFC    ' ) .AND. &
+                  ( NINT ( request_level ) .NE. 1001 ) ) THEN
+      error_number = 99999001
+      error_message(1:31) = 'proc_ob_access                 '
+      error_message(32:)  = ' For surface pressure, request pressure &
+      &level 1001 mb.'
+      fatal = .true.
+      listing = .false.
+      CALL error_handler ( error_number , error_message , &
+      fatal , listing )
+   END IF oops_01b
+   ! BPR END
 
    !  For QC, we are either retrieving data from the data structure (get), or we are 
    !  storing it there (put).  For OA, we are requesting the data (use), but a bit 
@@ -145,7 +190,10 @@ put_value , put_array_index , put_qc_info )
 
             CALL query_ob ( obs(loop_index) , date , time , &
             request_variable , request_level , request_qc_max , request_p_diff , &
-            value , qc )
+!BPR BEGIN
+!           value , qc )
+            value , qc , fg_3d_h = get_fg_3d_h, fg_3d_t = get_fg_3d_t )
+!BPR END
 
             !  If qc is returned .NE. to missing, then this routine found a 
             !  valid observation.
@@ -165,6 +213,10 @@ put_value , put_array_index , put_qc_info )
                IF ( PRESENT ( get_qc_info ) ) get_qc_info(counter) = qc
                IF ( PRESENT ( get_id ) ) &
                get_id(counter) = obs(loop_index)%location%id(1:8)
+
+               !BPR BEGIN
+               IF ( PRESENT ( get_elevation ) ) get_elevation(counter) = obs(loop_index)%info%elevation 
+               !BPR END
 
                !  Is this observation located in our domain?  We can 
                !  check easily if this has x,y available.

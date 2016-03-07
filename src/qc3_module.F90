@@ -14,6 +14,7 @@ SUBROUTINE dry_convective_adjustment ( obs , counter , print_dry )
 !  sounding by making use of the conservation of dry static energy.
 
    USE observation
+   USE qc0, only: add_to_qc_flag
 
    IMPLICIT NONE
 
@@ -245,13 +246,28 @@ SUBROUTINE dry_convective_adjustment ( obs , counter , print_dry )
                   current%meas%rh%data = 100. * exp ( 5418.12 * ( 1./t(i) - 1./(t(i)-dp(i))))
                ENDIF
                IF ( current%meas%temperature%qc .NE. missing ) THEN
-                  current%meas%temperature%qc   = current%meas%temperature%qc + convective_adjustment
+                  !BPR BEGIN
+                  !Previous code would add convective_adjustment flag even it
+                  !was already extant in the QC flag
+                  !current%meas%temperature%qc   = current%meas%temperature%qc + convective_adjustment
+                  CALL add_to_qc_flag( current%meas%temperature%qc, convective_adjustment )
+                  !BPR END
                END IF
                IF ( current%meas%dew_point%qc .NE. missing ) THEN
-                  current%meas%dew_point%qc   = current%meas%dew_point%qc + convective_adjustment
+                  !BPR BEGIN
+                  !Previous code would add convective_adjustment flag even it
+                  !was already extant in the QC flag
+                  !current%meas%dew_point%qc   = current%meas%dew_point%qc + convective_adjustment
+                  CALL add_to_qc_flag( current%meas%dew_point%qc, convective_adjustment )
+                  !BPR END
                END IF
                IF ( current%meas%rh%qc .NE. missing ) THEN
-                  current%meas%rh%qc   = current%meas%rh%qc + convective_adjustment
+                  !BPR BEGIN
+                  !Previous code would add convective_adjustment flag even it
+                  !was already extant in the QC flag
+                  !current%meas%rh%qc   = current%meas%rh%qc + convective_adjustment
+                  CALL add_to_qc_flag( current%meas%rh%qc, convective_adjustment )
+                  !BPR END
                END IF
             ELSE
                ! Do nothing

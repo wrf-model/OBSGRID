@@ -1,7 +1,10 @@
 SUBROUTINE proc_obs_sort ( obs_filename , unit , &
 obs , number_of_obs , total_number_of_obs , fatal_if_exceed_max_obs , total_dups , index , &
 print_out_obs_found , print_out_files , &
-levels , pressure , &
+!BPR BEGIN
+!levels , pressure , &
+levels , pressure , slp_x , temperature , use_p_tolerance_one_lev , &
+!BPR END
 max_p_extend_t , max_p_extend_w , &
 height , iew , jns , map_projection , date , time , fdda_loop) 
 
@@ -18,6 +21,11 @@ height , iew , jns , map_projection , date , time , fdda_loop)
                                                        print_out_files
    INTEGER , INTENT ( IN )                          :: levels
    REAL    , INTENT ( IN ) , DIMENSION ( levels )   :: pressure
+!BPR BEGIN
+   REAL    , INTENT ( IN ) , DIMENSION ( jns, iew ) :: slp_x
+   REAL    , INTENT ( IN ) , DIMENSION ( jns , iew , levels ) :: temperature
+   LOGICAL , INTENT ( IN )                          :: use_p_tolerance_one_lev
+!BPR END
    REAL                                             :: max_p_extend_t , &
                                                        max_p_extend_w
    INTEGER                                          :: iew , jns , map_projection
