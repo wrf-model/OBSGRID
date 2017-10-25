@@ -688,7 +688,13 @@ pressure(:kbu_alloc) = pressure(:kbu_alloc) * 100.
       END IF
 
       !!! Let's make sure the output to OBS_DOMAINnxx is sorted in time.
-      IF ( dummy_filename(1:4) .NE. 'null' .AND. fdda_loop .NE. fdda_loop_max ) THEN
+      !BPR BEGIN
+      !Previously, if fdda_loop=1 and fdda_loop_max=1 then obs would be output to the 
+      !obs file but the time-sorting of the obs would not occur.
+      !IF ( dummy_filename(1:4) .NE. 'null' .AND. fdda_loop .NE. fdda_loop_max ) THEN
+      IF ( dummy_filename(1:4) .NE. 'null' .AND. &
+           ( (fdda_loop .NE. fdda_loop_max) .OR. (fdda_loop .EQ. 1) ) ) THEN
+      !BPR END
         !BPR BEGIN
         !Modifications made to speed up this sorting of obs by time since this
         !checking contributes notably to total run times (at least in cases with
