@@ -3,12 +3,16 @@ WRF Objective Analysis Program
 The WRF Objective analysis (OA) program is a program
 that blends observations (in the form of ASCII format) and background
 (first guess) fields from WPS/metgrid. It provides a simple way to
-add observations to the incoming from another model.
+add observations to the incoming data from another model.
 
-For questions and help to run the program, please see the 
-User's Guide at http://www.mmm.ucar.edu/wrf/users/docs/user_guide/contents.html
-and send email to wrfhelp@ucar.edu.
+For questions and help to run the program, please see Chapter 7 of the WRF Users' Guide:
+http://www2.mmm.ucar.edu/wrf/users/docs/user_guide_v4/contents.html
+For information on observation nudging and how OBSGRID can be used to prepare
+observations for use in observation nudging also see the Observation Nudging Users' Guide: 
+http://www2.mmm.ucar.edu/wrf/users/docs/ObsNudgingGuide.pdf
 
+For support questions, please post to the WRF/MPAS/WRFDA/WRF-Chem User Support Forum:
+http://forum.mmm.ucar.edu/phpBB3/
 ===================================================
 
 Main program: obsgrid.exe
