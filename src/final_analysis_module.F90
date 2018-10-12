@@ -130,7 +130,7 @@ oa_type , oa_3D_type , oa_3D_option , rad_influence , oa_psfc )
           IF ( itype == 2 ) THEN        ! characters
             rcode = nf_get_att_text (met_ncid, NF_GLOBAL, cname, cval)
             IF(cname(1:5) .eq. 'TITLE') then
-               cval = "OUTPUT FROM OBSGRID"
+               cval = "OUTPUT FROM OBSGRID V4"
                ilen = len_trim(cval)
             ENDIF 
             rcode = nf_put_att_text(oa_ncid, NF_GLOBAL, cname, ilen, cval(1:ilen))
