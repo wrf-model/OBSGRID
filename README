@@ -3,7 +3,11 @@ WRF Objective Analysis Program
 The WRF Objective analysis (OA) program is a program
 that blends observations (in the form of ASCII format) and background
 (first guess) fields from WPS/metgrid. It provides a simple way to
-add observations to the incoming data from another model.
+add observations to the incoming data from another model. 
+
+Historically, this program began in the mid 90s as the objective
+analysis program little_r (Dave Gill) and was later modified for
+use by the WRF system (Cindy Bruyere).
 
 For questions and help to run the program, please see Chapter 7 of the WRF Users' Guide:
 http://www2.mmm.ucar.edu/wrf/users/docs/user_guide_v4/contents.html
