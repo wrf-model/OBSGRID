@@ -3155,15 +3155,17 @@ SUBROUTINE output_obs ( obs , unit , file_name , num_obs , out_opt, forinput, &
         !ob itself is written Obsgrid may not find any valid obs to write and
         !thus we have an ob header without any actual obs.  An ob of this format
         !in the OBS_DOMAIN* file will cause WRF obs nudging to crash
-        IF((.NOT. is_sounding) .AND. &
-           (.NOT. eps_equal(next%meas%height%data, obs(i)%info%elevation, 1.))) THEN
-         obs(i)%info%discard = .TRUE.
-         PRINT '(A,A,A,A,F12.2,A,F12.2,A,A,A,A)','WARNING: Ob indicates is_sounding=.FALSE. ',&
-          'but the ob height does ',&
-          'not match the station elevation.  This ob will be omitted since Obsgrid assumes ',&
-          'is_sounding=.FALSE. indicates a surface ob. Height = ', next%meas%height%data, &
-          ', Elevation = ', obs(i)%info%elevation,', Ob ID = ',TRIM(ADJUSTL(obs(i)%location%id)),&
-          ', Ob Time = ', obs(i)%valid_time%date_char 
+        IF (ASSOCIATED (next)) THEN
+          IF((.NOT. is_sounding) .AND. &
+             (.NOT. eps_equal(next%meas%height%data, obs(i)%info%elevation, 1.))) THEN
+           obs(i)%info%discard = .TRUE.
+           PRINT '(A,A,A,A,F12.2,A,F12.2,A,A,A,A)','WARNING: Ob indicates is_sounding=.FALSE. ',&
+            'but the ob height does ',&
+            'not match the station elevation.  This ob will be omitted since Obsgrid assumes ',&
+            'is_sounding=.FALSE. indicates a surface ob. Height = ', next%meas%height%data, &
+            ', Elevation = ', obs(i)%info%elevation,', Ob ID = ',TRIM(ADJUSTL(obs(i)%location%id)),&
+            ', Ob Time = ', obs(i)%valid_time%date_char 
+          ENDIF
         ENDIF
 
         !BPR END
